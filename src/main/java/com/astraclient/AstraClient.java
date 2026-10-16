@@ -35,10 +35,17 @@ public final class AstraClient implements ClientModInitializer {
     private static final DateTimeFormatter CLOCK_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
+    private static final Map<String, Integer> MODULE_KEYBINDS = new LinkedHashMap<>();
+    private static final Map<String, Boolean> KEY_WAS_DOWN = new LinkedHashMap<>();
     private static KeyBinding openGuiKey;
     private static boolean alternateAccent;
     private static int guiScale = 100;
     private static long sessionStartedAt = System.currentTimeMillis();
+    private static String notification = "Astra Client loaded";
+    private static long notificationUntil = System.currentTimeMillis() + 2400L;
+    private static boolean fullBrightWasEnabled;
+    private static boolean appliedNightVision;
+    private static boolean hadNightVisionBeforeEnable;
 
     static {
         MODULES.put("fullbright", false);
@@ -59,6 +66,10 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("arrowcounter", false);
         MODULES.put("goldencounter", false);
         MODULES.put("sessionstats", false);
+        for (String id : MODULES.keySet()) {
+            MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
+            KEY_WAS_DOWN.put(id, false);
+        }
     }
 
     public static boolean isEnabled(String id) {
@@ -67,18 +78,80 @@ public final class AstraClient implements ClientModInitializer {
 
     public static void toggle(String id) {
         if (!MODULES.containsKey(id)) return;
-        MODULES.put(id, !MODULES.get(id));
+        boolean value = !MODULES.get(id);
+        MODULES.put(id, value);
+        notifyUser((value ? "Enabled " : "Disabled ") + readableName(id));
         saveConfig();
     }
 
     public static void setEnabled(String id, boolean enabled) {
         if (!MODULES.containsKey(id)) return;
         MODULES.put(id, enabled);
+        notifyUser((enabled ? "Enabled " : "Disabled ") + readableName(id));
         saveConfig();
     }
 
     public static Map<String, Boolean> moduleSnapshot() {
         return Map.copyOf(MODULES);
+    }
+
+    public static int moduleKeybind(String id) {
+        return MODULE_KEYBINDS.getOrDefault(id, GLFW.GLFW_KEY_UNKNOWN);
+    }
+
+    public static void setModuleKeybind(String id, int keyCode) {
+        if (!MODULES.containsKey(id)) return;
+        MODULE_KEYBINDS.put(id, keyCode);
+        KEY_WAS_DOWN.put(id, false);
+        notifyUser("Keybind " + readableName(id) + ": " + keyName(keyCode));
+        saveConfig();
+    }
+
+    public static String keyName(int keyCode) {
+        if (keyCode == GLFW.GLFW_KEY_UNKNOWN) return "NONE";
+        if (keyCode >= GLFW.GLFW_KEY_A && keyCode <= GLFW.GLFW_KEY_Z) return Character.toString((char) keyCode);
+        if (keyCode >= GLFW.GLFW_KEY_0 && keyCode <= GLFW.GLFW_KEY_9) return Character.toString((char) keyCode);
+        if (keyCode >= GLFW.GLFW_KEY_F1 && keyCode <= GLFW.GLFW_KEY_F25)
+            return "F" + (keyCode - GLFW.GLFW_KEY_F1 + 1);
+        return switch (keyCode) {
+            case GLFW.GLFW_KEY_SPACE -> "SPACE";
+            case GLFW.GLFW_KEY_LEFT_SHIFT -> "L-SHIFT";
+            case GLFW.GLFW_KEY_RIGHT_SHIFT -> "R-SHIFT";
+            case GLFW.GLFW_KEY_LEFT_CONTROL -> "L-CTRL";
+            case GLFW.GLFW_KEY_RIGHT_CONTROL -> "R-CTRL";
+            case GLFW.GLFW_KEY_LEFT_ALT -> "L-ALT";
+            case GLFW.GLFW_KEY_RIGHT_ALT -> "R-ALT";
+            case GLFW.GLFW_KEY_TAB -> "TAB";
+            case GLFW.GLFW_KEY_ENTER -> "ENTER";
+            case GLFW.GLFW_KEY_BACKSPACE -> "BACKSPACE";
+            case GLFW.GLFW_KEY_DELETE -> "DELETE";
+            default -> "KEY-" + keyCode;
+        };
+    }
+
+    private static String readableName(String id) {
+        return switch (id) {
+            case "fullbright" -> "FullBright";
+            case "autosprint" -> "Auto Sprint";
+            case "fps" -> "FPS Counter";
+            case "coordinates" -> "Coordinates";
+            case "direction" -> "Direction";
+            case "keystrokes" -> "Keystrokes";
+            case "targethud" -> "Target HUD";
+            case "armorhud" -> "Armor HUD";
+            case "potionhud" -> "Potion HUD";
+            case "totemcounter" -> "Totem Counter";
+            case "pearlcounter" -> "Pearl Counter";
+            case "arrowcounter" -> "Arrow Counter";
+            case "goldencounter" -> "Golden Apple Counter";
+            case "sessionstats" -> "Session Stats";
+            default -> id;
+        };
+    }
+
+    public static void notifyUser(String message) {
+        notification = message == null ? "" : message;
+        notificationUntil = System.currentTimeMillis() + 2500L;
     }
 
     public static boolean isAlternateAccent() {
