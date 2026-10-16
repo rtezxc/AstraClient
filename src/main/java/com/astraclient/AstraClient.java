@@ -189,7 +189,21 @@ public final class AstraClient implements ClientModInitializer {
                 }
             }
 
+            processModuleKeybinds(client);
             if (client.player == null || client.world == null) return;
+
+            boolean fullBrightEnabled = isEnabled("fullbright");
+            if (fullBrightEnabled && !fullBrightWasEnabled) {
+                hadNightVisionBeforeEnable = client.player.hasStatusEffect(StatusEffects.NIGHT_VISION);
+                appliedNightVision = false;
+            } else if (!fullBrightEnabled && fullBrightWasEnabled) {
+                if (appliedNightVision && !hadNightVisionBeforeEnable) {
+                    client.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
+                }
+                appliedNightVision = false;
+                hadNightVisionBeforeEnable = false;
+            }
+            fullBrightWasEnabled = fullBrightEnabled;
 
             if (isEnabled("autosprint")
                 && client.player.forwardSpeed > 0.0F
@@ -198,11 +212,13 @@ public final class AstraClient implements ClientModInitializer {
                 client.player.setSprinting(true);
             }
 
-            // Refresh the visual aid while enabled. Disabling stops refreshes immediately.
-            if (isEnabled("fullbright") && client.player.age % 100 == 0) {
+            // Refresh only the effect Astra itself needs. If the player already had
+            // Night Vision before enabling FullBright, leave that external effect alone.
+            if (fullBrightEnabled && client.player.age % 100 == 0 && !hadNightVisionBeforeEnable) {
                 client.player.addStatusEffect(
                     new StatusEffectInstance(StatusEffects.NIGHT_VISION, 220, 0, false, false, false)
                 );
+                appliedNightVision = true;
             }
         });
 
@@ -210,6 +226,19 @@ public final class AstraClient implements ClientModInitializer {
             renderHud(MinecraftClient.getInstance(), drawContext));
 
         System.out.println("[Astra Client] Initialized for Minecraft 1.21.4");
+    }
+
+    private static void processModuleKeybinds(MinecraftClient client) {
+        if (client.getWindow() == null) return;
+        long window = client.getWindow().getHandle();
+        boolean screenOpen = client.currentScreen != null;
+        for (String id : MODULE_KEYBINDS.keySet()) {
+            int code = MODULE_KEYBINDS.getOrDefault(id, GLFW.GLFW_KEY_UNKNOWN);
+            boolean down = code != GLFW.GLFW_KEY_UNKNOWN && InputUtil.isKeyPressed(window, code);
+            boolean wasDown = KEY_WAS_DOWN.getOrDefault(id, false);
+            if (!screenOpen && down && !wasDown) toggle(id);
+            KEY_WAS_DOWN.put(id, down);
+        }
     }
 
     private static void renderHud(MinecraftClient client, DrawContext context) {
@@ -300,6 +329,15 @@ public final class AstraClient implements ClientModInitializer {
                 y = drawHudLine(client, context, x, y, "SESSION", session, accent);
             }
         }
+        if (System.currentTimeMillis() < notificationUntil && !notification.isEmpty()) {
+            String label = "ASTRA  •  " + notification;
+            int width = Math.min(context.getScaledWindowWidth() - 16, client.textRenderer.getWidth(label) + 28);
+            int nx = context.getScaledWindowWidth() - width - 8;
+            context.fill(nx, 8, nx + width, 30, 0xE80C111D);
+            context.fill(nx, 8, nx + 3, 30, accent);
+            context.drawText(client.textRenderer, label, nx + 10, 15, 0xFFF4F5FC, false);
+        }
+
         if (isEnabled("keystrokes")) {
             int keyX = 8;
             int keyY = screenHeight - 79;
