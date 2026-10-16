@@ -511,7 +511,7 @@ public final class AstraScreen extends Screen {
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 382 - settingsScrollOffset, contentW,
             "Reset module defaults", "RESET", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 418 - settingsScrollOffset, contentW,
-            "Export config backup", "EXPORT", accent);
+            "Config manager (5 save slots)", "OPEN", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 454 - settingsScrollOffset, contentW,
             "Import config backup", "IMPORT", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 490 - settingsScrollOffset, contentW,
@@ -647,7 +647,7 @@ public final class AstraScreen extends Screen {
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 418 - settingsScrollOffset, contentW, 34)) {
-                AstraClient.exportConfigBackup();
+                client.setScreen(new AstraConfigScreen(this));
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 454 - settingsScrollOffset, contentW, 34)) {

@@ -704,6 +704,73 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    private static Path namedConfigPath(int slot) {
+        if (slot < 1 || slot > 5) throw new IllegalArgumentException("Config slot must be 1-5");
+        return CONFIG_PATH.resolveSibling("astraclient-config-" + slot + ".properties");
+    }
+
+    public static boolean hasNamedConfig(int slot) {
+        try { return Files.isRegularFile(namedConfigPath(slot)); }
+        catch (RuntimeException exception) { return false; }
+    }
+
+    /** Saves a full snapshot of the current settings into one of five independent slots. */
+    public static void saveNamedConfig(int slot) {
+        try {
+            saveConfig();
+            Files.copy(CONFIG_PATH, namedConfigPath(slot), StandardCopyOption.REPLACE_EXISTING);
+            notifyUser("Saved config slot " + slot);
+        } catch (Exception exception) {
+            System.err.println("[Astra Client] Could not save config slot " + slot + ": " + exception.getMessage());
+            notifyUser("Could not save config slot " + slot);
+        }
+    }
+
+    /** Loads a named snapshot and reinitializes in-memory defaults before applying its properties. */
+    public static void loadNamedConfig(int slot) {
+        Path source;
+        try { source = namedConfigPath(slot); }
+        catch (RuntimeException exception) { notifyUser("Invalid config slot"); return; }
+        if (!Files.isRegularFile(source)) {
+            notifyUser("Slot " + slot + " is empty — save a config first");
+            return;
+        }
+        try {
+            // Validate the snapshot before replacing the active file.
+            Properties validation = new Properties();
+            try (InputStream input = Files.newInputStream(source)) { validation.load(input); }
+            MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
+            MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
+            KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
+            HUD_X.clear();
+            HUD_Y.clear();
+            accentTheme = 0;
+            guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
+            guiKeyWasDown = false;
+            guiKeybindIgnoreUntil = System.currentTimeMillis() + 400L;
+            clickSounds = true;
+            autoSprintGroundOnly = true;
+            autoSprintDisableInMenus = true;
+            guiScale = 100;
+            hudOpacity = 84;
+            hudBackgrounds = true;
+            zoomFov = 30;
+            autoEatHungerThreshold = 16;
+            espRange = 64;
+            combatRange = 4;
+            targetPlayers = true;
+            targetHostile = true;
+            targetPassive = false;
+            Files.copy(source, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
+            loadConfig();
+            saveConfig();
+            notifyUser("Loaded config slot " + slot);
+        } catch (Exception exception) {
+            System.err.println("[Astra Client] Could not load config slot " + slot + ": " + exception.getMessage());
+            notifyUser("Could not load config slot " + slot);
+        }
+    }
+
     /** Writes a portable copy of the current settings next to the live config file. */
     public static void exportConfigBackup() {
         saveConfig();
