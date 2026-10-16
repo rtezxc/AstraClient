@@ -392,6 +392,10 @@ public final class AstraScreen extends Screen {
 
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 274, contentW,
             "Reset module defaults", "RESET", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 310, contentW,
+            "Export config backup", "EXPORT", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 346, contentW,
+            "Import config backup", "IMPORT", accent);
         if (panelH >= 390) {
             ctx.drawText(textRenderer, "HUD positions are saved from the HUD Editor.", contentX,
                 top + panelH - 50, MUTED, false);
@@ -491,6 +495,14 @@ public final class AstraScreen extends Screen {
             }
             if (inside(mouseX, mouseY, contentX, top + 274, contentW, 31)) {
                 AstraClient.resetModuleDefaults();
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 310, contentW, 34)) {
+                AstraClient.exportConfigBackup();
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 346, contentW, 34)) {
+                AstraClient.importConfigBackup();
                 return true;
             }
             return true;
