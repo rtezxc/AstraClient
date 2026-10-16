@@ -42,6 +42,7 @@ public final class AstraHudEditorScreen extends Screen {
     private final Screen parent;
     private String draggedId;
     private int dragOffsetX, dragOffsetY;
+    private final long openedAt = System.currentTimeMillis();
 
     public AstraHudEditorScreen() {
         this(null);
@@ -57,15 +58,26 @@ public final class AstraHudEditorScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, width, height, 0xFF080B12);
-        context.fill(0, 0, width, height, 0xB80A0D16);
+        long now = System.currentTimeMillis();
+        float progress = Math.min(1.0f, Math.max(0.0f, (now - openedAt) / 240.0f));
+        float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0f);
+        int shade = Math.round(8 + 3 * eased);
+        context.fill(0, 0, width, height, 0xFF000000 | (shade << 16) | (shade << 8) | (shade + 4));
         int accent = AstraClient.accentColor();
 
-        context.fill(10, 10, width - 10, 62, PANEL);
-        context.fill(10, 10, width - 10, 13, accent);
-        context.drawText(textRenderer, "ASTRA  /  HUD EDITOR", 22, 22, TEXT, true);
+        int headerY = 10 + Math.round((1.0f - eased) * 9.0f);
+        context.fill(10, headerY, width - 10, headerY + 52, PANEL);
+        context.fill(10, headerY, width - 10, headerY + 3, accent);
+        int shineW = Math.max(14, width / 12);
+        int shineX = 10 + (int) ((now / 5L) % Math.max(1, width - 20 + shineW)) - shineW;
+        int shineLeft = Math.max(10, shineX);
+        int shineRight = Math.min(width - 10, shineX + shineW);
+        if (shineRight > shineLeft) context.fill(shineLeft, headerY, shineRight, headerY + 2, 0xBFFFFFFF);
+        int pulseAlpha = 45 + (int) (35 * (0.5 + 0.5 * Math.sin(now / 240.0)));
+        context.fill(10, headerY - 1, width - 10, headerY, (pulseAlpha << 24) | (accent & 0x00FFFFFF));
+        context.drawText(textRenderer, "ASTRA  /  HUD EDITOR", 22, headerY + 12, TEXT, true);
         context.drawText(textRenderer, "Drag widgets to move them. Right-click a widget to toggle it.",
-            22, 40, MUTED, false);
+            22, headerY + 30, MUTED, false);
 
         renderedBoxes.clear();
         for (Widget widget : WIDGETS) {
@@ -81,6 +93,11 @@ public final class AstraHudEditorScreen extends Screen {
             boolean hover = mouseX >= x && mouseX <= x + boxW && mouseY >= y && mouseY <= y + boxH;
             int background = enabled ? (hover ? 0xF32B2541 : CARD) : (hover ? 0xF22A3040 : 0xC9151A25);
             context.fill(x, y, x + boxW, y + boxH, background);
+            if (hover || (draggedId != null && draggedId.equals(widget.id))) {
+                int glowAlpha = 55 + (int) (35 * (0.5 + 0.5 * Math.sin(now / 150.0)));
+                context.fill(x - 1, y - 1, x + boxW + 1, y, (glowAlpha << 24) | (accent & 0x00FFFFFF));
+                context.fill(x - 1, y + boxH, x + boxW + 1, y + boxH + 1, (glowAlpha << 24) | (accent & 0x00FFFFFF));
+            }
             context.fill(x, y, x + 3, y + boxH, enabled ? accent : 0xFF5B6578);
             context.drawText(textRenderer, display, x + 9, y + 7, enabled ? TEXT : MUTED, false);
             if (draggedId != null && draggedId.equals(widget.id)) {
