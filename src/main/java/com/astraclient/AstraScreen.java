@@ -27,7 +27,7 @@ public final class AstraScreen extends Screen {
 
     private static final List<ModuleInfo> MODULES = List.of(
         new ModuleInfo("fullbright", "FullBright", "Night vision for dark areas", "Render", true),
-        new ModuleInfo("playeresp", "Player ESP", "Highlight other players", "Render", false),
+        new ModuleInfo("playeresp", "Player ESP", "Local glowing outline around other players", "Render", true),
         new ModuleInfo("mobesp", "Mob ESP", "Highlight living entities", "Render", false),
         new ModuleInfo("itemesp", "Item ESP", "Highlight dropped items", "Render", false),
         new ModuleInfo("xray", "X-Ray", "Highlight selected blocks", "Render", false),
