@@ -15,27 +15,36 @@ public final class AstraHudEditorScreen extends Screen {
     private static final int TEXT = 0xFFF2F5FC;
     private static final int MUTED = 0xFF8996AD;
 
+    // Every HUD element registered by AstraClient is represented here so none
+    // are left impossible to reposition from the editor. Two columns keep the
+    // preview usable at common laptop and phone-scaled resolutions.
     private static final List<Widget> WIDGETS = List.of(
-        new Widget("fps", "FPS Counter", 8, 8),
-        new Widget("coordinates", "Coordinates", 8, 29),
-        new Widget("direction", "Direction", 8, 50),
-        new Widget("ping", "Ping", 8, 71),
-        new Widget("memory", "Memory", 8, 92),
-        new Widget("speedometer", "Speedometer", 8, 113),
-        new Widget("clock", "Clock", 8, 134),
-        new Widget("totemcounter", "Totem Counter", 8, 155),
-        new Widget("pearlcounter", "Pearl Counter", 8, 176),
-        new Widget("arrowcounter", "Arrow Counter", 8, 197),
-        new Widget("goldencounter", "Golden Apples", 8, 218),
-        new Widget("armorhud", "Armor HUD", 8, 239),
-        new Widget("potionhud", "Potion HUD", 8, 260),
-        new Widget("targethud", "Target HUD", 8, -26),
-        new Widget("sessionstats", "Session Stats", 8, 302),
-        new Widget("keystrokes", "Keystrokes", 8, -79),
-        new Widget("healthhud", "Health HUD", 8, -42),
-        new Widget("hungerhud", "Hunger HUD", 8, -21),
-        new Widget("blockreachhud", "Block Reach HUD", 150, -84),
-        new Widget("frametimehud", "Frame Time HUD", 150, -63)
+        new Widget("fps", "FPS Counter", 8, 70),
+        new Widget("coordinates", "Coordinates", 8, 95),
+        new Widget("direction", "Direction", 8, 120),
+        new Widget("ping", "Ping", 8, 145),
+        new Widget("memory", "Memory", 8, 170),
+        new Widget("speedometer", "Speedometer", 8, 195),
+        new Widget("clock", "Clock", 8, 220),
+        new Widget("totemcounter", "Totem Counter", 8, 245),
+        new Widget("pearlcounter", "Ender Pearl Counter", 8, 270),
+        new Widget("arrowcounter", "Arrow Counter", 8, 295),
+        new Widget("goldencounter", "Golden Apples", 8, 320),
+        new Widget("armorhud", "Armor HUD", 8, 345),
+        new Widget("potionhud", "Potion HUD", 8, 370),
+        new Widget("targethud", "Target HUD", 220, 70),
+        new Widget("sessionstats", "Session Stats", 220, 95),
+        new Widget("keystrokes", "Keystrokes", 220, 120),
+        new Widget("healthhud", "Health HUD", 220, 145),
+        new Widget("hungerhud", "Hunger HUD", 220, 170),
+        new Widget("blockreachhud", "Block Reach HUD", 220, 195),
+        new Widget("frametimehud", "Frame Time HUD", 220, 220),
+        new Widget("biome", "Biome Display", 220, 245),
+        new Widget("cps", "CPS Counter", 220, 270),
+        new Widget("worldinfo", "World Information", 220, 295),
+        new Widget("potioncounter", "Potion Counter", 220, 320),
+        new Widget("durabilityhud", "Durability HUD", 220, 345),
+        new Widget("inventoryhud", "Inventory HUD", 220, 370)
     );
 
     private final List<Box> renderedBoxes = new ArrayList<>();
@@ -76,7 +85,7 @@ public final class AstraHudEditorScreen extends Screen {
         int pulseAlpha = 45 + (int) (35 * (0.5 + 0.5 * Math.sin(now / 240.0)));
         context.fill(10, headerY - 1, width - 10, headerY, (pulseAlpha << 24) | (accent & 0x00FFFFFF));
         context.drawText(textRenderer, "ASTRA  /  HUD EDITOR", 22, headerY + 12, TEXT, true);
-        context.drawText(textRenderer, "Drag widgets to move them. Right-click a widget to toggle it.",
+        context.drawText(textRenderer, "Drag to reposition  •  Right-click to toggle  •  Changes save automatically",
             22, headerY + 30, MUTED, false);
 
         renderedBoxes.clear();
@@ -111,7 +120,7 @@ public final class AstraHudEditorScreen extends Screen {
             mouseX >= 12 && mouseX <= 140 && mouseY >= buttonY && mouseY <= buttonY + 22, 0xFFFF829A);
         drawButton(context, width - 98, buttonY, 86, 22, "DONE",
             mouseX >= width - 98 && mouseX <= width - 12 && mouseY >= buttonY && mouseY <= buttonY + 22, accent);
-        context.drawText(textRenderer, "Positions save after you release a dragged widget.",
+        context.drawText(textRenderer, "All HUD widgets are editable • Drag to place them exactly where you want",
             151, height - 24, MUTED, false);
         // This screen uses manual drawing only. Skip the vanilla renderer to keep it crisp.
     }
