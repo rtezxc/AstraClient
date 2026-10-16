@@ -5,7 +5,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 public class AstraClient implements ClientModInitializer {
@@ -26,15 +25,12 @@ public class AstraClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openGuiKey.wasPressed()) {
-                if (client.player != null) {
-                    client.player.sendMessage(
-                        Text.literal("§b§lASTRA CLIENT §7» §fGUI loading..."),
-                        true
-                    );
+                if (client.player != null && client.currentScreen == null) {
+                    client.setScreen(new AstraScreen());
                 }
             }
         });
 
-        System.out.println("[Astra Client] Initialized successfully!");
+        System.out.println("[Astra Client] Initialized!");
     }
 }
