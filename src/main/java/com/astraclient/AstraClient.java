@@ -1046,12 +1046,12 @@ public final class AstraClient implements ClientModInitializer {
             String reach = client.crosshairTarget != null && client.crosshairTarget.getType() == HitResult.Type.BLOCK
                 ? String.format(Locale.ROOT, "%.2f blocks", client.player.getEyePos().distanceTo(client.crosshairTarget.getPos()))
                 : "No block targeted";
-            drawHudLine(client, context, "blockreachhud", 8, 491, "BLOCK REACH", reach, accent);
+            drawHudLine(client, context, "blockreachhud", hudX("blockreachhud", 150), screenHeight - 84, "BLOCK REACH", reach, accent);
         }
         if (isEnabled("frametimehud")) {
             int fps = client.getCurrentFps();
             String frameTime = fps > 0 ? String.format(Locale.ROOT, "%.2f ms", 1000.0 / fps) : "--";
-            drawHudLine(client, context, "frametimehud", 8, 512, "FRAME TIME", frameTime, accent);
+            drawHudLine(client, context, "frametimehud", hudX("frametimehud", 150), screenHeight - 63, "FRAME TIME", frameTime, accent);
         }
         if (isEnabled("fps")) drawHudLine(client, context, "fps", 8, 8, "FPS",
             Integer.toString(client.getCurrentFps()), accent);
