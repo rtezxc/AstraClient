@@ -17,6 +17,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.util.math.Box;
+import net.minecraft.world.RaycastContext;
 import java.util.HashMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -258,7 +259,7 @@ public final class AstraClient implements ClientModInitializer {
             case "inventorymove" -> "Inventory Move";
             case "autoeat" -> "Auto Eat";
             case "killaura" -> "Kill Aura";
-            case "triggerbot" -> "Critical TriggerBot";
+            case "triggerbot" -> "TriggerBot";
             case "autotool" -> "Auto Tool";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
@@ -734,7 +735,7 @@ public final class AstraClient implements ClientModInitializer {
             && hit.getEntity() instanceof LivingEntity target
             && isValidCombatTarget(target, client.player)
             && client.player.distanceTo(target) <= attackRange
-            && client.player.canSee(target)) {
+            && client.player.canSee(target) && hasClearLineOfSight(client, target)) {
             if (attackTarget(client, target)) return;
         }
 
@@ -751,7 +752,8 @@ public final class AstraClient implements ClientModInitializer {
             LivingEntity.class, client.player.getBoundingBox().expand(attackRange),
             entity -> isValidCombatTarget(entity, client.player))) {
             double distance = client.player.distanceTo(candidate);
-            if (distance > bestDistance || !client.player.canSee(candidate)) continue;
+            if (distance > bestDistance || !client.player.canSee(candidate)
+                || !hasClearLineOfSight(client, candidate)) continue;
 
             // Prefer targets actually in front of the player, while allowing a
             // generous cone so ordinary mouse movement doesn't make the aura miss.
@@ -845,6 +847,22 @@ public final class AstraClient implements ClientModInitializer {
         if (target == self || !target.isAlive() || target.isSpectator()) return false;
         if (target instanceof PlayerEntity) return targetPlayers;
         return target instanceof HostileEntity ? targetHostile : targetPassive;
+    }
+
+    /**
+     * Entity.canSee checks entity visibility, not whether a solid block is between
+     * the player and target. Raycast the block world as well so combat modules
+     * never select targets through walls.
+     */
+    private static boolean hasClearLineOfSight(MinecraftClient client, Entity target) {
+        if (client.player == null || client.world == null || target == null) return false;
+        var start = client.player.getEyePos();
+        var end = target.getEyePos();
+        var hit = client.world.raycast(new RaycastContext(
+            start, end, RaycastContext.ShapeType.COLLIDER,
+            RaycastContext.FluidHandling.NONE, client.player
+        ));
+        return hit.getType() == HitResult.Type.MISS;
     }
 
     private static boolean isCriticalHitReady(PlayerEntity player) {
