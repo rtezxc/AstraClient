@@ -19,7 +19,7 @@ public class AstraClient implements ClientModInitializer {
                 "key.astraclient.open_gui",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_RIGHT_SHIFT,
-                KeyBinding.Category.MISC
+                "category.astraclient"
             )
         );
 
@@ -31,6 +31,6 @@ public class AstraClient implements ClientModInitializer {
             }
         });
 
-        System.out.println("[Astra Client] Initialized!");
+        System.out.println("[Astra Client] Initialized successfully!");
     }
 }
