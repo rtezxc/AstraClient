@@ -242,8 +242,11 @@ public final class AstraScreen extends Screen {
                     ctx.fill(x, y, x + cardW, y + cardH, hover ? PANEL_HOVER : PANEL);
                     ctx.fill(x, y, x + 3, y + cardH, module.implemented
                         ? (enabled ? accent : LINE) : 0xFF3A4050);
-                    ctx.fill(x + 10, y + 10, x + 29, y + 29, enabled ? 0xFF302747 : 0xFF252B37);
-                    ctx.drawText(textRenderer, iconFor(module.name), x + 15, y + 15,
+                    boolean iconHover = mouseX >= x + 7 && mouseX <= x + 32
+                        && mouseY >= y + 7 && mouseY <= y + 32;
+                    ctx.fill(x + 10, y + 10, x + 29, y + 29,
+                        iconHover ? 0xFF463765 : (enabled ? 0xFF302747 : 0xFF252B37));
+                    ctx.drawText(textRenderer, iconHover ? "⚙" : iconFor(module.name), x + 15, y + 15,
                         module.implemented ? accent : 0xFF727B8D, true);
 
                     String status = captureKeybindId != null && captureKeybindId.equals(module.id)
@@ -482,14 +485,22 @@ public final class AstraScreen extends Screen {
             int x = contentX + (i % 2) * (cardW + gap);
             int y = listTop + (i / 2) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
-                // Tap the key label (bottom-right) to bind on touchscreen; right-click
-                // anywhere on the card also opens capture mode for mouse users.
-                if (module.implemented && mouseY >= y + 49 && mouseX >= x + Math.min(54, cardW - 10)) {
+                // Tap the icon to open module settings; tap the key label to bind on touchscreens.
+                // Right-click anywhere on a card also starts key capture.
+                if (module.implemented && mouseX >= x + 7 && mouseX <= x + 32
+                    && mouseY >= y + 7 && mouseY <= y + 32) {
+                    client.setScreen(new AstraModuleSettingsScreen(this, module.id,
+                        module.name, module.description, true));
+                } else if (module.implemented && mouseY >= y + 49
+                    && mouseX >= x + Math.min(54, cardW - 10)) {
                     captureKeybindId = module.id;
                     searchFocused = false;
                     AstraClient.notifyUser("Press a key to bind " + module.name + " (Esc clears)");
                 } else if (module.implemented) {
                     AstraClient.toggle(module.id);
+                } else if (mouseX >= x + 7 && mouseX <= x + 32 && mouseY >= y + 7 && mouseY <= y + 32) {
+                    client.setScreen(new AstraModuleSettingsScreen(this, module.id,
+                        module.name, module.description, false));
                 }
                 return true;
             }
