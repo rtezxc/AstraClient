@@ -29,6 +29,8 @@ import java.util.UUID;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.SwordItem;
+import net.minecraft.item.AxeItem;
 import net.minecraft.item.Items;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.BlockHitResult;
@@ -108,6 +110,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("killaura", false);
         MODULES.put("triggerbot", false);
         MODULES.put("autotool", false);
+        MODULES.put("autoweapon", false);
         MODULES.put("biome", false);
         MODULES.put("cps", false);
         MODULES.put("worldinfo", false);
@@ -240,6 +243,7 @@ public final class AstraClient implements ClientModInitializer {
             case "killaura" -> "Kill Aura";
             case "triggerbot" -> "Critical TriggerBot";
             case "autotool" -> "Auto Tool";
+            case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
             case "worldinfo" -> "World Information";
@@ -523,6 +527,7 @@ public final class AstraClient implements ClientModInitializer {
             processModuleKeybinds(client);
             updateInventoryMove(client);
             updateCombatModules(client);
+            updateAutoWeapon(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -656,6 +661,30 @@ public final class AstraClient implements ClientModInitializer {
         }
 
         if (bestTarget != null) attackTarget(client, bestTarget);
+    }
+
+    /**
+     * Selects the best available sword, then axe, only while aiming at a living target.
+     * Does not move items or alter inventory contents.
+     */
+    private static void updateAutoWeapon(MinecraftClient client) {
+        if (!isEnabled("autoweapon") || client.player == null || client.world == null
+            || client.currentScreen != null || !(client.crosshairTarget instanceof EntityHitResult hit)
+            || !(hit.getEntity() instanceof LivingEntity target) || !target.isAlive()
+            || target == client.player) return;
+
+        int bestSlot = -1;
+        int bestScore = 0;
+        for (int slot = 0; slot < 9; slot++) {
+            ItemStack stack = client.player.getInventory().getStack(slot);
+            int score = stack.getItem() instanceof SwordItem ? 3
+                : stack.getItem() instanceof AxeItem ? 2 : 0;
+            if (score > bestScore) {
+                bestScore = score;
+                bestSlot = slot;
+            }
+        }
+        if (bestSlot >= 0) client.player.getInventory().selectedSlot = bestSlot;
     }
 
     private static boolean isValidCombatTarget(LivingEntity target, PlayerEntity self) {
