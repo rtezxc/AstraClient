@@ -68,7 +68,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "compasshud"
+        "potionhud", "targethud", "damageindicators", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "compasshud"
     };
     private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
     private static final Map<String, HudBounds> HUD_RENDERED_BOUNDS = new LinkedHashMap<>();
@@ -91,6 +91,7 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean autoSprintDisableInMenus = true;
     private static int guiScale = 100;
     private static int hudOpacity = 84;
+    private static boolean hudBackgrounds = true;
     private static long sessionStartedAt = System.currentTimeMillis();
     private static String notification = "Astra Client loaded";
     private static long notificationUntil = System.currentTimeMillis() + 2400L;
@@ -117,6 +118,10 @@ public final class AstraClient implements ClientModInitializer {
     private static int fpsHistoryIndex;
     private static long lastFpsSampleAt;
     private static LivingEntity lastCombatTarget;
+    private static PlayerEntity damageTrackedPlayer;
+    private static float lastObservedHealth = -1.0F;
+    private static float recentDamageAmount;
+    private static long damageAlertUntil;
 
     static {
         MODULES.put("fullbright", false);
@@ -155,6 +160,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("memory", false);
         MODULES.put("speedometer", false);
         MODULES.put("targethud", false);
+        MODULES.put("damageindicators", false);
         MODULES.put("armorhud", false);
         MODULES.put("potionhud", false);
         MODULES.put("clock", false);
@@ -298,6 +304,7 @@ public final class AstraClient implements ClientModInitializer {
             case "direction" -> "Direction";
             case "keystrokes" -> "Keystrokes";
             case "targethud" -> "Target HUD";
+            case "damageindicators" -> "Damage Indicators";
             case "armorhud" -> "Armor HUD";
             case "potionhud" -> "Potion HUD";
             case "totemcounter" -> "Totem Counter";
@@ -447,6 +454,16 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    public static boolean areHudBackgroundsEnabled() {
+        return hudBackgrounds;
+    }
+
+    public static void toggleHudBackgrounds() {
+        hudBackgrounds = !hudBackgrounds;
+        notifyUser("HUD backgrounds " + (hudBackgrounds ? "enabled" : "hidden"));
+        saveConfig();
+    }
+
     public static int previewHudOpacity(int value) {
         hudOpacity = Math.max(35, Math.min(100, value));
         return hudOpacity;
@@ -536,6 +553,7 @@ public final class AstraClient implements ClientModInitializer {
             properties.load(input);
             clickSounds = Boolean.parseBoolean(properties.getProperty("ui.clickSounds", "true"));
             hudOpacity = Math.max(20, Math.min(100, Integer.parseInt(properties.getProperty("hud.opacity", "90"))));
+            hudBackgrounds = Boolean.parseBoolean(properties.getProperty("hud.backgrounds", "true"));
             autoSprintGroundOnly = Boolean.parseBoolean(properties.getProperty("autosprint.groundOnly", "false"));
             autoSprintDisableInMenus = Boolean.parseBoolean(properties.getProperty("autosprint.disableInMenus", "true"));
             for (String id : MODULES.keySet()) {
@@ -592,6 +610,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("hud.editorKey", Integer.toString(hudEditKeybindCode));
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
+        properties.setProperty("hud.backgrounds", Boolean.toString(hudBackgrounds));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
         properties.setProperty("autoeat.hungerThreshold", Integer.toString(autoEatHungerThreshold));
         properties.setProperty("esp.range", Integer.toString(espRange));
@@ -643,6 +662,7 @@ public final class AstraClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             long guiWindow = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             updateChatHudEditor(client);
+            updateDamageTracker(client);
             boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
                 && GLFW.glfwGetKey(guiWindow, guiKeybindCode) == GLFW.GLFW_PRESS;
             if (guiDown && !guiKeyWasDown) {
@@ -1193,7 +1213,7 @@ public final class AstraClient implements ClientModInitializer {
             int compassY = Math.max(4, Math.min(screenHeight - 28, hudY("compasshud", 178)));
             int yaw = Math.floorMod((int) Math.round(client.player.getYaw()), 360);
             String heading = client.player.getHorizontalFacing().asString().toUpperCase(Locale.ROOT);
-            context.fill(compassX, compassY, compassX + 172, compassY + 25, 0xD90A0D16);
+            if (hudBackgrounds) context.fill(compassX, compassY, compassX + 172, compassY + 25, 0xD90A0D16);
             context.fill(compassX, compassY, compassX + 172, compassY + 2, accent);
             context.drawTextWithShadow(client.textRenderer, "COMPASS", compassX + 6, compassY + 6, 0xFF8996AD);
             context.drawTextWithShadow(client.textRenderer, heading + "  " + yaw + "°", compassX + 78, compassY + 6, 0xFFFFFFFF);
@@ -1377,7 +1397,7 @@ public final class AstraClient implements ClientModInitializer {
             int panelWidth = Math.min(context.getScaledWindowWidth() - x - 8,
                 Math.max(142, Math.max(client.textRenderer.getWidth(targetName),
                     client.textRenderer.getWidth(healthText) + client.textRenderer.getWidth(distance)) + 24));
-            context.fill(x, y, x + panelWidth, y + 38, 0xD90B101A);
+            if (hudBackgrounds) context.fill(x, y, x + panelWidth, y + 38, 0xD90B101A);
             HUD_RENDERED_BOUNDS.put("targethud", new HudBounds(x, y, panelWidth, 38));
             context.fill(x, y, x + 3, y + 38, accent);
             context.drawText(client.textRenderer, targetName, x + 10, y + 5, 0xFFF3F5FC, true);
@@ -1411,7 +1431,7 @@ public final class AstraClient implements ClientModInitializer {
             int graphWidth = 122;
             int graphHeight = 52;
             HUD_RENDERED_BOUNDS.put("fpsgraph", new HudBounds(gx, gy, graphWidth, graphHeight));
-            context.fill(gx, gy, gx + graphWidth, gy + graphHeight, 0xD90B101A);
+            if (hudBackgrounds) context.fill(gx, gy, gx + graphWidth, gy + graphHeight, 0xD90B101A);
             context.fill(gx, gy, gx + graphWidth, gy + 2, accent);
             context.drawText(client.textRenderer, "FPS HISTORY", gx + 5, gy + 5, 0xFFF2F5FC, false);
             context.drawText(client.textRenderer, Integer.toString(client.getCurrentFps()), gx + graphWidth - 24, gy + 5, 0xFF4AD9F5, false);
@@ -1436,7 +1456,7 @@ public final class AstraClient implements ClientModInitializer {
             int brandWidth = client.textRenderer.getWidth(brand);
             int panelWidth = brandWidth + client.textRenderer.getWidth(subtitle) + 30;
             HUD_RENDERED_BOUNDS.put("watermark", new HudBounds(wx, wy, panelWidth, 24));
-            context.fill(wx, wy, wx + panelWidth, wy + 24, 0xE90B101A);
+            if (hudBackgrounds) context.fill(wx, wy, wx + panelWidth, wy + 24, 0xE90B101A);
             context.fill(wx, wy, wx + 3, wy + 24, accent);
             context.fill(wx + panelWidth - 2, wy, wx + panelWidth, wy + 24, 0xFF4AD9F5);
             int shineWidth = Math.max(10, panelWidth / 5);
@@ -1471,7 +1491,7 @@ public final class AstraClient implements ClientModInitializer {
                 int rowY = listY + i * 14;
                 int rowRight = listX + rowWidth;
                 int rowColor = (i % 2 == 0) ? 0xD9121825 : 0xD91C2030;
-                context.fill(listX, rowY, rowRight, rowY + 13, rowColor);
+                if (hudBackgrounds) context.fill(listX, rowY, rowRight, rowY + 13, rowColor);
                 context.fill(listX, rowY, listX + 2, rowY + 13, accent);
                 context.fill(rowRight - 2, rowY, rowRight, rowY + 13, 0xFF4AD9F5);
                 context.drawText(client.textRenderer, name, listX + 7, rowY + 3, 0xFFF2F5FC, false);
@@ -1482,7 +1502,7 @@ public final class AstraClient implements ClientModInitializer {
             String label = "ASTRA  •  " + notification;
             int width = Math.min(context.getScaledWindowWidth() - 16, client.textRenderer.getWidth(label) + 28);
             int nx = context.getScaledWindowWidth() - width - 8;
-            context.fill(nx, 8, nx + width, 30, (Math.round(230.0f * hudOpacity / 100.0f) << 24) | 0x000C111D);
+            if (hudBackgrounds) context.fill(nx, 8, nx + width, 30, (Math.round(230.0f * hudOpacity / 100.0f) << 24) | 0x000C111D);
             context.fill(nx, 8, nx + 3, 30, accent);
             context.drawText(client.textRenderer, label, nx + 10, 15, 0xFFF4F5FC, false);
         }
@@ -1499,7 +1519,39 @@ public final class AstraClient implements ClientModInitializer {
             HUD_RENDERED_BOUNDS.put("keystrokes", new HudBounds(keyX, keyY, 64, 63));
         }
 
+        if (isEnabled("damageindicators") && System.currentTimeMillis() < damageAlertUntil) {
+            String damageText = "-" + String.format(Locale.ROOT, "%.1f", recentDamageAmount) + " HP";
+            int panelWidth = client.textRenderer.getWidth(damageText) + 20;
+            int x = hudX("damageindicators", screenWidth / 2 - panelWidth / 2);
+            int y = hudY("damageindicators", screenHeight / 2 + 26);
+            x = clampInt(x, 0, Math.max(0, screenWidth - panelWidth));
+            y = clampInt(y, 0, Math.max(0, screenHeight - 18));
+            if (hudBackgrounds) context.fill(x, y, x + panelWidth, y + 18, 0xD90B101A);
+            context.fill(x, y, x + 3, y + 18, 0xFFFF657A);
+            context.drawTextWithShadow(client.textRenderer, damageText, x + 10, y + 5, 0xFFFF8291);
+            HUD_RENDERED_BOUNDS.put("damageindicators", new HudBounds(x, y, panelWidth, 18));
+        }
+
         renderChatHudEditingOverlay(client, context);
+    }
+
+    private static void updateDamageTracker(MinecraftClient client) {
+        if (client.player == null) {
+            damageTrackedPlayer = null;
+            lastObservedHealth = -1.0F;
+            return;
+        }
+        float health = client.player.getHealth();
+        if (client.player != damageTrackedPlayer || lastObservedHealth < 0.0F) {
+            damageTrackedPlayer = client.player;
+            lastObservedHealth = health;
+            return;
+        }
+        if (health < lastObservedHealth - 0.01F && isEnabled("damageindicators")) {
+            recentDamageAmount = lastObservedHealth - health;
+            damageAlertUntil = System.currentTimeMillis() + 1600L;
+        }
+        lastObservedHealth = health;
     }
 
     /**
@@ -1597,6 +1649,7 @@ public final class AstraClient implements ClientModInitializer {
         return switch (id) {
             case "arraylist", "potionhud", "targethud", "blockreachhud", "frametimehud", "fpsgraph" -> 150;
             case "compasshud" -> screenWidth / 2 - 84;
+            case "damageindicators" -> screenWidth / 2 - 44;
             default -> 8;
         };
     }
@@ -1628,6 +1681,7 @@ public final class AstraClient implements ClientModInitializer {
             case "sessionstats" -> 449;
             case "potionhud" -> 260;
             case "targethud" -> screenHeight - 43;
+            case "damageindicators" -> screenHeight / 2 + 26;
             case "healthhud" -> screenHeight - 42;
             case "hungerhud" -> screenHeight - 21;
             case "blockreachhud" -> screenHeight - 84;
@@ -1766,7 +1820,7 @@ public final class AstraClient implements ClientModInitializer {
         }
         int width = Math.min(maxWidth, client.textRenderer.getWidth(text) + 16);
         int hudAlpha = Math.round(255.0f * hudOpacity / 100.0f);
-        context.fill(x, y, x + width, y + 18, (hudAlpha << 24) | 0x00101420);
+        if (hudBackgrounds) context.fill(x, y, x + width, y + 18, (hudAlpha << 24) | 0x00101420);
         context.fill(x, y, x + 2, y + 18, accent);
         context.drawText(client.textRenderer, text, x + 8, y + 5, 0xFFF3F5FF, false);
         return width;
@@ -1777,8 +1831,9 @@ public final class AstraClient implements ClientModInitializer {
         int x, int y, String label, int accent
     ) {
         int width = label.length() > 1 ? 46 : 20;
-        context.fill(x, y, x + width, y + 19,
-            binding.isPressed() ? accent : ((Math.round(255.0f * hudOpacity / 100.0f) << 24) | 0x00101420));
+        if (binding.isPressed()) context.fill(x, y, x + width, y + 19, accent);
+        else if (hudBackgrounds) context.fill(x, y, x + width, y + 19,
+            (Math.round(255.0f * hudOpacity / 100.0f) << 24) | 0x00101420);
         context.fill(x, y, x + width, y + 1,
             binding.isPressed() ? 0xFFFFFFFF : 0xFF353D50);
         int textWidth = client.textRenderer.getWidth(label);

@@ -50,6 +50,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("autototem", "Auto Totem", "Automatic offhand management", "Combat", false),
         new ModuleInfo("antiknockback", "Anti Knockback", "Reduce received knockback", "Combat", false),
         new ModuleInfo("targethud", "Target HUD", "Show target name and distance", "HUD", true),
+        new ModuleInfo("damageindicators", "Damage Indicators", "Show a short red indicator when your health drops", "Player", true),
         new ModuleInfo("cps", "CPS Counter", "Count left and right mouse clicks per second", "HUD", true),
         new ModuleInfo("worldinfo", "World Information", "Show dimension and in-game day", "HUD", true),
         new ModuleInfo("potioncounter", "Potion Counter", "Count potions in your inventory", "Inventory", true),
@@ -470,10 +471,12 @@ public final class AstraScreen extends Screen {
             opacityY + 12, MUTED, false);
 
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 346 - settingsScrollOffset, contentW,
-            "Reset module defaults", "RESET", accent);
+            "HUD backgrounds", AstraClient.areHudBackgroundsEnabled() ? "ON" : "OFF", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 382 - settingsScrollOffset, contentW,
-            "Export config backup", "EXPORT", accent);
+            "Reset module defaults", "RESET", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 418 - settingsScrollOffset, contentW,
+            "Export config backup", "EXPORT", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 454 - settingsScrollOffset, contentW,
             "Import config backup", "IMPORT", accent);
     }
 
@@ -592,14 +595,18 @@ public final class AstraScreen extends Screen {
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 346 - settingsScrollOffset, contentW, 34)) {
-                AstraClient.resetModuleDefaults();
+                AstraClient.toggleHudBackgrounds();
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 382 - settingsScrollOffset, contentW, 34)) {
-                AstraClient.exportConfigBackup();
+                AstraClient.resetModuleDefaults();
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 418 - settingsScrollOffset, contentW, 34)) {
+                AstraClient.exportConfigBackup();
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 454 - settingsScrollOffset, contentW, 34)) {
                 AstraClient.importConfigBackup();
                 return true;
             }
@@ -701,6 +708,7 @@ public final class AstraScreen extends Screen {
         actions.add("settings");
         actions.add("accent");
         actions.add("sounds");
+        actions.add("backgrounds");
         if (module.implemented) {
             actions.add("toggle");
             actions.add("bind");
@@ -738,6 +746,7 @@ public final class AstraScreen extends Screen {
             case "settings" -> "Open settings...";
             case "accent" -> "Accent theme: " + AstraClient.accentName();
             case "sounds" -> "UI click sounds: " + (AstraClient.areClickSoundsEnabled() ? "ON" : "OFF");
+            case "backgrounds" -> "HUD backgrounds: " + (AstraClient.areHudBackgroundsEnabled() ? "ON" : "OFF");
             case "hudopacity" -> "HUD opacity: " + AstraClient.hudOpacity() + "%";
             case "toggle" -> module != null && AstraClient.isEnabled(module.id) ? "Disable module" : "Enable module";
             case "bind" -> "Change keybind...";
@@ -813,6 +822,7 @@ public final class AstraScreen extends Screen {
             }
             case "accent" -> AstraClient.toggleAccent();
             case "sounds" -> AstraClient.toggleClickSounds();
+            case "backgrounds" -> AstraClient.toggleHudBackgrounds();
             case "hudopacity" -> AstraClient.setHudOpacity(AstraClient.hudOpacity() >= 95 ? 50 : AstraClient.hudOpacity() + 15);
             case "resetbind" -> AstraClient.setModuleKeybind(module.id, GLFW.GLFW_KEY_UNKNOWN);
             case "toggle" -> AstraClient.toggle(module.id);
@@ -921,7 +931,7 @@ public final class AstraScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (category.equals("Settings")) {
             int panelH = panelHeight();
-            int maxSettingsScroll = Math.max(0, 456 - Math.max(90, panelH - 130));
+            int maxSettingsScroll = Math.max(0, 492 - Math.max(90, panelH - 130));
             settingsScrollOffset = Math.max(0, Math.min(maxSettingsScroll,
                 settingsScrollOffset - (int) Math.round(verticalAmount * 32.0)));
             return true;
