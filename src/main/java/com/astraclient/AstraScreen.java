@@ -318,17 +318,19 @@ public final class AstraScreen extends Screen {
         DrawContext ctx, int mouseX, int mouseY, int top,
         int contentX, int contentW, int panelH, int accent
     ) {
-        ctx.drawText(textRenderer, "CLIENT SETTINGS", contentX, top + 75, WHITE, true);
-        ctx.drawText(textRenderer, "Preferences save automatically.", contentX, top + 94, MUTED, false);
+        ctx.drawText(textRenderer, "CLIENT SETTINGS", contentX, top + 70, WHITE, true);
+        ctx.drawText(textRenderer, "Preferences save automatically.", contentX, top + 88, MUTED, false);
 
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 116, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 108, contentW,
             "Accent theme", AstraClient.isAlternateAccent() ? "CYAN" : "PURPLE", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 148, contentW,
+            "Interface click sound", AstraClient.areClickSoundsEnabled() ? "ON" : "MUTED", accent);
 
-        ctx.drawText(textRenderer, "GUI SCALE", contentX, top + 169, WHITE, true);
+        ctx.drawText(textRenderer, "GUI SCALE", contentX, top + 190, WHITE, true);
         String value = AstraClient.guiScale() + "%";
         ctx.drawText(textRenderer, value, contentX + contentW - textRenderer.getWidth(value),
-            top + 169, accent, true);
-        int trackX = contentX, trackY = top + 190;
+            top + 190, accent, true);
+        int trackX = contentX, trackY = top + 210;
         int trackW = contentW;
         ctx.fill(trackX, trackY, trackX + trackW, trackY + 6, 0xFF2B3344);
         int fillW = (AstraClient.guiScale() - 75) * trackW / 50;
@@ -339,12 +341,14 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, max, trackX + trackW - textRenderer.getWidth(max),
             trackY + 12, MUTED, false);
 
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 218, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 242, contentW,
             "Reset module defaults", "RESET", accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 263, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 282, contentW,
             "Save configuration", "SAVE", accent);
-        ctx.drawText(textRenderer, "Planned modules remain locked until implemented.",
-            contentX, top + panelH - 50, MUTED, false);
+        if (panelH >= 390) {
+            ctx.drawText(textRenderer, "Planned modules remain locked until implemented.",
+                contentX, top + panelH - 50, MUTED, false);
+        }
     }
 
     private void renderSettingRow(
@@ -352,19 +356,18 @@ public final class AstraScreen extends Screen {
         String label, String action, int accent
     ) {
         boolean hover = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + 43;
-        ctx.fill(x, y, x + w, y + 43, hover ? PANEL_HOVER : PANEL);
-        ctx.fill(x, y, x + 2, y + 43, accent);
-        ctx.drawText(textRenderer, label, x + 12, y + 10, WHITE, true);
+        ctx.fill(x, y, x + w, y + 34, hover ? PANEL_HOVER : PANEL);
+        ctx.fill(x, y, x + 2, y + 34, accent);
+        ctx.drawText(textRenderer, label, x + 12, y + 9, WHITE, true);
         ctx.drawText(textRenderer, action, x + w - textRenderer.getWidth(action) - 12,
-            y + 10, accent, true);
+            y + 9, accent, true);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 1) {
-            return beginModuleKeybindCapture(mouseX, mouseY);
-        }
-        if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
+        if (button != 0 && button != 1) return super.mouseClicked(mouseX, mouseY, button);
+        AstraClient.playClickSound();
+        if (button == 1) return beginModuleKeybindCapture(mouseX, mouseY);
 
         int panelW = panelWidth(), panelH = panelHeight();
         int left = panelLeft(panelW), top = panelTop(panelH);
@@ -415,20 +418,24 @@ public final class AstraScreen extends Screen {
         }
 
         if (category.equals("Settings")) {
-            if (inside(mouseX, mouseY, contentX, top + 116, contentW, 43)) {
+            if (inside(mouseX, mouseY, contentX, top + 108, contentW, 34)) {
                 AstraClient.toggleAccent();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 183, contentW, 20)) {
+            if (inside(mouseX, mouseY, contentX, top + 148, contentW, 34)) {
+                AstraClient.toggleClickSounds();
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 203, contentW, 28)) {
                 draggingScale = true;
                 updateScaleFromMouse(mouseX, contentX, contentW);
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 218, contentW, 43)) {
+            if (inside(mouseX, mouseY, contentX, top + 242, contentW, 34)) {
                 AstraClient.resetModuleDefaults();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 263, contentW, 43)) {
+            if (inside(mouseX, mouseY, contentX, top + 282, contentW, 34)) {
                 AstraClient.saveConfig();
                 return true;
             }
