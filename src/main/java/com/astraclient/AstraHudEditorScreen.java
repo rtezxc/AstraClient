@@ -35,11 +35,17 @@ public final class AstraHudEditorScreen extends Screen {
     );
 
     private final List<Box> renderedBoxes = new ArrayList<>();
+    private final Screen parent;
     private String draggedId;
     private int dragOffsetX, dragOffsetY;
 
     public AstraHudEditorScreen() {
+        this(null);
+    }
+
+    public AstraHudEditorScreen(Screen parent) {
         super(Text.literal("Astra HUD Editor"));
+        this.parent = parent;
     }
 
     private record Widget(String id, String label, int defaultX, int defaultY) { }
@@ -153,6 +159,11 @@ public final class AstraHudEditorScreen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void close() {
+        client.setScreen(parent);
     }
 
     @Override
