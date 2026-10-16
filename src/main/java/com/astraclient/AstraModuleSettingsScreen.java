@@ -19,6 +19,7 @@ public final class AstraModuleSettingsScreen extends Screen {
     private final boolean implemented;
     private boolean capturingKey;
     private boolean draggingZoomSlider;
+    private boolean draggingEspSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
                                      String description, boolean implemented) {
@@ -90,6 +91,20 @@ public final class AstraModuleSettingsScreen extends Screen {
             ctx.drawText(textRenderer, "10°  •  MORE ZOOM", sliderX, sliderY + 13, MUTED, false);
             String less = "60°";
             ctx.drawText(textRenderer, less, sliderX + sliderW - textRenderer.getWidth(less),
+                sliderY + 13, MUTED, false);
+        } else if (moduleId.equals("playeresp") || moduleId.equals("mobesp") || moduleId.equals("itemesp")) {
+            ctx.drawText(textRenderer, "MAXIMUM OUTLINE DISTANCE", x + 20, nextY + 3, WHITE, true);
+            String rangeLabel = AstraClient.espRange() + " blocks";
+            ctx.drawText(textRenderer, rangeLabel, x + panelW - 20 - textRenderer.getWidth(rangeLabel),
+                nextY + 3, accent(), true);
+            int sliderX = x + 20, sliderY = nextY + 27, sliderW = panelW - 40;
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
+            int fill = (AstraClient.espRange() - 16) * sliderW / 112;
+            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
+            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
+            ctx.drawText(textRenderer, "16", sliderX, sliderY + 13, MUTED, false);
+            String maxRange = "128 blocks";
+            ctx.drawText(textRenderer, maxRange, sliderX + sliderW - textRenderer.getWidth(maxRange),
                 sliderY + 13, MUTED, false);
         } else if (isHudModule(moduleId)) {
             drawRow(ctx, x + 20, nextY, panelW - 40, 32, "HUD layout",
@@ -186,6 +201,12 @@ public final class AstraModuleSettingsScreen extends Screen {
                 updateZoomFromMouse(mouseX, x + 20, pw - 40);
                 return true;
             }
+        } else if (moduleId.equals("playeresp") || moduleId.equals("mobesp") || moduleId.equals("itemesp")) {
+            if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
+                draggingEspSlider = true;
+                updateEspRangeFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
         } else if (isHudModule(moduleId)) {
             if (inside(mouseX, mouseY, x + 20, nextY, pw - 40, 32)) {
                 client.setScreen(new AstraHudEditorScreen(this));
@@ -216,6 +237,11 @@ public final class AstraModuleSettingsScreen extends Screen {
         return mx >= x && mx <= x + w && my >= y && my <= y + h;
     }
 
+    private void updateEspRangeFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewEspRange(16 + (int) Math.round(progress * 112.0));
+    }
+
     private void updateZoomFromMouse(double mouseX, int sliderX, int sliderW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
         // Left = stronger zoom (10°), right = lighter zoom (60°).
@@ -224,11 +250,12 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (button == 0 && draggingZoomSlider) {
+        if (button == 0 && (draggingZoomSlider || draggingEspSlider)) {
             int pw = Math.min(600, width - 24);
             int x = (width - pw) / 2;
             int sliderX = x + 20;
-            updateZoomFromMouse(mouseX, sliderX, pw - 40);
+            if (draggingZoomSlider) updateZoomFromMouse(mouseX, sliderX, pw - 40);
+            else updateEspRangeFromMouse(mouseX, sliderX, pw - 40);
             return true;
         }
         return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
@@ -236,8 +263,9 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (draggingZoomSlider) AstraClient.saveConfig();
+        if (draggingZoomSlider || draggingEspSlider) AstraClient.saveConfig();
         draggingZoomSlider = false;
+        draggingEspSlider = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
