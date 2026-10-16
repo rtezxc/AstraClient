@@ -962,12 +962,29 @@ public final class AstraClient implements ClientModInitializer {
         }
         if (isEnabled("targethud") && client.crosshairTarget instanceof EntityHitResult hit) {
             Entity entity = hit.getEntity();
-            String targetInfo = entity.getName().getString() + "  "
-                + String.format(Locale.ROOT, "%.1f m", client.player.distanceTo(entity));
-            if (entity instanceof LivingEntity living) {
-                targetInfo += String.format(Locale.ROOT, "  ♥ %.1f/%.1f", living.getHealth(), living.getMaxHealth());
+            String targetName = entity.getName().getString();
+            String distance = String.format(Locale.ROOT, "%.1f m", client.player.distanceTo(entity));
+            String healthText = entity instanceof LivingEntity living
+                ? String.format(Locale.ROOT, "%.1f / %.1f HP", Math.max(0.0F, living.getHealth()), living.getMaxHealth())
+                : "ENTITY";
+            int x = hudX("targethud", 8);
+            int y = hudY("targethud", screenHeight - 43);
+            int panelWidth = Math.min(context.getScaledWindowWidth() - x - 8,
+                Math.max(142, Math.max(client.textRenderer.getWidth(targetName),
+                    client.textRenderer.getWidth(healthText) + client.textRenderer.getWidth(distance)) + 24));
+            context.fill(x, y, x + panelWidth, y + 38, 0xD90B101A);
+            context.fill(x, y, x + 3, y + 38, accent);
+            context.drawText(client.textRenderer, targetName, x + 10, y + 5, 0xFFF3F5FC, true);
+            context.drawText(client.textRenderer, distance, x + panelWidth - client.textRenderer.getWidth(distance) - 8,
+                y + 5, accent, false);
+            context.drawText(client.textRenderer, healthText, x + 10, y + 19, 0xFFD5DCEC, false);
+            if (entity instanceof LivingEntity living && living.getMaxHealth() > 0.0F) {
+                int barX = x + 10, barY = y + 32, barWidth = panelWidth - 20;
+                context.fill(barX, barY, barX + barWidth, barY + 3, 0xFF303747);
+                int healthWidth = Math.max(0, Math.min(barWidth,
+                    Math.round(barWidth * living.getHealth() / living.getMaxHealth())));
+                context.fill(barX, barY, barX + healthWidth, barY + 3, 0xFF69E6B8);
             }
-            drawHudLine(client, context, "targethud", 8, screenHeight - 26, "TARGET", targetInfo, accent);
         }
         if (isEnabled("sessionstats")) {
             long elapsed = Math.max(0L, (System.currentTimeMillis() - sessionStartedAt) / 1000L);
