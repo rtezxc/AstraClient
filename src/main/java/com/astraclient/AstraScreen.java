@@ -32,7 +32,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("itemesp", "Item ESP", "Highlight dropped items", "Render", false),
         new ModuleInfo("xray", "X-Ray", "Highlight selected blocks", "Render", false),
         new ModuleInfo("nametags", "Nametags", "Enhanced entity labels", "Render", false),
-        new ModuleInfo("zoom", "Zoom", "Camera zoom", "Render", false),
+        new ModuleInfo("zoom", "Zoom", "Adjustable camera FOV zoom", "Render", true),
         new ModuleInfo("autosprint", "Auto Sprint", "Sprint while moving forward", "Movement", true),
         new ModuleInfo("noslow", "No Slow", "Reduce action slowdown", "Movement", false),
         new ModuleInfo("speed", "Speed", "Movement speed adjustment", "Movement", false),
