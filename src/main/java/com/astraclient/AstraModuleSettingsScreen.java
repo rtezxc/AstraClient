@@ -18,6 +18,7 @@ public final class AstraModuleSettingsScreen extends Screen {
     private final String description;
     private final boolean implemented;
     private boolean capturingKey;
+    private boolean draggingZoomSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
                                      String description, boolean implemented) {
@@ -76,6 +77,20 @@ public final class AstraModuleSettingsScreen extends Screen {
                 AstraClient.autoSprintGroundOnly() ? "ON" : "OFF", mouseX, mouseY, a);
             drawRow(ctx, x + 20, nextY + 37, panelW - 40, 32, "Pause in menus",
                 AstraClient.autoSprintDisableInMenus() ? "ON" : "OFF", mouseX, mouseY, a);
+        } else if (moduleId.equals("zoom")) {
+            ctx.drawText(textRenderer, "ZOOM FIELD OF VIEW", x + 20, nextY + 3, WHITE, true);
+            String fovLabel = AstraClient.zoomFov() + "°";
+            ctx.drawText(textRenderer, fovLabel, x + panelW - 20 - textRenderer.getWidth(fovLabel),
+                nextY + 3, accent(), true);
+            int sliderX = x + 20, sliderY = nextY + 27, sliderW = panelW - 40;
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
+            int fill = (60 - AstraClient.zoomFov()) * sliderW / 50;
+            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
+            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
+            ctx.drawText(textRenderer, "10°  •  MORE ZOOM", sliderX, sliderY + 13, MUTED, false);
+            String less = "60°";
+            ctx.drawText(textRenderer, less, sliderX + sliderW - textRenderer.getWidth(less),
+                sliderY + 13, MUTED, false);
         } else if (isHudModule(moduleId)) {
             drawRow(ctx, x + 20, nextY, panelW - 40, 32, "HUD layout",
                 "OPEN EDITOR", mouseX, mouseY, a);
@@ -165,6 +180,12 @@ public final class AstraModuleSettingsScreen extends Screen {
                 AstraClient.toggleAutoSprintDisableInMenus();
                 return true;
             }
+        } else if (moduleId.equals("zoom")) {
+            if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
+                draggingZoomSlider = true;
+                updateZoomFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
         } else if (isHudModule(moduleId)) {
             if (inside(mouseX, mouseY, x + 20, nextY, pw - 40, 32)) {
                 client.setScreen(new AstraHudEditorScreen(this));
@@ -193,6 +214,31 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     private boolean inside(double mx, double my, int x, int y, int w, int h) {
         return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    }
+
+    private void updateZoomFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        // Left = stronger zoom (10°), right = lighter zoom (60°).
+        AstraClient.previewZoomFov(10 + (int) Math.round(progress * 50.0));
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (button == 0 && draggingZoomSlider) {
+            int pw = Math.min(600, width - 24);
+            int x = (width - pw) / 2;
+            int sliderX = x + 20;
+            updateZoomFromMouse(mouseX, sliderX, pw - 40);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (draggingZoomSlider) AstraClient.saveConfig();
+        draggingZoomSlider = false;
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
