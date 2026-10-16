@@ -8,12 +8,14 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import org.lwjgl.glfw.GLFW;
@@ -39,6 +41,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final Map<String, Boolean> KEY_WAS_DOWN = new LinkedHashMap<>();
     private static KeyBinding openGuiKey;
     private static boolean alternateAccent;
+    private static boolean clickSounds = true;
     private static int guiScale = 100;
     private static long sessionStartedAt = System.currentTimeMillis();
     private static String notification = "Astra Client loaded";
@@ -158,6 +161,23 @@ public final class AstraClient implements ClientModInitializer {
         return alternateAccent;
     }
 
+    public static boolean areClickSoundsEnabled() {
+        return clickSounds;
+    }
+
+    public static void toggleClickSounds() {
+        clickSounds = !clickSounds;
+        notifyUser("Click sounds " + (clickSounds ? "enabled" : "muted"));
+        saveConfig();
+    }
+
+    public static void playClickSound() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (clickSounds && client != null && client.getSoundManager() != null) {
+            client.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 0.95F));
+        }
+    }
+
     public static void toggleAccent() {
         alternateAccent = !alternateAccent;
         saveConfig();
@@ -185,6 +205,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
         KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
         alternateAccent = false;
+        clickSounds = true;
         guiScale = 100;
         notifyUser("Settings reset to defaults");
         saveConfig();
@@ -220,6 +241,7 @@ public final class AstraClient implements ClientModInitializer {
             properties.setProperty("module." + entry.getKey(), Boolean.toString(entry.getValue()));
         }
         properties.setProperty("theme.alternateAccent", Boolean.toString(alternateAccent));
+        properties.setProperty("ui.clickSounds", Boolean.toString(clickSounds));
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
             properties.setProperty("keybind." + entry.getKey(), Integer.toString(entry.getValue()));
