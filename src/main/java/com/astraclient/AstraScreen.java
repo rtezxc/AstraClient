@@ -716,7 +716,11 @@ public final class AstraScreen extends Screen {
             actions.add("bind");
             actions.add("resetbind");
         }
-        if (module.id.equals("killaura")) {
+        if (module.id.equals("customcrosshair")) {
+            actions.add("crosshairSize");
+            actions.add("crosshairGap");
+            actions.add("crosshairThickness");
+        } else if (module.id.equals("killaura")) {
             actions.add("players");
             actions.add("hostile");
             actions.add("passive");
@@ -762,6 +766,9 @@ public final class AstraScreen extends Screen {
             case "toggle" -> module != null && AstraClient.isEnabled(module.id) ? "Disable module" : "Enable module";
             case "bind" -> "Change keybind...";
             case "resetbind" -> "Clear keybind";
+            case "crosshairSize" -> "Arm length: " + AstraClient.crosshairSize();
+            case "crosshairGap" -> "Center gap: " + AstraClient.crosshairGap();
+            case "crosshairThickness" -> "Line thickness: " + AstraClient.crosshairThickness();
             case "players" -> "Target players: " + (AstraClient.targetPlayers() ? "ON" : "OFF");
             case "hostile" -> "Target hostile: " + (AstraClient.targetHostile() ? "ON" : "OFF");
             case "passive" -> "Target passive: " + (AstraClient.targetPassive() ? "ON" : "OFF");
@@ -842,6 +849,9 @@ public final class AstraScreen extends Screen {
             case "backgrounds" -> AstraClient.toggleHudBackgrounds();
             case "hudopacity" -> AstraClient.setHudOpacity(AstraClient.hudOpacity() >= 95 ? 50 : AstraClient.hudOpacity() + 15);
             case "resetbind" -> AstraClient.setModuleKeybind(module.id, GLFW.GLFW_KEY_UNKNOWN);
+            case "crosshairSize" -> AstraClient.setCrosshairSize(AstraClient.crosshairSize() >= 20 ? 3 : AstraClient.crosshairSize() + 2);
+            case "crosshairGap" -> AstraClient.setCrosshairGap(AstraClient.crosshairGap() >= 12 ? 1 : AstraClient.crosshairGap() + 1);
+            case "crosshairThickness" -> AstraClient.setCrosshairThickness(AstraClient.crosshairThickness() >= 5 ? 1 : AstraClient.crosshairThickness() + 1);
             case "toggle" -> AstraClient.toggle(module.id);
             case "bind" -> {
                 captureKeybindId = module.id;

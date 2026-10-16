@@ -103,6 +103,9 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean appliedNightVision;
     private static boolean hadNightVisionBeforeEnable;
     private static int zoomFov = 30;
+    private static int crosshairSize = 7;
+    private static int crosshairGap = 3;
+    private static int crosshairThickness = 2;
     private static int espRange = 64;
     private static int combatRange = 4;
     private static boolean targetPlayers = true;
@@ -456,6 +459,29 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    public static int crosshairSize() { return crosshairSize; }
+    public static int crosshairGap() { return crosshairGap; }
+    public static int crosshairThickness() { return crosshairThickness; }
+
+    public static void previewCrosshairSize(int value) { crosshairSize = Math.max(3, Math.min(20, value)); }
+    public static void setCrosshairSize(int value) {
+        previewCrosshairSize(value);
+        notifyUser("Crosshair size: " + crosshairSize);
+        saveConfig();
+    }
+    public static void previewCrosshairGap(int value) { crosshairGap = Math.max(1, Math.min(12, value)); }
+    public static void setCrosshairGap(int value) {
+        previewCrosshairGap(value);
+        notifyUser("Crosshair gap: " + crosshairGap);
+        saveConfig();
+    }
+    public static void previewCrosshairThickness(int value) { crosshairThickness = Math.max(1, Math.min(5, value)); }
+    public static void setCrosshairThickness(int value) {
+        previewCrosshairThickness(value);
+        notifyUser("Crosshair thickness: " + crosshairThickness);
+        saveConfig();
+    }
+
     public static int zoomFov() { return zoomFov; }
 
     public static void setZoomFov(int value) {
@@ -534,6 +560,9 @@ public final class AstraClient implements ClientModInitializer {
         guiScale = 100;
         hudOpacity = 84;
         zoomFov = 30;
+        crosshairSize = 7;
+        crosshairGap = 3;
+        crosshairThickness = 2;
         autoEatHungerThreshold = 16;
         espRange = 64;
         combatRange = 4;
@@ -623,6 +652,9 @@ public final class AstraClient implements ClientModInitializer {
                 Integer.parseInt(properties.getProperty("gui.scale", "100"))));
             zoomFov = Math.max(10, Math.min(60,
                 Integer.parseInt(properties.getProperty("zoom.fov", "30"))));
+            crosshairSize = Math.max(3, Math.min(20, Integer.parseInt(properties.getProperty("crosshair.size", "7"))));
+            crosshairGap = Math.max(1, Math.min(12, Integer.parseInt(properties.getProperty("crosshair.gap", "3"))));
+            crosshairThickness = Math.max(1, Math.min(5, Integer.parseInt(properties.getProperty("crosshair.thickness", "2"))));
             autoEatHungerThreshold = Math.max(10, Math.min(19,
                 Integer.parseInt(properties.getProperty("autoeat.hungerThreshold", "16"))));
             lowHealthThreshold = Math.max(2, Math.min(20,
@@ -673,6 +705,9 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         properties.setProperty("hud.backgrounds", Boolean.toString(hudBackgrounds));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
+        properties.setProperty("crosshair.size", Integer.toString(crosshairSize));
+        properties.setProperty("crosshair.gap", Integer.toString(crosshairGap));
+        properties.setProperty("crosshair.thickness", Integer.toString(crosshairThickness));
         properties.setProperty("autoeat.hungerThreshold", Integer.toString(autoEatHungerThreshold));
         properties.setProperty("lowhealth.threshold", Integer.toString(lowHealthThreshold));
         properties.setProperty("effectalert.thresholdSeconds", Integer.toString(effectAlertThresholdSeconds));
@@ -1284,11 +1319,16 @@ public final class AstraClient implements ClientModInitializer {
                 && entityHit.getEntity() instanceof LivingEntity ? 0xFFFF657A
                 : client.crosshairTarget != null && client.crosshairTarget.getType() == HitResult.Type.BLOCK
                     ? 0xFF69E6B8 : accent;
-            context.fill(cx - 1, cy - 7, cx + 1, cy - 3, color);
-            context.fill(cx - 1, cy + 3, cx + 1, cy + 7, color);
-            context.fill(cx - 7, cy - 1, cx - 3, cy + 1, color);
-            context.fill(cx + 3, cy - 1, cx + 7, cy + 1, color);
-            context.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFFFFFFFF);
+            int halfThickness = crosshairThickness / 2;
+            int left = cx - halfThickness;
+            int right = left + crosshairThickness;
+            context.fill(left, cy - crosshairGap - crosshairSize, right, cy - crosshairGap, color);
+            context.fill(left, cy + crosshairGap, right, cy + crosshairGap + crosshairSize, color);
+            context.fill(cx - crosshairGap - crosshairSize, cy - halfThickness,
+                cx - crosshairGap, cy - halfThickness + crosshairThickness, color);
+            context.fill(cx + crosshairGap, cy - halfThickness,
+                cx + crosshairGap + crosshairSize, cy - halfThickness + crosshairThickness, color);
+            context.fill(cx - 1, cy - 1, cx + 2, cy + 2, 0xFFFFFFFF);
         }
 
         if (isEnabled("compasshud")) {

@@ -25,6 +25,9 @@ public final class AstraModuleSettingsScreen extends Screen {
     private boolean draggingLowHealthSlider;
     private boolean draggingEffectAlertSlider;
     private boolean draggingBlockFinderSlider;
+    private boolean draggingCrosshairSizeSlider;
+    private boolean draggingCrosshairGapSlider;
+    private boolean draggingCrosshairThicknessSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
                                      String description, boolean implemented) {
@@ -83,6 +86,34 @@ public final class AstraModuleSettingsScreen extends Screen {
                 AstraClient.autoSprintGroundOnly() ? "ON" : "OFF", mouseX, mouseY, a);
             drawRow(ctx, x + 20, nextY + 37, panelW - 40, 32, "Pause in menus",
                 AstraClient.autoSprintDisableInMenus() ? "ON" : "OFF", mouseX, mouseY, a);
+        } else if (moduleId.equals("customcrosshair")) {
+            int sliderX = x + 20, sliderW = panelW - 40;
+            ctx.drawText(textRenderer, "ARM LENGTH", sliderX, nextY + 2, WHITE, true);
+            String sizeValue = Integer.toString(AstraClient.crosshairSize());
+            ctx.drawText(textRenderer, sizeValue, sliderX + sliderW - textRenderer.getWidth(sizeValue), nextY + 2, accent(), true);
+            int sizeY = nextY + 16;
+            ctx.fill(sliderX, sizeY, sliderX + sliderW, sizeY + 5, 0xFF2B3344);
+            int sizeFill = (AstraClient.crosshairSize() - 3) * sliderW / 17;
+            ctx.fill(sliderX, sizeY, sliderX + sizeFill, sizeY + 5, accent());
+            ctx.fill(sliderX + sizeFill - 3, sizeY - 3, sliderX + sizeFill + 3, sizeY + 8, WHITE);
+
+            ctx.drawText(textRenderer, "CENTER GAP", sliderX, nextY + 39, WHITE, true);
+            String gapValue = Integer.toString(AstraClient.crosshairGap());
+            ctx.drawText(textRenderer, gapValue, sliderX + sliderW - textRenderer.getWidth(gapValue), nextY + 39, accent(), true);
+            int gapY = nextY + 53;
+            ctx.fill(sliderX, gapY, sliderX + sliderW, gapY + 5, 0xFF2B3344);
+            int gapFill = (AstraClient.crosshairGap() - 1) * sliderW / 11;
+            ctx.fill(sliderX, gapY, sliderX + gapFill, gapY + 5, accent());
+            ctx.fill(sliderX + gapFill - 3, gapY - 3, sliderX + gapFill + 3, gapY + 8, WHITE);
+
+            ctx.drawText(textRenderer, "LINE THICKNESS", sliderX, nextY + 76, WHITE, true);
+            String thicknessValue = Integer.toString(AstraClient.crosshairThickness());
+            ctx.drawText(textRenderer, thicknessValue, sliderX + sliderW - textRenderer.getWidth(thicknessValue), nextY + 76, accent(), true);
+            int thicknessY = nextY + 90;
+            ctx.fill(sliderX, thicknessY, sliderX + sliderW, thicknessY + 5, 0xFF2B3344);
+            int thicknessFill = (AstraClient.crosshairThickness() - 1) * sliderW / 4;
+            ctx.fill(sliderX, thicknessY, sliderX + thicknessFill, thicknessY + 5, accent());
+            ctx.fill(sliderX + thicknessFill - 3, thicknessY - 3, sliderX + thicknessFill + 3, thicknessY + 8, WHITE);
         } else if (moduleId.equals("zoom")) {
             ctx.drawText(textRenderer, "ZOOM FIELD OF VIEW", x + 20, nextY + 3, WHITE, true);
             String fovLabel = AstraClient.zoomFov() + "°";
@@ -281,6 +312,22 @@ public final class AstraModuleSettingsScreen extends Screen {
                 AstraClient.toggleAutoSprintDisableInMenus();
                 return true;
             }
+        } else if (moduleId.equals("customcrosshair")) {
+            if (inside(mouseX, mouseY, x + 20, nextY + 12, pw - 40, 17)) {
+                draggingCrosshairSizeSlider = true;
+                updateCrosshairSizeFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
+            if (inside(mouseX, mouseY, x + 20, nextY + 49, pw - 40, 17)) {
+                draggingCrosshairGapSlider = true;
+                updateCrosshairGapFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
+            if (inside(mouseX, mouseY, x + 20, nextY + 86, pw - 40, 17)) {
+                draggingCrosshairThicknessSlider = true;
+                updateCrosshairThicknessFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
         } else if (moduleId.equals("zoom")) {
             if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
                 draggingZoomSlider = true;
@@ -370,6 +417,21 @@ public final class AstraModuleSettingsScreen extends Screen {
         return mx >= x && mx <= x + w && my >= y && my <= y + h;
     }
 
+    private void updateCrosshairSizeFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewCrosshairSize(3 + (int) Math.round(progress * 17.0));
+    }
+
+    private void updateCrosshairGapFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewCrosshairGap(1 + (int) Math.round(progress * 11.0));
+    }
+
+    private void updateCrosshairThicknessFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewCrosshairThickness(1 + (int) Math.round(progress * 4.0));
+    }
+
     private void updateBlockFinderRangeFromMouse(double mouseX, int sliderX, int sliderW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
         AstraClient.previewBlockFinderRange(8 + (int) Math.round(progress * 40.0));
@@ -410,7 +472,8 @@ public final class AstraModuleSettingsScreen extends Screen {
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (button == 0 && (draggingZoomSlider || draggingEspSlider || draggingCombatSlider
             || draggingAutoEatSlider || draggingLowHealthSlider || draggingEffectAlertSlider
-            || draggingBlockFinderSlider)) {
+            || draggingBlockFinderSlider || draggingCrosshairSizeSlider
+            || draggingCrosshairGapSlider || draggingCrosshairThicknessSlider)) {
             int pw = Math.min(600, width - 24);
             int x = (width - pw) / 2;
             int sliderX = x + 20;
@@ -420,6 +483,9 @@ public final class AstraModuleSettingsScreen extends Screen {
             else if (draggingLowHealthSlider) updateLowHealthThresholdFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingEffectAlertSlider) updateEffectAlertThresholdFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingBlockFinderSlider) updateBlockFinderRangeFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingCrosshairSizeSlider) updateCrosshairSizeFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingCrosshairGapSlider) updateCrosshairGapFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingCrosshairThicknessSlider) updateCrosshairThicknessFromMouse(mouseX, sliderX, pw - 40);
             else updateCombatRangeFromMouse(mouseX, sliderX, pw - 40);
             return true;
         }
@@ -429,7 +495,8 @@ public final class AstraModuleSettingsScreen extends Screen {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (draggingZoomSlider || draggingEspSlider || draggingCombatSlider || draggingAutoEatSlider
-            || draggingLowHealthSlider || draggingEffectAlertSlider || draggingBlockFinderSlider) AstraClient.saveConfig();
+            || draggingLowHealthSlider || draggingEffectAlertSlider || draggingBlockFinderSlider
+            || draggingCrosshairSizeSlider || draggingCrosshairGapSlider || draggingCrosshairThicknessSlider) AstraClient.saveConfig();
         draggingZoomSlider = false;
         draggingEspSlider = false;
         draggingCombatSlider = false;
@@ -437,6 +504,9 @@ public final class AstraModuleSettingsScreen extends Screen {
         draggingLowHealthSlider = false;
         draggingEffectAlertSlider = false;
         draggingBlockFinderSlider = false;
+        draggingCrosshairSizeSlider = false;
+        draggingCrosshairGapSlider = false;
+        draggingCrosshairThicknessSlider = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
