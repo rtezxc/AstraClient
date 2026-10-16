@@ -155,6 +155,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("arraylist", false);
         MODULES.put("watermark", true);
         MODULES.put("fpsgraph", false);
+        MODULES.put("lowhealthalert", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -294,6 +295,7 @@ public final class AstraClient implements ClientModInitializer {
             case "arraylist" -> "Active Modules";
             case "watermark" -> "Watermark";
             case "fpsgraph" -> "FPS Graph";
+            case "lowhealthalert" -> "Low Health Alert";
             default -> id;
         };
     }
@@ -1120,7 +1122,23 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null || client.world == null) return;
 
         int accent = accentColor();
+        int screenWidth = context.getScaledWindowWidth();
         int screenHeight = context.getScaledWindowHeight();
+
+        // A subtle pulsing warning stays out of the way until health is critical.
+        if (isEnabled("lowhealthalert") && client.player.getHealth() > 0.0F
+                && client.player.getHealth() <= 6.0F) {
+            int alpha = (int) (32 + (Math.sin(System.currentTimeMillis() / 180.0) + 1.0) * 30);
+            int warningTint = (alpha << 24) | 0x00FF405D;
+            context.fill(0, 0, screenWidth, 3, warningTint);
+            context.fill(0, screenHeight - 3, screenWidth, screenHeight, warningTint);
+            context.fill(0, 0, 3, screenHeight, warningTint);
+            context.fill(screenWidth - 3, 0, screenWidth, screenHeight, warningTint);
+            String warning = "LOW HEALTH";
+            context.drawTextWithShadow(client.textRenderer, warning,
+                    screenWidth / 2 - client.textRenderer.getWidth(warning) / 2,
+                    screenHeight / 2 + 18, 0xFFFF657A);
+        }
 
         // Minimal custom crosshair overlay; work is done only while the module is enabled.
         if (isEnabled("customcrosshair")) {
