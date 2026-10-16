@@ -946,17 +946,43 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null) return;
         String[] args = rawMessage.trim().split("\\s+");
         if (args.length == 1 || args[1].equalsIgnoreCase("help")) {
-            client.player.sendMessage(Text.literal("§b[Astra] §fCommands: §e.astra modules §7, §e.astra toggle <module-id> §7, §e.astra profile <performance|pvp|exploration> §7, §e.astra hud §7, §e.configs"), false);
+            client.player.sendMessage(Text.literal("§b[Astra] §fCommands: §e.astra status§7, §e.astra coords§7, §e.astra fps§7, §e.astra modules [all]§7, §e.astra toggle <id>§7, §e.astra disableall§7, §e.astra profile <name>§7, §e.astra hud§7, §e.configs"), false);
             return;
         }
         switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "status" -> {
+                var player = client.player;
+                String dimension = client.world == null ? "unknown" : client.world.getRegistryKey().getValue().toString();
+                client.player.sendMessage(Text.literal("§b[Astra] §fStatus §7| FPS: §a" + client.getCurrentFps()
+                    + " §7| Health: §c" + String.format(Locale.ROOT, "%.1f", player.getHealth())
+                    + "§7/§c" + String.format(Locale.ROOT, "%.1f", player.getMaxHealth())
+                    + " §7| Hunger: §e" + player.getHungerManager().getFoodLevel()), false);
+                client.player.sendMessage(Text.literal("§b[Astra] §7Dimension: §f" + dimension
+                    + " §7| Position: §f" + player.getBlockX() + ", " + player.getBlockY() + ", " + player.getBlockZ()), false);
+            }
+            case "coords" -> {
+                var player = client.player;
+                String direction = player.getHorizontalFacing().getName().toUpperCase(Locale.ROOT);
+                client.player.sendMessage(Text.literal("§b[Astra] §fXYZ: §e" + player.getBlockX() + " "
+                    + player.getBlockY() + " " + player.getBlockZ() + " §7| Facing: §b" + direction), false);
+            }
+            case "fps" -> client.player.sendMessage(Text.literal("§b[Astra] §fCurrent FPS: §a" + client.getCurrentFps()), false);
+            case "disableall" -> {
+                MODULES.replaceAll((id, ignored) -> false);
+                KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
+                saveConfig();
+                client.player.sendMessage(Text.literal("§b[Astra] §aDisabled all modules and saved settings."), false);
+            }
             case "modules" -> {
-                List<String> enabled = new ArrayList<>();
+                boolean showAll = args.length > 2 && args[2].equalsIgnoreCase("all");
+                List<String> shown = new ArrayList<>();
                 for (Map.Entry<String, Boolean> entry : MODULES.entrySet()) {
-                    if (Boolean.TRUE.equals(entry.getValue())) enabled.add(entry.getKey());
+                    if (showAll || Boolean.TRUE.equals(entry.getValue())) {
+                        shown.add((Boolean.TRUE.equals(entry.getValue()) ? "§a" : "§7") + entry.getKey());
+                    }
                 }
-                client.player.sendMessage(Text.literal("§b[Astra] §fEnabled modules (" + enabled.size() + "): §a"
-                    + (enabled.isEmpty() ? "none" : String.join("§7, §a", enabled))), false);
+                client.player.sendMessage(Text.literal("§b[Astra] §f" + (showAll ? "All modules" : "Enabled modules")
+                    + " (" + shown.size() + "): " + (shown.isEmpty() ? "none" : String.join("§7, ", shown))), false);
             }
             case "toggle" -> {
                 if (args.length < 3 || !MODULES.containsKey(args[2].toLowerCase(Locale.ROOT))) {
