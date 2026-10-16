@@ -171,7 +171,7 @@ public final class AstraModuleSettingsScreen extends Screen {
                 return true;
             }
             if (inside(mouseX, mouseY, x + 20, nextY + 37, pw - 40, 32)) {
-                client.setScreen(new AstraScreen());
+                client.setScreen(new AstraScreen("Settings"));
                 return true;
             }
         }
