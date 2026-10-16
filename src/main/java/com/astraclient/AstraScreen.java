@@ -373,11 +373,11 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, "CLIENT SETTINGS", contentX, top + 62 - settingsScrollOffset, WHITE, true);
         ctx.drawText(textRenderer, "Preferences save automatically.", contentX, top + 79 - settingsScrollOffset, MUTED, false);
 
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 96 - settingsScrollOffset - settingsScrollOffset, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 96 - settingsScrollOffset, contentW,
             "Accent theme", AstraClient.accentName(), accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 132 - settingsScrollOffset - settingsScrollOffset, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 132 - settingsScrollOffset, contentW,
             "Interface click sound", AstraClient.areClickSoundsEnabled() ? "ON" : "MUTED", accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 168 - settingsScrollOffset - settingsScrollOffset, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 168 - settingsScrollOffset, contentW,
             "GUI open key", capturingGuiKey ? "PRESS A KEY  •  ESC = DEFAULT" : AstraClient.keyName(AstraClient.guiKeybindCode()), accent);
 
         ctx.drawText(textRenderer, "GUI SCALE", contentX, top + 207 - settingsScrollOffset, WHITE, true);
@@ -408,11 +408,11 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, full, contentX + contentW - textRenderer.getWidth(full),
             opacityY + 12, MUTED, false);
 
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 310 - settingsScrollOffset - settingsScrollOffset, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 310 - settingsScrollOffset, contentW,
             "Reset module defaults", "RESET", accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 346 - settingsScrollOffset - settingsScrollOffset, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 346 - settingsScrollOffset, contentW,
             "Export config backup", "EXPORT", accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 382 - settingsScrollOffset - settingsScrollOffset, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 382 - settingsScrollOffset, contentW,
             "Import config backup", "IMPORT", accent);
         if (panelH >= 390) {
             ctx.drawText(textRenderer, "HUD positions are saved from the HUD Editor.", contentX,
