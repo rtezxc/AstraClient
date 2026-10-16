@@ -41,6 +41,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("safewalk", "Safe Walk", "Uses sneak protection near block edges", "Movement", true),
         new ModuleInfo("eagle", "Eagle", "Automatically sneaks when standing over a ledge", "Movement", true),
         new ModuleInfo("inventorymove", "Inventory Move", "Move with inventory open", "Movement", true),
+        new ModuleInfo("autoeat", "Auto Eat", "Automatically eats hotbar food when hunger is 16 or lower", "Inventory", true),
         new ModuleInfo("fly", "Fly", "Client-side flight: jump to rise, sneak to descend", "Movement", true),
         new ModuleInfo("autowalk", "Auto Walk", "Automatically holds forward while in the world", "Movement", true),
         new ModuleInfo("aimassist", "Aim Assist", "Aim assistance", "Combat", false),
