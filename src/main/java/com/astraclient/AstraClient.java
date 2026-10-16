@@ -106,6 +106,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final int[] FPS_HISTORY = new int[40];
     private static int fpsHistoryIndex;
     private static long lastFpsSampleAt;
+    private static LivingEntity lastCombatTarget;
 
     static {
         MODULES.put("fullbright", false);
@@ -737,7 +738,10 @@ public final class AstraClient implements ClientModInitializer {
 
         // If both modules are enabled and TriggerBot has no valid crosshair
         // target (or the attack cooldown is not ready), KillAura can still run.
-        if (!isEnabled("killaura")) return;
+        if (!isEnabled("killaura")) {
+            lastCombatTarget = null;
+            return;
+        }
 
         LivingEntity bestTarget = null;
         double bestDistance = attackRange;
@@ -760,6 +764,7 @@ public final class AstraClient implements ClientModInitializer {
             bestDistance = distance;
         }
 
+        lastCombatTarget = bestTarget;
         if (bestTarget != null) attackTarget(client, bestTarget);
     }
 
@@ -1278,8 +1283,12 @@ public final class AstraClient implements ClientModInitializer {
                 effectY += 21;
             }
         }
-        if (isEnabled("targethud") && client.crosshairTarget instanceof EntityHitResult hit) {
-            Entity entity = hit.getEntity();
+        Entity hudTarget = client.crosshairTarget instanceof EntityHitResult hit
+            ? hit.getEntity()
+            : isEnabled("killaura") && lastCombatTarget != null && lastCombatTarget.isAlive()
+                && client.player.distanceTo(lastCombatTarget) <= 3.0D ? lastCombatTarget : null;
+        if (isEnabled("targethud") && hudTarget != null) {
+            Entity entity = hudTarget;
             String targetName = entity.getName().getString();
             String distance = String.format(Locale.ROOT, "%.1f m", client.player.distanceTo(entity));
             String healthText = entity instanceof LivingEntity living
