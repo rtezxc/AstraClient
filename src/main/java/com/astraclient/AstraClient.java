@@ -1328,6 +1328,11 @@ public final class AstraClient implements ClientModInitializer {
             context.fill(wx, wy, wx + panelWidth, wy + 24, 0xE90B101A);
             context.fill(wx, wy, wx + 3, wy + 24, accent);
             context.fill(wx + panelWidth - 2, wy, wx + panelWidth, wy + 24, 0xFF4AD9F5);
+            int shineWidth = Math.max(10, panelWidth / 5);
+            int shineX = wx + (int) ((System.currentTimeMillis() / 7L) % (panelWidth + shineWidth)) - shineWidth;
+            int shineLeft = Math.max(wx + 3, shineX);
+            int shineRight = Math.min(wx + panelWidth - 2, shineX + shineWidth);
+            if (shineRight > shineLeft) context.fill(shineLeft, wy + 1, shineRight, wy + 3, 0x80FFFFFF);
             context.drawText(client.textRenderer, brand, wx + 9, wy + 4, 0xFFF2F5FC, true);
             context.drawText(client.textRenderer, subtitle, wx + 12 + brandWidth, wy + 7, 0xFF4AD9F5, false);
         }
@@ -1369,7 +1374,7 @@ public final class AstraClient implements ClientModInitializer {
 
         if (isEnabled("keystrokes")) {
             int keyX = hudX("keystrokes", 8);
-            int savedY = hudY("keystrokes", -79);
+            int savedY = hudY("keystrokes", -110);
             int keyY = savedY < 0 ? screenHeight + savedY : savedY;
             drawKey(context, client, client.options.forwardKey, keyX + 22, keyY, "W", accent);
             drawKey(context, client, client.options.leftKey, keyX, keyY + 22, "A", accent);
