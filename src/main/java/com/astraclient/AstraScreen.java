@@ -73,6 +73,8 @@ public final class AstraScreen extends Screen {
     private int scrollOffset;
     private boolean draggingWindow;
     private boolean resizingWindow;
+    private boolean draggingScale;
+    private String captureKeybindId;
     private int dragOffsetX, dragOffsetY, resizeStartX, resizeStartScale;
     private int windowOffsetX, windowOffsetY;
     private final long openedAt = System.currentTimeMillis();
@@ -236,8 +238,10 @@ public final class AstraScreen extends Screen {
                     ctx.drawText(textRenderer, iconFor(module.name), x + 15, y + 15,
                         module.implemented ? accent : 0xFF727B8D, true);
 
-                    String status = module.implemented ? (enabled ? "ON" : "OFF") : "LOCKED";
-                    int statusColor = !module.implemented ? 0xFF777F90 : (enabled ? GREEN : MUTED);
+                    String status = captureKeybindId != null && captureKeybindId.equals(module.id)
+                        ? "PRESS KEY" : (module.implemented ? (enabled ? "ON" : "OFF") : "LOCKED");
+                    int statusColor = captureKeybindId != null && captureKeybindId.equals(module.id)
+                        ? AMBER : (!module.implemented ? 0xFF777F90 : (enabled ? GREEN : MUTED));
                     int statusW = textRenderer.getWidth(status);
                     ctx.drawText(textRenderer, status, x + cardW - statusW - 8, y + 11, statusColor, true);
 
@@ -248,6 +252,9 @@ public final class AstraScreen extends Screen {
                     if (module.implemented) {
                         ctx.fill(x + 10, y + 51, x + 39, y + 58, enabled ? accent : 0xFF30384A);
                         ctx.fill(x + 42, y + 51, x + 49, y + 58, enabled ? 0xFFBDA7FF : 0xFF30384A);
+                        String keyLabel = "KEY " + AstraClient.keyName(AstraClient.moduleKeybind(module.id));
+                        ctx.drawText(textRenderer, truncateToWidth(keyLabel, Math.max(22, cardW - 66)),
+                            x + 56, y + 51, 0xFF7D8AA1, false);
                     } else {
                         ctx.drawText(textRenderer, "NOT IMPLEMENTED", x + 10, y + 51, 0xFF727B8D, false);
                     }
@@ -354,6 +361,9 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 1) {
+            return beginModuleKeybindCapture(mouseX, mouseY);
+        }
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
         int panelW = panelWidth(), panelH = panelHeight();
@@ -410,6 +420,7 @@ public final class AstraScreen extends Screen {
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 183, contentW, 20)) {
+                draggingScale = true;
                 updateScaleFromMouse(mouseX, contentX, contentW);
                 return true;
             }
@@ -454,8 +465,46 @@ public final class AstraScreen extends Screen {
         AstraClient.setGuiScale(75 + (int) Math.round(progress * 50.0));
     }
 
+    private boolean beginModuleKeybindCapture(double mouseX, double mouseY) {
+        if (category.equals("Settings")) return super.mouseClicked(mouseX, mouseY, 1);
+        int panelW = panelWidth(), panelH = panelHeight();
+        int left = panelLeft(panelW), top = panelTop(panelH);
+        int sideW = sidebarWidth(panelW);
+        int contentX = left + sideW + 18;
+        int contentW = panelW - sideW - 34;
+        int listTop = top + 105, listBottom = top + panelH - 43;
+        if (mouseY < listTop || mouseY > listBottom) return true;
+        List<ModuleInfo> visible = getVisibleModules();
+        int cardW = Math.max(70, (contentW - 10) / 2);
+        int stride = 76, cardH = 65;
+        int viewportH = Math.max(1, listBottom - listTop);
+        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
+        for (int i = 0; i < visible.size(); i++) {
+            ModuleInfo module = visible.get(i);
+            int x = contentX + (i % 2) * (cardW + 10);
+            int y = listTop + (i / 2) * stride - scrollOffset;
+            if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
+                if (module.implemented) {
+                    captureKeybindId = module.id;
+                    searchFocused = false;
+                    AstraClient.notifyUser("Press a key to bind " + module.name + " (Esc clears)");
+                }
+                return true;
+            }
+        }
+        return true;
+    }
+
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (button == 0 && draggingScale) {
+            int panelW = panelWidth(), sideW = sidebarWidth(panelW);
+            int x = panelLeft(panelW) + sideW + 18;
+            int w = panelW - sideW - 34;
+            updateScaleFromMouse(mouseX, x, w);
+            return true;
+        }
         if (button == 0 && resizingWindow) {
             AstraClient.previewGuiScale(resizeStartScale + (int) Math.round((mouseX - resizeStartX) / 4.0));
             return true;
@@ -481,9 +530,10 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (resizingWindow) AstraClient.saveConfig();
+        if (resizingWindow || draggingScale) AstraClient.saveConfig();
         draggingWindow = false;
         resizingWindow = false;
+        draggingScale = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
@@ -520,6 +570,15 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (captureKeybindId != null) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                AstraClient.setModuleKeybind(captureKeybindId, GLFW.GLFW_KEY_UNKNOWN);
+            } else {
+                AstraClient.setModuleKeybind(captureKeybindId, keyCode);
+            }
+            captureKeybindId = null;
+            return true;
+        }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (searchFocused) {
                 searchFocused = false;
