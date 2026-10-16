@@ -69,6 +69,7 @@ public final class AstraClient implements ClientModInitializer {
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
         "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph"
     };
+    private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
     private static int guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
@@ -1238,7 +1239,9 @@ public final class AstraClient implements ClientModInitializer {
             }
             String value = weakest.isEmpty() ? "No durable items"
                 : weakest.getName().getString() + " · " + lowestPercent + "%";
-            drawHudLine(client, context, "durabilityhud", 8, 323, "LOWEST DURABILITY", value, accent);
+            int durabilityColor = lowestPercent < 15 ? 0xFFFF657A
+                : lowestPercent < 40 ? 0xFFFFC266 : accent;
+            drawHudLine(client, context, "durabilityhud", 8, 323, "LOWEST DURABILITY", value, durabilityColor);
         }
         if (isEnabled("inventoryhud")) {
             ItemStack selected = client.player.getMainHandStack();
@@ -1341,7 +1344,7 @@ public final class AstraClient implements ClientModInitializer {
             List<String> activeNames = new ArrayList<>();
             for (Map.Entry<String, Boolean> entry : MODULES.entrySet()) {
                 String id = entry.getKey();
-                if (!entry.getValue() || id.equals("arraylist") || List.of(HUD_WIDGET_IDS).contains(id)) continue;
+                if (!entry.getValue() || id.equals("arraylist") || HUD_WIDGET_ID_SET.contains(id)) continue;
                 activeNames.add(readableName(id));
             }
             activeNames.sort((left, right) -> {
