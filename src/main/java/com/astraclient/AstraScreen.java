@@ -38,6 +38,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("noslow", "No Slow", "Reduce action slowdown", "Movement", false),
         new ModuleInfo("speed", "Speed", "Movement speed adjustment", "Movement", false),
         new ModuleInfo("safewalk", "Safe Walk", "Uses sneak protection near block edges", "Movement", true),
+        new ModuleInfo("eagle", "Eagle", "Automatically sneaks when standing over a ledge", "Movement", true),
         new ModuleInfo("inventorymove", "Inventory Move", "Move with inventory open", "Movement", false),
         new ModuleInfo("fly", "Fly", "Custom flight movement", "Movement", false),
         new ModuleInfo("aimassist", "Aim Assist", "Aim assistance", "Combat", false),
