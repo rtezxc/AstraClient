@@ -50,7 +50,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
     private static final Map<String, Integer> MODULE_KEYBINDS = new LinkedHashMap<>();
     private static final Map<String, Boolean> KEY_WAS_DOWN = new LinkedHashMap<>();
-    private static final Map<UUID, Boolean> ORIGINAL_ENTITY_GLOW = new HashMap<>();
+    private static final Map<UUID, GlowState> ORIGINAL_ENTITY_GLOW = new HashMap<>();
     private static Object lastGlowWorld;
     private static final Map<String, Integer> HUD_X = new LinkedHashMap<>();
     private static final Map<String, Integer> HUD_Y = new LinkedHashMap<>();
@@ -59,6 +59,8 @@ public final class AstraClient implements ClientModInitializer {
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
         "potionhud", "targethud", "sessionstats", "keystrokes"
     };
+    private record GlowState(Entity entity, boolean wasGlowing) { }
+
     private static KeyBinding openGuiKey;
     private static int accentTheme;
     private static boolean clickSounds = true;
@@ -557,16 +559,28 @@ public final class AstraClient implements ClientModInitializer {
             UUID uuid = entity.getUuid();
             seen.add(uuid);
             if (desired) {
-                ORIGINAL_ENTITY_GLOW.putIfAbsent(uuid, entity.isGlowing());
+                ORIGINAL_ENTITY_GLOW.putIfAbsent(uuid, new GlowState(entity, entity.isGlowing()));
                 if (!entity.isGlowing()) entity.setGlowing(true);
             } else {
-                Boolean original = ORIGINAL_ENTITY_GLOW.remove(uuid);
-                if (original != null && entity.isGlowing() != original) entity.setGlowing(original);
+                GlowState original = ORIGINAL_ENTITY_GLOW.remove(uuid);
+                if (original != null && entity.isGlowing() != original.wasGlowing()) {
+                    entity.setGlowing(original.wasGlowing());
+                }
             }
         }
 
-        // Forget unloaded entities so the tracking map does not grow between chunks/worlds.
-        ORIGINAL_ENTITY_GLOW.keySet().removeIf(uuid -> !seen.contains(uuid));
+        // Restore entities that walked out of the active radius, and discard stale references.
+        var iterator = ORIGINAL_ENTITY_GLOW.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, GlowState> entry = iterator.next();
+            if (seen.contains(entry.getKey())) continue;
+            GlowState original = entry.getValue();
+            Entity previousEntity = original.entity();
+            if (!previousEntity.isRemoved() && previousEntity.isGlowing() != original.wasGlowing()) {
+                previousEntity.setGlowing(original.wasGlowing());
+            }
+            iterator.remove();
+        }
     }
 
     private static void processModuleKeybinds(MinecraftClient client) {
