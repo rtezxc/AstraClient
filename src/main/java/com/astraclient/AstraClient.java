@@ -31,6 +31,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.Hand;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import org.lwjgl.glfw.GLFW;
@@ -98,6 +99,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("safewalk", false);
         MODULES.put("eagle", false);
         MODULES.put("inventorymove", false);
+        MODULES.put("killaura", false);
+        MODULES.put("triggerbot", false);
         MODULES.put("autotool", false);
         MODULES.put("biome", false);
         MODULES.put("cps", false);
@@ -227,6 +230,8 @@ public final class AstraClient implements ClientModInitializer {
             case "safewalk" -> "Safe Walk";
             case "eagle" -> "Eagle";
             case "inventorymove" -> "Inventory Move";
+            case "killaura" -> "Kill Aura";
+            case "triggerbot" -> "Critical TriggerBot";
             case "autotool" -> "Auto Tool";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -482,6 +487,7 @@ public final class AstraClient implements ClientModInitializer {
 
             processModuleKeybinds(client);
             updateInventoryMove(client);
+            updateCombatModules(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -574,6 +580,65 @@ public final class AstraClient implements ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> restoreZoom(client));
 
         System.out.println("[Astra Client] Initialized for Minecraft 1.21.4");
+    }
+
+    /**
+     * Basic local combat automation. TriggerBot deliberately takes priority over
+     * Kill Aura: while it is enabled, it attacks only the entity under the
+     * crosshair and only when vanilla critical-hit conditions are satisfied.
+     */
+    private static void updateCombatModules(MinecraftClient client) {
+        if (client.player == null || client.world == null || client.interactionManager == null
+            || client.currentScreen != null || client.player.isSpectator()) return;
+
+        if (isEnabled("triggerbot")) {
+            if (client.crosshairTarget instanceof EntityHitResult hit
+                && hit.getEntity() instanceof LivingEntity target
+                && target != client.player && target.isAlive()
+                && client.player.distanceTo(target) <= 4.0F
+                && isCriticalHitReady(client.player)) {
+                attackTarget(client, target);
+            }
+            return;
+        }
+
+        if (!isEnabled("killaura")) return;
+        LivingEntity bestTarget = null;
+        double bestDistance = 4.2D;
+        var look = client.player.getRotationVec(1.0F);
+        var eye = client.player.getEyePos();
+
+        for (LivingEntity candidate : client.world.getEntitiesByClass(
+            LivingEntity.class, client.player.getBoundingBox().expand(4.2D),
+            entity -> entity != client.player && entity.isAlive() && !entity.isSpectator())) {
+            double distance = client.player.distanceTo(candidate);
+            if (distance > bestDistance) continue;
+            var direction = candidate.getBoundingBox().getCenter().subtract(eye).normalize();
+            // Avoid attacking entities behind the player; a broad cone keeps this usable.
+            if (look.dotProduct(direction) < 0.15D) continue;
+            bestTarget = candidate;
+            bestDistance = distance;
+        }
+
+        if (bestTarget != null) attackTarget(client, bestTarget);
+    }
+
+    private static boolean isCriticalHitReady(PlayerEntity player) {
+        return !player.isOnGround()
+            && player.fallDistance > 0.0F
+            && player.getVelocity().y < 0.0D
+            && !player.isClimbing()
+            && !player.isTouchingWater()
+            && !player.hasVehicle()
+            && !player.isSprinting()
+            && !player.hasStatusEffect(StatusEffects.BLINDNESS);
+    }
+
+    private static void attackTarget(MinecraftClient client, LivingEntity target) {
+        if (client.player == null || client.interactionManager == null
+            || client.player.getAttackCooldownProgress(0.0F) < 0.9F) return;
+        client.interactionManager.attackEntity(client.player, target);
+        client.player.swingHand(Hand.MAIN_HAND);
     }
 
     /** Lets keyboard movement bindings remain active while the vanilla inventory is open. */
