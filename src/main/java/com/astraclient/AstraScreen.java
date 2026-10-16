@@ -71,6 +71,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("sessionstats", "Session Stats", "Show time since client start", "Utility", true),
         new ModuleInfo("noweather", "No Weather", "Hide weather effects", "World", false),
         new ModuleInfo("autotool", "Auto Tool", "Select the fastest hotbar tool for the targeted block", "World", true),
+        new ModuleInfo("autoweapon", "Auto Weapon", "Selects a sword or axe while aiming at a living target", "Combat", true),
         new ModuleInfo("fastplace", "Fast Place", "Placement assistance", "World", false),
         new ModuleInfo("fastbreak", "Fast Break", "Breaking assistance", "World", false),
         new ModuleInfo("scaffold", "Scaffold", "Automated block placement", "World", false)
