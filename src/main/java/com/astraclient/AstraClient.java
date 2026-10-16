@@ -946,10 +946,55 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null) return;
         String[] args = rawMessage.trim().split("\\s+");
         if (args.length == 1 || args[1].equalsIgnoreCase("help")) {
-            client.player.sendMessage(Text.literal("§b[Astra] §fCommands: §e.astra status§7, §e.astra coords§7, §e.astra fps§7, §e.astra modules [all]§7, §e.astra toggle <id>§7, §e.astra disableall§7, §e.astra profile <name>§7, §e.astra hud§7, §e.configs"), false);
+            client.player.sendMessage(Text.literal("§b[Astra] §fCommands: §e.astra status/coords/fps§7, §e.astra inventory/armor§7, §e.astra waypoint [set|show|clear]§7, §e.astra modules [all]§7, §e.astra toggle <id>§7, §e.astra disableall§7, §e.astra profile <name>§7, §e.astra hud§7, §e.configs"), false);
             return;
         }
         switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "waypoint" -> {
+                String action = args.length > 2 ? args[2].toLowerCase(Locale.ROOT) : "show";
+                switch (action) {
+                    case "set" -> setWaypointHere();
+                    case "clear" -> clearWaypoint();
+                    case "show" -> {
+                        if (!isWaypointSet()) {
+                            client.player.sendMessage(Text.literal("§b[Astra] §7No waypoint set. Use §e.astra waypoint set"), false);
+                        } else {
+                            double dx = waypointX() + 0.5 - client.player.getX();
+                            double dy = waypointY() + 0.5 - client.player.getY();
+                            double dz = waypointZ() + 0.5 - client.player.getZ();
+                            double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                            client.player.sendMessage(Text.literal("§b[Astra] §fWaypoint: §e" + waypointX() + " "
+                                + waypointY() + " " + waypointZ() + " §7| Distance: §a"
+                                + String.format(Locale.ROOT, "%.1f", distance) + " blocks"), false);
+                        }
+                    }
+                    default -> client.player.sendMessage(Text.literal("§b[Astra] §cUsage: .astra waypoint <set|show|clear>"), false);
+                }
+            }
+            case "inventory" -> {
+                int occupied = 0;
+                int stacks = 0;
+                for (ItemStack stack : client.player.getInventory().main) {
+                    if (!stack.isEmpty()) {
+                        occupied++;
+                        stacks += stack.getCount();
+                    }
+                }
+                ItemStack held = client.player.getMainHandStack();
+                String heldName = held.isEmpty() ? "Empty hand" : held.getName().getString() + " x" + held.getCount();
+                client.player.sendMessage(Text.literal("§b[Astra] §fInventory: §a" + occupied
+                    + "§7/36 slots occupied, §a" + stacks + "§7 total items"), false);
+                client.player.sendMessage(Text.literal("§b[Astra] §fMain hand: §e" + heldName), false);
+            }
+            case "armor" -> {
+                String[] labels = {"Feet", "Legs", "Chest", "Head"};
+                List<String> pieces = new ArrayList<>();
+                for (int i = 0; i < client.player.getInventory().armor.size(); i++) {
+                    ItemStack stack = client.player.getInventory().armor.get(i);
+                    pieces.add(labels[i] + ": " + (stack.isEmpty() ? "empty" : stack.getName().getString()));
+                }
+                client.player.sendMessage(Text.literal("§b[Astra] §fArmor: §e" + String.join(" §7| §e", pieces)), false);
+            }
             case "status" -> {
                 var player = client.player;
                 String dimension = client.world == null ? "unknown" : client.world.getRegistryKey().getValue().toString();
