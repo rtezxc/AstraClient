@@ -206,6 +206,11 @@ public final class AstraScreen extends Screen {
         ctx.fill(left + 22, top + 32, left + 34, top + 35, 0xFF54E8FF);
         ctx.drawText(textRenderer, "ASTRA", left + 50, top + 14, WHITE, true);
         ctx.drawText(textRenderer, "CLIENT  /  FABRIC 1.21.4", left + 50, top + 32, MUTED, false);
+        // Small live-status badge gives the header a polished client-dashboard feel.
+        int liveX = left + panelW - 78;
+        ctx.fill(liveX, top + 20, liveX + 35, top + 34, 0xFF172D2B);
+        ctx.fill(liveX + 5, top + 25, liveX + 9, top + 29, 0xFF69E6B8);
+        ctx.drawText(textRenderer, "LIVE", liveX + 13, top + 23, 0xFF69E6B8, true);
         ctx.fill(left + panelW - 31, top + 17, left + panelW - 11, top + 37, 0xFF242B3B);
         ctx.drawText(textRenderer, "×", left + panelW - 25, top + 22, WHITE, true);
 
@@ -246,6 +251,7 @@ public final class AstraScreen extends Screen {
             if (selected) {
                 ctx.fill(left + 7, categoryY, left + sideW - 7, categoryY + rowHeight, 0xFF29233F);
                 ctx.fill(left + 7, categoryY, left + 10, categoryY + rowHeight, accent);
+                ctx.fill(left + sideW - 13, categoryY + 4, left + sideW - 9, categoryY + rowHeight - 4, 0xFF54E8FF);
             } else if (hover) {
                 ctx.fill(left + 7, categoryY, left + sideW - 7, categoryY + rowHeight, 0xFF1A202D);
             }
@@ -256,8 +262,16 @@ public final class AstraScreen extends Screen {
             categoryY += step;
         }
         ctx.fill(left + 12, top + panelH - 47, left + sideW - 12, top + panelH - 46, LINE);
+        int activeModules = (int) MODULES.stream().filter(m -> m.implemented)
+            .filter(m -> AstraClient.isEnabled(m.id)).count();
         ctx.drawText(textRenderer, "RIGHT SHIFT", left + 13, top + panelH - 37, accent, false);
         ctx.drawText(textRenderer, "ASTRA • LOCAL", left + 13, top + panelH - 23, MUTED, false);
+        String activeLabel = activeModules + " ACTIVE";
+        int badgeW = textRenderer.getWidth(activeLabel) + 12;
+        ctx.fill(left + sideW - badgeW - 10, top + panelH - 25,
+            left + sideW - 8, top + panelH - 12, 0xFF172D2B);
+        ctx.drawText(textRenderer, activeLabel, left + sideW - badgeW - 7,
+            top + panelH - 22, 0xFF69E6B8, true);
 
         if (category.equals("Settings")) {
             renderSettings(ctx, mouseX, mouseY, top, contentX, contentW, panelH, accent);
@@ -285,9 +299,17 @@ public final class AstraScreen extends Screen {
                     if (y + cardH < listTop || y > listBottom) continue;
                     boolean hover = mouseX >= x && mouseX <= x + cardW && mouseY >= y && mouseY <= y + cardH;
                     boolean enabled = module.implemented && AstraClient.isEnabled(module.id);
-                    ctx.fill(x, y, x + cardW, y + cardH, hover ? PANEL_HOVER : PANEL);
+                    // Layered card surfaces, fine borders and a top accent rail create depth
+                    // without relying on rounded-rectangle APIs unavailable in older mappings.
+                    ctx.fill(x, y, x + cardW, y + cardH, hover ? 0xFF252D40 : PANEL);
+                    ctx.fill(x + 1, y + 1, x + cardW - 1, y + cardH - 1,
+                        hover ? 0xFF20283A : 0xFF151B27);
+                    ctx.fill(x, y, x + cardW, y + 1, enabled ? accent : LINE);
                     ctx.fill(x, y, x + 3, y + cardH, module.implemented
                         ? (enabled ? accent : LINE) : 0xFF3A4050);
+                    if (enabled) {
+                        ctx.fill(x + 4, y + 2, x + cardW - 2, y + 3, 0x553FCEE9);
+                    }
                     boolean iconHover = mouseX >= x + 7 && mouseX <= x + 32
                         && mouseY >= y + 7 && mouseY <= y + 32;
                     ctx.fill(x + 10, y + 10, x + 29, y + 29,
@@ -307,11 +329,17 @@ public final class AstraScreen extends Screen {
                     ctx.drawText(textRenderer, truncateToWidth(module.description, Math.max(12, cardW - 22)),
                         x + 10, y + 34, MUTED, false);
                     if (module.implemented) {
-                        ctx.fill(x + 10, y + 51, x + 39, y + 58, enabled ? accent : 0xFF30384A);
-                        ctx.fill(x + 42, y + 51, x + 49, y + 58, enabled ? 0xFFBDA7FF : 0xFF30384A);
                         String keyLabel = "KEY " + AstraClient.keyName(AstraClient.moduleKeybind(module.id));
-                        ctx.drawText(textRenderer, truncateToWidth(keyLabel, Math.max(22, cardW - 66)),
-                            x + 56, y + 51, 0xFF7D8AA1, false);
+                        ctx.drawText(textRenderer, truncateToWidth(keyLabel, Math.max(22, cardW - 78)),
+                            x + 10, y + 51, 0xFF7D8AA1, false);
+                        // Compact toggle switch mirrors the module's current state.
+                        int switchX = x + cardW - 34;
+                        int switchY = y + 50;
+                        ctx.fill(switchX, switchY, switchX + 25, switchY + 11,
+                            enabled ? 0xFF254A48 : 0xFF303747);
+                        ctx.fill(switchX + (enabled ? 15 : 3), switchY + 2,
+                            switchX + (enabled ? 23 : 11), switchY + 9,
+                            enabled ? 0xFF69E6B8 : 0xFF8A93A6);
                     } else {
                         ctx.drawText(textRenderer, "NOT IMPLEMENTED", x + 10, y + 51, 0xFF727B8D, false);
                     }
@@ -320,6 +348,12 @@ public final class AstraScreen extends Screen {
                 long ready = visible.stream().filter(m -> m.implemented).count();
                 ctx.drawText(textRenderer, visible.size() + " MODULES  •  " + ready + " AVAILABLE",
                     contentX, top + panelH - 26, MUTED, false);
+                if (rows * stride > viewportH) {
+                    String scrollHint = "SCROLL TO EXPLORE";
+                    int hintW = textRenderer.getWidth(scrollHint);
+                    ctx.drawText(textRenderer, scrollHint,
+                        contentX + contentW - hintW, top + panelH - 26, accent, false);
+                }
             }
         }
 
