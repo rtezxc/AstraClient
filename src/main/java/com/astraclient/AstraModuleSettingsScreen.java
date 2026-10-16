@@ -144,6 +144,12 @@ public final class AstraModuleSettingsScreen extends Screen {
             String maxRange = "128 blocks";
             ctx.drawText(textRenderer, maxRange, sliderX + sliderW - textRenderer.getWidth(maxRange),
                 sliderY + 13, MUTED, false);
+            if (moduleId.equals("tracers")) {
+                drawRow(ctx, x + 20, nextY + 54, panelW - 40, 27, "Trace players",
+                    AstraClient.tracerPlayers() ? "ON" : "OFF", mouseX, mouseY, a);
+                drawRow(ctx, x + 20, nextY + 84, panelW - 40, 27, "Trace mobs",
+                    AstraClient.tracerMobs() ? "ON" : "OFF", mouseX, mouseY, a);
+            }
         } else if (moduleId.equals("blockfinder")) {
             drawRow(ctx, x + 20, nextY, panelW - 40, 32, "Search target",
                 AstraClient.blockFinderTarget(), mouseX, mouseY, a);
@@ -339,6 +345,14 @@ public final class AstraModuleSettingsScreen extends Screen {
             if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
                 draggingEspSlider = true;
                 updateEspRangeFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
+            if (moduleId.equals("tracers") && inside(mouseX, mouseY, x + 20, nextY + 54, pw - 40, 27)) {
+                AstraClient.toggleTracerPlayers();
+                return true;
+            }
+            if (moduleId.equals("tracers") && inside(mouseX, mouseY, x + 20, nextY + 84, pw - 40, 27)) {
+                AstraClient.toggleTracerMobs();
                 return true;
             }
         } else if (moduleId.equals("blockfinder")) {

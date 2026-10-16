@@ -724,8 +724,11 @@ public final class AstraScreen extends Screen {
             actions.add("players");
             actions.add("hostile");
             actions.add("passive");
-        } else if (module.id.equals("playeresp") || module.id.equals("mobesp")
-            || module.id.equals("itemesp") || module.id.equals("tracers")) {
+        } else if (module.id.equals("tracers")) {
+            actions.add("range");
+            actions.add("tracerPlayers");
+            actions.add("tracerMobs");
+        } else if (module.id.equals("playeresp") || module.id.equals("mobesp") || module.id.equals("itemesp")) {
             actions.add("range");
         } else if (module.id.equals("autosprint")) {
             actions.add("ground");
@@ -775,6 +778,8 @@ public final class AstraScreen extends Screen {
             case "range" -> module != null && module.id.equals("tracers")
                 ? "Cycle tracer range (" + AstraClient.espRange() + ")"
                 : "Cycle outline range (" + AstraClient.espRange() + ")";
+            case "tracerPlayers" -> "Trace players: " + (AstraClient.tracerPlayers() ? "ON" : "OFF");
+            case "tracerMobs" -> "Trace mobs: " + (AstraClient.tracerMobs() ? "ON" : "OFF");
             case "ground" -> "Ground only: " + (AstraClient.autoSprintGroundOnly() ? "ON" : "OFF");
             case "menus" -> "Pause in menus: " + (AstraClient.autoSprintDisableInMenus() ? "ON" : "OFF");
             case "zoom" -> "Cycle zoom FOV (" + AstraClient.zoomFov() + "°)";
@@ -861,6 +866,8 @@ public final class AstraScreen extends Screen {
             case "hostile" -> AstraClient.toggleCombatTarget("hostile");
             case "passive" -> AstraClient.toggleCombatTarget("passive");
             case "range" -> AstraClient.setEspRange(AstraClient.espRange() >= 112 ? 16 : AstraClient.espRange() + 16);
+            case "tracerPlayers" -> AstraClient.toggleTracerPlayers();
+            case "tracerMobs" -> AstraClient.toggleTracerMobs();
             case "ground" -> AstraClient.toggleAutoSprintGroundOnly();
             case "menus" -> AstraClient.toggleAutoSprintDisableInMenus();
             case "zoom" -> AstraClient.setZoomFov(AstraClient.zoomFov() >= 50 ? 10 : AstraClient.zoomFov() + 10);

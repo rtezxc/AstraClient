@@ -459,6 +459,21 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    public static boolean tracerPlayers() { return tracerPlayers; }
+    public static boolean tracerMobs() { return tracerMobs; }
+    public static void toggleTracerPlayers() {
+        tracerPlayers = !tracerPlayers;
+        cachedTracerTargets.clear();
+        notifyUser("Player tracers " + (tracerPlayers ? "enabled" : "disabled"));
+        saveConfig();
+    }
+    public static void toggleTracerMobs() {
+        tracerMobs = !tracerMobs;
+        cachedTracerTargets.clear();
+        notifyUser("Mob tracers " + (tracerMobs ? "enabled" : "disabled"));
+        saveConfig();
+    }
+
     public static int crosshairSize() { return crosshairSize; }
     public static int crosshairGap() { return crosshairGap; }
     public static int crosshairThickness() { return crosshairThickness; }
@@ -655,6 +670,8 @@ public final class AstraClient implements ClientModInitializer {
             crosshairSize = Math.max(3, Math.min(20, Integer.parseInt(properties.getProperty("crosshair.size", "7"))));
             crosshairGap = Math.max(1, Math.min(12, Integer.parseInt(properties.getProperty("crosshair.gap", "3"))));
             crosshairThickness = Math.max(1, Math.min(5, Integer.parseInt(properties.getProperty("crosshair.thickness", "2"))));
+            tracerPlayers = Boolean.parseBoolean(properties.getProperty("tracers.players", "true"));
+            tracerMobs = Boolean.parseBoolean(properties.getProperty("tracers.mobs", "true"));
             autoEatHungerThreshold = Math.max(10, Math.min(19,
                 Integer.parseInt(properties.getProperty("autoeat.hungerThreshold", "16"))));
             lowHealthThreshold = Math.max(2, Math.min(20,
@@ -708,6 +725,8 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("crosshair.size", Integer.toString(crosshairSize));
         properties.setProperty("crosshair.gap", Integer.toString(crosshairGap));
         properties.setProperty("crosshair.thickness", Integer.toString(crosshairThickness));
+        properties.setProperty("tracers.players", Boolean.toString(tracerPlayers));
+        properties.setProperty("tracers.mobs", Boolean.toString(tracerMobs));
         properties.setProperty("autoeat.hungerThreshold", Integer.toString(autoEatHungerThreshold));
         properties.setProperty("lowhealth.threshold", Integer.toString(lowHealthThreshold));
         properties.setProperty("effectalert.thresholdSeconds", Integer.toString(effectAlertThresholdSeconds));
@@ -1058,6 +1077,8 @@ public final class AstraClient implements ClientModInitializer {
     private static final List<LivingEntity> cachedTracerTargets = new ArrayList<>();
     private static long lastTracerScanAt;
     private static Object tracerWorld;
+    private static boolean tracerPlayers = true;
+    private static boolean tracerMobs = true;
     private static boolean autoWalkWasForcing;
     /**
      * Uses food from the hotbar when hunger is low. It stops when the player
@@ -1684,6 +1705,7 @@ public final class AstraClient implements ClientModInitializer {
             LivingEntity.class, client.player.getBoundingBox().expand(espRange),
             entity -> entity != client.player && entity.isAlive()
                 && client.player.distanceTo(entity) <= espRange
+                && (entity instanceof PlayerEntity ? tracerPlayers : tracerMobs)
         );
         found.sort((left, right) ->
             Double.compare(client.player.distanceTo(left), client.player.distanceTo(right)));
