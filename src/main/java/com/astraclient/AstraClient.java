@@ -956,7 +956,7 @@ public final class AstraClient implements ClientModInitializer {
                     if (Boolean.TRUE.equals(entry.getValue())) enabled.add(entry.getKey());
                 }
                 client.player.sendMessage(Text.literal("§b[Astra] §fEnabled modules (" + enabled.size() + "): §a"
-                    + (enabled.isEmpty() ? "none" : String.join("§7, §a", enabled)), false);
+                    + (enabled.isEmpty() ? "none" : String.join("§7, §a", enabled))), false);
             }
             case "toggle" -> {
                 if (args.length < 3 || !MODULES.containsKey(args[2].toLowerCase(Locale.ROOT))) {
