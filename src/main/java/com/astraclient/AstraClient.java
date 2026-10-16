@@ -2,6 +2,7 @@ package com.astraclient;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.loader.api.FabricLoader;
@@ -66,10 +67,14 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean fullBrightWasEnabled;
     private static boolean appliedNightVision;
     private static boolean hadNightVisionBeforeEnable;
+    private static int zoomFov = 30;
+    private static int originalFov = 70;
+    private static boolean zoomOverrideActive;
 
     static {
         MODULES.put("fullbright", false);
         MODULES.put("playeresp", false);
+        MODULES.put("zoom", false);
         MODULES.put("autosprint", false);
         MODULES.put("fps", true);
         MODULES.put("coordinates", false);
@@ -253,6 +258,18 @@ public final class AstraClient implements ClientModInitializer {
         guiScale = Math.max(75, Math.min(125, value));
     }
 
+    public static int zoomFov() { return zoomFov; }
+
+    public static void setZoomFov(int value) {
+        zoomFov = Math.max(10, Math.min(60, value));
+        notifyUser("Zoom FOV: " + zoomFov);
+        saveConfig();
+    }
+
+    public static void previewZoomFov(int value) {
+        zoomFov = Math.max(10, Math.min(60, value));
+    }
+
     public static int hudOpacity() {
         return hudOpacity;
     }
@@ -279,6 +296,7 @@ public final class AstraClient implements ClientModInitializer {
         autoSprintDisableInMenus = true;
         guiScale = 100;
         hudOpacity = 84;
+        zoomFov = 30;
         notifyUser("Settings reset to defaults");
         saveConfig();
     }
@@ -298,6 +316,8 @@ public final class AstraClient implements ClientModInitializer {
             );
             guiScale = Math.max(75, Math.min(125,
                 Integer.parseInt(properties.getProperty("gui.scale", "100"))));
+            zoomFov = Math.max(10, Math.min(60,
+                Integer.parseInt(properties.getProperty("zoom.fov", "30"))));
             for (String id : MODULE_KEYBINDS.keySet()) {
                 MODULE_KEYBINDS.put(id, Integer.parseInt(
                     properties.getProperty("keybind." + id, Integer.toString(GLFW.GLFW_KEY_UNKNOWN))));
@@ -324,6 +344,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("autosprint.disableInMenus", Boolean.toString(autoSprintDisableInMenus));
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
+        properties.setProperty("zoom.fov", Integer.toString(zoomFov));
         for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
             properties.setProperty("keybind." + entry.getKey(), Integer.toString(entry.getValue()));
         }
@@ -385,6 +406,7 @@ public final class AstraClient implements ClientModInitializer {
 
             processModuleKeybinds(client);
             updatePlayerEsp(client);
+            updateZoom(client);
             if (client.player == null || client.world == null) return;
 
             boolean fullBrightEnabled = isEnabled("fullbright");
@@ -421,8 +443,33 @@ public final class AstraClient implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register((drawContext, tickCounter) ->
             renderHud(MinecraftClient.getInstance(), drawContext));
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> restoreZoom(client));
 
         System.out.println("[Astra Client] Initialized for Minecraft 1.21.4");
+    }
+
+    private static void updateZoom(MinecraftClient client) {
+        if (client.options == null) return;
+        if (isEnabled("zoom")) {
+            if (!zoomOverrideActive) {
+                originalFov = client.options.getFov().getValue();
+                zoomOverrideActive = true;
+            }
+            if (client.options.getFov().getValue() != zoomFov) {
+                client.options.getFov().setValue(zoomFov);
+            }
+        } else if (zoomOverrideActive) {
+            client.options.getFov().setValue(originalFov);
+            zoomOverrideActive = false;
+        }
+    }
+
+    private static void restoreZoom(MinecraftClient client) {
+        if (zoomOverrideActive && client.options != null) {
+            client.options.getFov().setValue(originalFov);
+        }
+        zoomOverrideActive = false;
+        saveConfig();
     }
 
     /**
