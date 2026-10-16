@@ -91,7 +91,8 @@ public final class AstraHudEditorScreen extends Screen {
         int pulseAlpha = 45 + (int) (35 * (0.5 + 0.5 * Math.sin(now / 240.0)));
         context.fill(10, headerY - 1, width - 10, headerY, (pulseAlpha << 24) | (accent & 0x00FFFFFF));
         context.drawText(textRenderer, "ASTRA  /  HUD EDITOR", 22, headerY + 12, TEXT, true);
-        context.drawText(textRenderer, "Drag to reposition  •  Right-click to toggle  •  Changes save automatically",
+        context.drawText(textRenderer, "Drag to reposition  •  Right-click toggles  •  Chat + "
+            + AstraClient.keyName(AstraClient.hudEditKeybindCode()) + " = live drag mode",
             22, headerY + 30, MUTED, false);
 
         renderedBoxes.clear();

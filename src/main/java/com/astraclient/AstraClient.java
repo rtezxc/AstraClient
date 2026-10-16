@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.sound.PositionedSoundInstance;
@@ -70,9 +71,18 @@ public final class AstraClient implements ClientModInitializer {
         "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "compasshud"
     };
     private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
+    private static final Map<String, HudBounds> HUD_RENDERED_BOUNDS = new LinkedHashMap<>();
     private record GlowState(Entity entity, boolean wasGlowing) { }
+    private record HudBounds(int x, int y, int width, int height) { }
 
     private static int guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
+    private static int hudEditKeybindCode = GLFW.GLFW_KEY_F6;
+    private static boolean hudEditKeyWasDown;
+    private static boolean hudChatEditMode;
+    private static boolean hudMouseWasDown;
+    private static boolean hudRightMouseWasDown;
+    private static String draggedHudId;
+    private static int hudDragOffsetX, hudDragOffsetY;
     private static boolean guiKeyWasDown;
     private static long guiKeybindIgnoreUntil;
     private static int accentTheme;
@@ -364,6 +374,15 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    public static int hudEditKeybindCode() { return hudEditKeybindCode; }
+
+    public static void setHudEditKeybindCode(int keyCode) {
+        hudEditKeybindCode = keyCode == GLFW.GLFW_KEY_UNKNOWN ? GLFW.GLFW_KEY_F6 : keyCode;
+        hudEditKeyWasDown = false;
+        notifyUser("Chat HUD drag key: " + keyName(hudEditKeybindCode));
+        saveConfig();
+    }
+
     public static int guiScale() {
         return guiScale;
     }
@@ -530,6 +549,8 @@ public final class AstraClient implements ClientModInitializer {
             )));
             guiKeybindCode = Integer.parseInt(properties.getProperty("gui.keybind", Integer.toString(GLFW.GLFW_KEY_RIGHT_SHIFT)));
             if (guiKeybindCode < GLFW.GLFW_KEY_SPACE || guiKeybindCode > GLFW.GLFW_KEY_LAST) guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
+            hudEditKeybindCode = Integer.parseInt(properties.getProperty("hud.editorKey", Integer.toString(GLFW.GLFW_KEY_F6)));
+            if (hudEditKeybindCode < GLFW.GLFW_KEY_SPACE || hudEditKeybindCode > GLFW.GLFW_KEY_LAST) hudEditKeybindCode = GLFW.GLFW_KEY_F6;
             guiScale = Math.max(75, Math.min(125,
                 Integer.parseInt(properties.getProperty("gui.scale", "100"))));
             zoomFov = Math.max(10, Math.min(60,
@@ -568,6 +589,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("autosprint.groundOnly", Boolean.toString(autoSprintGroundOnly));
         properties.setProperty("autosprint.disableInMenus", Boolean.toString(autoSprintDisableInMenus));
         properties.setProperty("gui.keybind", Integer.toString(guiKeybindCode));
+        properties.setProperty("hud.editorKey", Integer.toString(hudEditKeybindCode));
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
@@ -620,6 +642,7 @@ public final class AstraClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             long guiWindow = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+            updateChatHudEditor(client);
             boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
                 && GLFW.glfwGetKey(guiWindow, guiKeybindCode) == GLFW.GLFW_PRESS;
             if (guiDown && !guiKeyWasDown) {
@@ -1128,6 +1151,7 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     private static void renderHud(MinecraftClient client, DrawContext context) {
+        HUD_RENDERED_BOUNDS.clear();
         if (client.player == null || client.world == null) return;
 
         int accent = accentColor();
@@ -1188,6 +1212,7 @@ public final class AstraClient implements ClientModInitializer {
                 }
             }
             context.fill(centerX - 1, compassY + 14, centerX + 1, compassY + 24, accent);
+            HUD_RENDERED_BOUNDS.put("compasshud", new HudBounds(compassX, compassY, 172, 25));
         }
 
         if (isEnabled("effectalert")) {
@@ -1320,14 +1345,21 @@ public final class AstraClient implements ClientModInitializer {
         }
         if (isEnabled("potionhud")) {
             int effectY = hudY("potionhud", 260);
+            int potionX = hudX("potionhud", 150);
+            int potionStartY = effectY;
+            int potionMaxWidth = 0;
+            int potionRows = 0;
             for (StatusEffectInstance effect : client.player.getStatusEffects()) {
                 if (effectY + 18 > screenHeight - 20) break;
                 String name = effect.getEffectType().value().getName().getString();
                 String duration = effect.getDuration() < 0 ? "∞" : formatDuration(effect.getDuration());
-                drawHudLineAt(client, context, hudX("potionhud", 150), effectY, "EFFECT",
-                    name + " " + duration, accent);
+                potionMaxWidth = Math.max(potionMaxWidth, drawHudLineAt(client, context, potionX, effectY, "EFFECT",
+                    name + " " + duration, accent));
                 effectY += 21;
+                potionRows++;
             }
+            if (potionRows > 0) HUD_RENDERED_BOUNDS.put("potionhud",
+                new HudBounds(potionX, potionStartY, potionMaxWidth, potionRows * 21 - 3));
         }
         Entity hudTarget = client.crosshairTarget instanceof EntityHitResult hit
             ? hit.getEntity()
@@ -1346,6 +1378,7 @@ public final class AstraClient implements ClientModInitializer {
                 Math.max(142, Math.max(client.textRenderer.getWidth(targetName),
                     client.textRenderer.getWidth(healthText) + client.textRenderer.getWidth(distance)) + 24));
             context.fill(x, y, x + panelWidth, y + 38, 0xD90B101A);
+            HUD_RENDERED_BOUNDS.put("targethud", new HudBounds(x, y, panelWidth, 38));
             context.fill(x, y, x + 3, y + 38, accent);
             context.drawText(client.textRenderer, targetName, x + 10, y + 5, 0xFFF3F5FC, true);
             context.drawText(client.textRenderer, distance, x + panelWidth - client.textRenderer.getWidth(distance) - 8,
@@ -1377,6 +1410,7 @@ public final class AstraClient implements ClientModInitializer {
             int gy = Math.max(2, Math.min(screenHeight - 54, hudY("fpsgraph", 70)));
             int graphWidth = 122;
             int graphHeight = 52;
+            HUD_RENDERED_BOUNDS.put("fpsgraph", new HudBounds(gx, gy, graphWidth, graphHeight));
             context.fill(gx, gy, gx + graphWidth, gy + graphHeight, 0xD90B101A);
             context.fill(gx, gy, gx + graphWidth, gy + 2, accent);
             context.drawText(client.textRenderer, "FPS HISTORY", gx + 5, gy + 5, 0xFFF2F5FC, false);
@@ -1401,6 +1435,7 @@ public final class AstraClient implements ClientModInitializer {
             String subtitle = "CLIENT";
             int brandWidth = client.textRenderer.getWidth(brand);
             int panelWidth = brandWidth + client.textRenderer.getWidth(subtitle) + 30;
+            HUD_RENDERED_BOUNDS.put("watermark", new HudBounds(wx, wy, panelWidth, 24));
             context.fill(wx, wy, wx + panelWidth, wy + 24, 0xE90B101A);
             context.fill(wx, wy, wx + 3, wy + 24, accent);
             context.fill(wx + panelWidth - 2, wy, wx + panelWidth, wy + 24, 0xFF4AD9F5);
@@ -1426,6 +1461,10 @@ public final class AstraClient implements ClientModInitializer {
             });
             int listX = hudX("arraylist", 150);
             int listY = hudY("arraylist", 8);
+            int arrayWidth = activeNames.isEmpty() ? 126
+                : activeNames.stream().mapToInt(name -> client.textRenderer.getWidth(name) + 14).max().orElse(126);
+            HUD_RENDERED_BOUNDS.put("arraylist", new HudBounds(listX, listY, arrayWidth,
+                Math.max(14, activeNames.size() * 14)));
             for (int i = 0; i < activeNames.size(); i++) {
                 String name = activeNames.get(i);
                 int rowWidth = client.textRenderer.getWidth(name) + 14;
@@ -1457,7 +1496,221 @@ public final class AstraClient implements ClientModInitializer {
             drawKey(context, client, client.options.backKey, keyX + 22, keyY + 22, "S", accent);
             drawKey(context, client, client.options.rightKey, keyX + 44, keyY + 22, "D", accent);
             drawKey(context, client, client.options.jumpKey, keyX, keyY + 44, "JUMP", accent);
+            HUD_RENDERED_BOUNDS.put("keystrokes", new HudBounds(keyX, keyY, 64, 63));
         }
+
+        renderChatHudEditingOverlay(client, context);
+    }
+
+    /**
+     * Chat HUD editor: open chat, press the configured editor key, then drag a widget.
+     * Right-clicking a widget toggles it. Movement is committed on mouse release,
+     * so config writes do not happen every tick or every rendered frame.
+     */
+    private static void updateChatHudEditor(MinecraftClient client) {
+        long handle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+        boolean chatOpen = client.currentScreen instanceof ChatScreen;
+        boolean editorKeyDown = handle != 0L && hudEditKeybindCode != GLFW.GLFW_KEY_UNKNOWN
+            && GLFW.glfwGetKey(handle, hudEditKeybindCode) == GLFW.GLFW_PRESS;
+        if (chatOpen && editorKeyDown && !hudEditKeyWasDown) {
+            hudChatEditMode = !hudChatEditMode;
+            if (!hudChatEditMode) finishHudDrag();
+            notifyUser(hudChatEditMode
+                ? "HUD EDIT MODE: drag widgets; right-click toggles them"
+                : "HUD edit mode closed");
+        }
+        hudEditKeyWasDown = editorKeyDown;
+
+        if (!chatOpen) {
+            if (hudChatEditMode || draggedHudId != null) {
+                hudChatEditMode = false;
+                finishHudDrag();
+            }
+            hudMouseWasDown = false;
+            hudRightMouseWasDown = false;
+            return;
+        }
+        if (!hudChatEditMode || handle == 0L) {
+            hudMouseWasDown = handle != 0L && GLFW.glfwGetMouseButton(handle, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+            hudRightMouseWasDown = handle != 0L && GLFW.glfwGetMouseButton(handle, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            return;
+        }
+
+        boolean leftDown = GLFW.glfwGetMouseButton(handle, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        boolean rightDown = GLFW.glfwGetMouseButton(handle, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        var window = client.getWindow();
+        double mouseX = client.mouse.getX() * window.getScaledWidth() / Math.max(1.0, window.getWidth());
+        double mouseY = client.mouse.getY() * window.getScaledHeight() / Math.max(1.0, window.getHeight());
+
+        if (leftDown && !hudMouseWasDown) {
+            String hit = hitTestHud(mouseX, mouseY);
+            if (hit != null) {
+                HudBounds bounds = HUD_RENDERED_BOUNDS.get(hit);
+                if (bounds != null) {
+                    draggedHudId = hit;
+                    hudDragOffsetX = (int) Math.round(mouseX) - bounds.x();
+                    hudDragOffsetY = (int) Math.round(mouseY) - bounds.y();
+                }
+            }
+        }
+        if (leftDown && draggedHudId != null) {
+            HudBounds current = HUD_RENDERED_BOUNDS.get(draggedHudId);
+            if (current != null) {
+                int x = clampInt((int) Math.round(mouseX) - hudDragOffsetX, 0,
+                    Math.max(0, window.getScaledWidth() - current.width()));
+                int y = clampInt((int) Math.round(mouseY) - hudDragOffsetY, 0,
+                    Math.max(0, window.getScaledHeight() - current.height()));
+                previewHudPosition(draggedHudId, x, y);
+            }
+        }
+        if (!leftDown && hudMouseWasDown && draggedHudId != null) finishHudDrag();
+
+        if (rightDown && !hudRightMouseWasDown) {
+            String hit = hitTestHud(mouseX, mouseY);
+            if (hit != null) toggle(hit);
+        }
+        hudMouseWasDown = leftDown;
+        hudRightMouseWasDown = rightDown;
+    }
+
+    private static void finishHudDrag() {
+        if (draggedHudId != null) {
+            String name = readableName(draggedHudId);
+            saveConfig();
+            notifyUser(name + " position saved");
+        }
+        draggedHudId = null;
+    }
+
+    private static String hitTestHud(double mouseX, double mouseY) {
+        for (int i = HUD_WIDGET_IDS.length - 1; i >= 0; i--) {
+            HudBounds bounds = HUD_RENDERED_BOUNDS.get(HUD_WIDGET_IDS[i]);
+            if (bounds != null && mouseX >= bounds.x() && mouseX <= bounds.x() + bounds.width()
+                && mouseY >= bounds.y() && mouseY <= bounds.y() + bounds.height()) {
+                return HUD_WIDGET_IDS[i];
+            }
+        }
+        return null;
+    }
+
+    private static int defaultHudX(String id, int screenWidth) {
+        return switch (id) {
+            case "arraylist", "potionhud", "targethud", "blockreachhud", "frametimehud", "fpsgraph" -> 150;
+            case "compasshud" -> screenWidth / 2 - 84;
+            default -> 8;
+        };
+    }
+
+    private static int defaultHudY(String id, int screenHeight) {
+        return switch (id) {
+            case "fps" -> 8;
+            case "coordinates" -> 29;
+            case "direction" -> 50;
+            case "ping" -> 71;
+            case "memory" -> 92;
+            case "speedometer" -> 113;
+            case "clock" -> 134;
+            case "watermark" -> 160;
+            case "compasshud" -> 178;
+            case "arraylist" -> 8;
+            case "fpsgraph" -> 70;
+            case "totemcounter" -> 218;
+            case "pearlcounter" -> 239;
+            case "arrowcounter" -> 260;
+            case "goldencounter" -> 281;
+            case "armorhud" -> 302;
+            case "durabilityhud" -> 323;
+            case "inventoryhud" -> 344;
+            case "biome" -> 365;
+            case "cps" -> 386;
+            case "worldinfo" -> 407;
+            case "potioncounter" -> 428;
+            case "sessionstats" -> 449;
+            case "potionhud" -> 260;
+            case "targethud" -> screenHeight - 43;
+            case "healthhud" -> screenHeight - 42;
+            case "hungerhud" -> screenHeight - 21;
+            case "blockreachhud" -> screenHeight - 84;
+            case "frametimehud" -> screenHeight - 63;
+            case "keystrokes" -> screenHeight - 110;
+            default -> 8;
+        };
+    }
+
+    private static void renderChatHudEditingOverlay(MinecraftClient client, DrawContext context) {
+        if (!hudChatEditMode || !(client.currentScreen instanceof ChatScreen)) return;
+        int screenWidth = context.getScaledWindowWidth();
+        int screenHeight = context.getScaledWindowHeight();
+        int accent = accentColor();
+        long now = System.currentTimeMillis();
+        String key = keyName(hudEditKeybindCode);
+        String banner = "ASTRA HUD EDIT  •  DRAG TO MOVE  •  RIGHT-CLICK TO TOGGLE  •  " + key + " TO EXIT";
+        int bannerWidth = Math.min(screenWidth - 12, client.textRenderer.getWidth(banner) + 18);
+        int bx = Math.max(6, (screenWidth - bannerWidth) / 2);
+        int by = 6;
+        context.fill(bx, by, bx + bannerWidth, by + 23, 0xE90B101A);
+        context.fill(bx, by, bx + bannerWidth, by + 2, accent);
+        int shineWidth = Math.max(12, bannerWidth / 7);
+        int shineX = bx + (int) ((now / 5L) % (bannerWidth + shineWidth)) - shineWidth;
+        int shineLeft = Math.max(bx + 2, shineX);
+        int shineRight = Math.min(bx + bannerWidth - 2, shineX + shineWidth);
+        if (shineRight > shineLeft) context.fill(shineLeft, by + 1, shineRight, by + 3, 0xBFFFFFFF);
+        context.drawText(client.textRenderer, banner, bx + 9, by + 8, 0xFFF3F5FC, true);
+
+        double mouseX = client.mouse.getX() * screenWidth / Math.max(1.0, client.getWindow().getWidth());
+        double mouseY = client.mouse.getY() * screenHeight / Math.max(1.0, client.getWindow().getHeight());
+        for (String id : HUD_WIDGET_IDS) {
+            HudBounds actual = HUD_RENDERED_BOUNDS.get(id);
+            int fallbackX = defaultHudX(id, screenWidth);
+            int fallbackY = defaultHudY(id, screenHeight);
+            int x = hudX(id, fallbackX);
+            int y = hudY(id, fallbackY);
+            if (y < 0) y = screenHeight + y;
+            int boxWidth = actual == null
+                ? Math.max(78, Math.min(220, client.textRenderer.getWidth(readableName(id) + "  OFF") + 16))
+                : actual.width();
+            int boxHeight = actual == null ? 18 : actual.height();
+            if (actual == null || !isEnabled(id)) {
+                x = clampInt(x, 0, Math.max(0, screenWidth - boxWidth));
+                y = clampInt(y, 28, Math.max(28, screenHeight - boxHeight));
+            } else {
+                x = actual.x();
+                y = actual.y();
+            }
+            boolean enabled = isEnabled(id);
+            boolean hover = mouseX >= x && mouseX <= x + boxWidth && mouseY >= y && mouseY <= y + boxHeight;
+            boolean dragging = id.equals(draggedHudId);
+            int pulse = 55 + (int) (45 * (0.5 + 0.5 * Math.sin(now / (dragging ? 105.0 : 190.0))));
+            int glow = (pulse << 24) | (accent & 0x00FFFFFF);
+            if (enabled && actual != null) {
+                context.fill(x - 1, y - 1, x + boxWidth + 1, y, glow);
+                context.fill(x - 1, y + boxHeight, x + boxWidth + 1, y + boxHeight + 1, glow);
+                context.fill(x - 1, y, x, y + boxHeight, glow);
+                context.fill(x + boxWidth, y, x + boxWidth + 1, y + boxHeight, glow);
+                if (hover || dragging) {
+                    context.fill(x, y, x + boxWidth, y + 2, accent);
+                    context.fill(x, y + boxHeight - 2, x + boxWidth, y + boxHeight, accent);
+                }
+            } else {
+                context.fill(x, y, x + boxWidth, y + boxHeight, enabled ? 0xA91A2231 : 0x99101722);
+                context.fill(x, y, x + 3, y + boxHeight, enabled ? accent : 0xFF657084);
+                context.drawText(client.textRenderer, readableName(id) + (enabled ? "  ON" : "  OFF"),
+                    x + 8, y + Math.max(4, (boxHeight - 9) / 2), enabled ? 0xFFF3F5FC : 0xFF8996AD, false);
+            }
+            if (hover) {
+                String hint = readableName(id) + (enabled ? "  •  DRAG TO MOVE" : "  •  RIGHT-CLICK TO ENABLE");
+                int hintW = Math.min(screenWidth - 12, client.textRenderer.getWidth(hint) + 12);
+                int hintX = clampInt((int) Math.round(mouseX) + 8, 6, Math.max(6, screenWidth - hintW - 6));
+                int hintY = clampInt((int) Math.round(mouseY) - 17, 32, Math.max(32, screenHeight - 14));
+                context.fill(hintX, hintY, hintX + hintW, hintY + 13, 0xF20B101A);
+                context.drawText(client.textRenderer, hint, hintX + 6, hintY + 3, accent, false);
+            }
+            HUD_RENDERED_BOUNDS.put(id, new HudBounds(x, y, boxWidth, boxHeight));
+        }
+    }
+
+    private static int clampInt(int value, int minimum, int maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
     }
 
     private static int countItem(MinecraftClient client, net.minecraft.item.Item item) {
@@ -1494,10 +1747,15 @@ public final class AstraClient implements ClientModInitializer {
         int x = hudX(id, defaultX);
         int y = hudY(id, defaultY);
         if (y < 0) y = context.getScaledWindowHeight() + y;
-        drawHudLineAt(client, context, x, y, label, value, accent);
+        int screenWidth = context.getScaledWindowWidth();
+        int screenHeight = context.getScaledWindowHeight();
+        x = Math.max(0, Math.min(screenWidth - 50, x));
+        y = Math.max(0, Math.min(screenHeight - 20, y));
+        int width = drawHudLineAt(client, context, x, y, label, value, accent);
+        HUD_RENDERED_BOUNDS.put(id, new HudBounds(x, y, width, 18));
     }
 
-    private static void drawHudLineAt(MinecraftClient client, DrawContext context, int x, int y,
+    private static int drawHudLineAt(MinecraftClient client, DrawContext context, int x, int y,
                                       String label, String value, int accent) {
         x = Math.max(0, Math.min(context.getScaledWindowWidth() - 50, x));
         y = Math.max(0, Math.min(context.getScaledWindowHeight() - 20, y));
@@ -1511,6 +1769,7 @@ public final class AstraClient implements ClientModInitializer {
         context.fill(x, y, x + width, y + 18, (hudAlpha << 24) | 0x00101420);
         context.fill(x, y, x + 2, y + 18, accent);
         context.drawText(client.textRenderer, text, x + 8, y + 5, 0xFFF3F5FF, false);
+        return width;
     }
 
     private static void drawKey(
