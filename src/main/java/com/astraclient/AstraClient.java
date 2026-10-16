@@ -1173,8 +1173,21 @@ public final class AstraClient implements ClientModInitializer {
             context.fill(compassX, compassY, compassX + 172, compassY + 2, accent);
             context.drawTextWithShadow(client.textRenderer, "COMPASS", compassX + 6, compassY + 6, 0xFF8996AD);
             context.drawTextWithShadow(client.textRenderer, heading + "  " + yaw + "°", compassX + 78, compassY + 6, 0xFFFFFFFF);
-            String strip = "W     NW     N     NE     E";
-            context.drawTextWithShadow(client.textRenderer, strip, compassX + 6, compassY + 15, 0xFF69E6B8);
+            // A yaw-relative compass strip: the center marker is the direction
+            // the player is facing, and labels slide as the camera turns.
+            String[] compassPoints = {"S", "SW", "W", "NW", "N", "NE", "E", "SE"};
+            int bearing = Math.floorMod(180 + yaw, 360);
+            int centerX = compassX + 86;
+            for (int slot = -3; slot <= 3; slot++) {
+                int slotBearing = Math.floorMod(bearing + slot * 45, 360);
+                String point = compassPoints[Math.floorMod(Math.round(slotBearing / 45.0f), 8)];
+                int labelX = centerX + slot * 22 - client.textRenderer.getWidth(point) / 2;
+                if (labelX >= compassX + 4 && labelX + client.textRenderer.getWidth(point) <= compassX + 168) {
+                    int pointColor = slot == 0 ? 0xFFFFFFFF : 0xFF69E6B8;
+                    context.drawTextWithShadow(client.textRenderer, point, labelX, compassY + 15, pointColor);
+                }
+            }
+            context.fill(centerX - 1, compassY + 14, centerX + 1, compassY + 24, accent);
         }
 
         if (isEnabled("effectalert")) {
