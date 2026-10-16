@@ -17,7 +17,9 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.util.math.Box;
 import java.util.HashMap;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -80,6 +82,9 @@ public final class AstraClient implements ClientModInitializer {
     private static int originalFov = 70;
     private static boolean zoomOverrideActive;
     private static boolean forcedSafeWalkSneak;
+    private static boolean attackMouseWasDown;
+    private static boolean useMouseWasDown;
+    private static final Deque<Long> CLICK_TIMESTAMPS = new ArrayDeque<>();
 
     static {
         MODULES.put("fullbright", false);
@@ -92,6 +97,9 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("safewalk", false);
         MODULES.put("autotool", false);
         MODULES.put("biome", false);
+        MODULES.put("cps", false);
+        MODULES.put("worldinfo", false);
+        MODULES.put("potioncounter", false);
         MODULES.put("fps", true);
         MODULES.put("coordinates", false);
         MODULES.put("direction", false);
@@ -214,6 +222,9 @@ public final class AstraClient implements ClientModInitializer {
             case "safewalk" -> "Safe Walk";
             case "autotool" -> "Auto Tool";
             case "biome" -> "Biome Display";
+            case "cps" -> "CPS Counter";
+            case "worldinfo" -> "World Information";
+            case "potioncounter" -> "Potion Counter";
             case "fps" -> "FPS Counter";
             case "coordinates" -> "Coordinates";
             case "direction" -> "Direction";
@@ -354,6 +365,10 @@ public final class AstraClient implements ClientModInitializer {
         Properties properties = new Properties();
         try (InputStream input = Files.newInputStream(CONFIG_PATH)) {
             properties.load(input);
+            clickSounds = Boolean.parseBoolean(properties.getProperty("ui.clickSounds", "true"));
+            hudOpacity = Math.max(20, Math.min(100, Integer.parseInt(properties.getProperty("hud.opacity", "90"))));
+            autoSprintGroundOnly = Boolean.parseBoolean(properties.getProperty("autosprint.groundOnly", "false"));
+            autoSprintDisableInMenus = Boolean.parseBoolean(properties.getProperty("autosprint.disableInMenus", "true"));
             for (String id : MODULES.keySet()) {
                 MODULES.put(id, Boolean.parseBoolean(
                     properties.getProperty("module." + id, Boolean.toString(MODULES.get(id)))
@@ -457,6 +472,21 @@ public final class AstraClient implements ClientModInitializer {
             }
 
             processModuleKeybinds(client);
+            long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+            if (windowHandle != 0L) {
+                long now = System.currentTimeMillis();
+                boolean attackDown = org.lwjgl.glfw.GLFW.glfwGetMouseButton(windowHandle, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                    == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+                boolean useDown = org.lwjgl.glfw.GLFW.glfwGetMouseButton(windowHandle, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)
+                    == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+                if (attackDown && !attackMouseWasDown) CLICK_TIMESTAMPS.addLast(now);
+                if (useDown && !useMouseWasDown) CLICK_TIMESTAMPS.addLast(now);
+                attackMouseWasDown = attackDown;
+                useMouseWasDown = useDown;
+                while (!CLICK_TIMESTAMPS.isEmpty() && now - CLICK_TIMESTAMPS.peekFirst() >= 1000L) {
+                    CLICK_TIMESTAMPS.removeFirst();
+                }
+            }
             updateEsp(client);
             updateZoom(client);
             if (client.player == null || client.world == null) return;
@@ -675,28 +705,44 @@ public final class AstraClient implements ClientModInitializer {
         }
         if (isEnabled("clock")) drawHudLine(client, context, "clock", 8, 134, "LOCAL TIME",
             LocalTime.now().format(CLOCK_FORMAT), accent);
+        if (isEnabled("cps")) {
+            drawHudLine(client, context, "cps", 8, 155, "CPS", Integer.toString(CLICK_TIMESTAMPS.size()), accent);
+        }
+        if (isEnabled("worldinfo")) {
+            String dimension = client.world.getRegistryKey().getValue().getPath().replace('_', ' ').toUpperCase(Locale.ROOT);
+            drawHudLine(client, context, "worldinfo", 8, 176, "WORLD", dimension + " · DAY " + (client.world.getTimeOfDay() / 24000L), accent);
+        }
+        if (isEnabled("potioncounter")) {
+            int potions = 0;
+            for (int slot = 0; slot < client.player.getInventory().size(); slot++) {
+                ItemStack stack = client.player.getInventory().getStack(slot);
+                if (stack.isOf(Items.POTION) || stack.isOf(Items.SPLASH_POTION)
+                    || stack.isOf(Items.LINGERING_POTION)) potions += stack.getCount();
+            }
+            drawHudLine(client, context, "potioncounter", 8, 197, "POTIONS", Integer.toString(potions), accent);
+        }
         if (isEnabled("biome")) {
             String biomeName = client.world.getBiome(client.player.getBlockPos()).getKey()
                 .map(key -> key.getValue().getPath().replace('_', ' ').toUpperCase(Locale.ROOT))
                 .orElse("UNKNOWN");
             drawHudLine(client, context, "biome", 8, 155, "BIOME", biomeName, accent);
         }
-        if (isEnabled("totemcounter")) drawHudLine(client, context, "totemcounter", 8, 155, "TOTEMS",
+        if (isEnabled("totemcounter")) drawHudLine(client, context, "totemcounter", 8, 218, "TOTEMS",
             Integer.toString(countItem(client, Items.TOTEM_OF_UNDYING)), accent);
-        if (isEnabled("pearlcounter")) drawHudLine(client, context, "pearlcounter", 8, 176, "PEARLS",
+        if (isEnabled("pearlcounter")) drawHudLine(client, context, "pearlcounter", 8, 239, "PEARLS",
             Integer.toString(countItem(client, Items.ENDER_PEARL)), accent);
         if (isEnabled("arrowcounter")) {
             int arrows = countItem(client, Items.ARROW) + countItem(client, Items.SPECTRAL_ARROW)
                 + countItem(client, Items.TIPPED_ARROW);
-            drawHudLine(client, context, "arrowcounter", 8, 197, "ARROWS", Integer.toString(arrows), accent);
+            drawHudLine(client, context, "arrowcounter", 8, 260, "ARROWS", Integer.toString(arrows), accent);
         }
         if (isEnabled("goldencounter")) {
             int apples = countItem(client, Items.GOLDEN_APPLE)
                 + countItem(client, Items.ENCHANTED_GOLDEN_APPLE);
-            drawHudLine(client, context, "goldencounter", 8, 218, "GOLDEN APPLES", Integer.toString(apples), accent);
+            drawHudLine(client, context, "goldencounter", 8, 281, "GOLDEN APPLES", Integer.toString(apples), accent);
         }
         if (isEnabled("armorhud")) {
-            drawHudLine(client, context, "armorhud", 8, 239, "ARMOR", armorSummary(client), accent);
+            drawHudLine(client, context, "armorhud", 8, 302, "ARMOR", armorSummary(client), accent);
         }
         if (isEnabled("potionhud")) {
             int effectY = hudY("potionhud", 260);
