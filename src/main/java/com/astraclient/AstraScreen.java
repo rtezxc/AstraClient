@@ -78,6 +78,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("arraylist", "Active Modules", "Show enabled non-HUD modules in a compact neon list", "HUD", true),
         new ModuleInfo("watermark", "Astra Watermark", "Show a movable Astra Client brand plate", "HUD", true),
         new ModuleInfo("fpsgraph", "FPS Graph", "Plot recent frame-rate samples over the last six seconds", "HUD", true),
+        new ModuleInfo("lowhealthalert", "Low Health Alert", "Pulse a warning border when health drops to three hearts or less", "Player", true),
         new ModuleInfo("noweather", "No Weather", "Hide weather effects", "World", false),
         new ModuleInfo("autotool", "Auto Tool", "Select the fastest hotbar tool for the targeted block", "World", true),
         new ModuleInfo("autoweapon", "Auto Weapon", "Selects a sword or axe while aiming at a living target", "Combat", true),
