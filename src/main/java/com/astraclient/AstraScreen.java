@@ -27,6 +27,7 @@ public final class AstraScreen extends Screen {
 
     private static final List<ModuleInfo> MODULES = List.of(
         new ModuleInfo("fullbright", "FullBright", "Night vision for dark areas", "Render", true),
+        new ModuleInfo("customcrosshair", "Custom Crosshair", "Draws a compact accent-colored crosshair overlay", "Render", true),
         new ModuleInfo("playeresp", "Player ESP", "Local glowing outline around other players", "Render", true),
         new ModuleInfo("mobesp", "Mob ESP", "Local glowing outlines around nearby mobs", "Render", true),
         new ModuleInfo("itemesp", "Item ESP", "Local glowing outlines around dropped items", "Render", true),
