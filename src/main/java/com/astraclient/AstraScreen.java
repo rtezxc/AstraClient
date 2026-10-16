@@ -223,8 +223,16 @@ public final class AstraScreen extends Screen {
         ctx.fill(searchX, searchY + 24, searchX + searchW, searchY + 25,
             searchFocused ? accent : LINE);
         String searchLabel = searchText.isEmpty() ? "Search modules..." : searchText;
-        ctx.drawText(textRenderer, truncateToWidth(searchLabel, searchW - 15),
+        ctx.drawText(textRenderer, truncateToWidth(searchLabel, searchW - (searchText.isEmpty() ? 15 : 31)),
             searchX + 8, searchY + 8, searchText.isEmpty() ? MUTED : WHITE, false);
+        if (!searchText.isEmpty()) {
+            boolean clearHover = mouseX >= searchX + searchW - 23 && mouseX <= searchX + searchW - 4
+                && mouseY >= searchY + 3 && mouseY <= searchY + 22;
+            ctx.fill(searchX + searchW - 23, searchY + 4, searchX + searchW - 4, searchY + 21,
+                clearHover ? 0xFF49314A : 0xFF30283D);
+            ctx.drawCenteredTextWithShadow(textRenderer, "×", searchX + searchW - 13,
+                searchY + 8, clearHover ? 0xFFFFB6D8 : accent);
+        }
         ctx.drawText(textRenderer, category.toUpperCase(Locale.ROOT),
             contentX, top + 17, WHITE, true);
         ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.1.0  •  "
@@ -346,8 +354,14 @@ public final class AstraScreen extends Screen {
                 }
                 ctx.disableScissor();
                 long ready = visible.stream().filter(m -> m.implemented).count();
-                ctx.drawText(textRenderer, visible.size() + " MODULES  •  " + ready + " AVAILABLE",
-                    contentX, top + panelH - 26, MUTED, false);
+                String moduleSummary = visible.size() + " MODULES  •  " + ready + " AVAILABLE";
+                ctx.drawText(textRenderer, moduleSummary, contentX, top + panelH - 26, MUTED, false);
+                if (!searchText.isEmpty()) {
+                    String matchSummary = visible.size() + (visible.size() == 1 ? " MATCH" : " MATCHES");
+                    int matchW = textRenderer.getWidth(matchSummary);
+                    ctx.drawText(textRenderer, matchSummary,
+                        contentX + contentW - matchW, top + panelH - 40, accent, true);
+                }
                 if (rows * stride > viewportH) {
                     String scrollHint = "SCROLL TO EXPLORE";
                     int hintW = textRenderer.getWidth(scrollHint);
@@ -500,6 +514,12 @@ public final class AstraScreen extends Screen {
         }
         if (mouseX >= searchX && mouseX <= searchX + searchW
             && mouseY >= searchY && mouseY <= searchY + 25) {
+            if (!searchText.isEmpty() && mouseX >= searchX + searchW - 25) {
+                searchText = "";
+                scrollOffset = 0;
+                searchFocused = true;
+                return true;
+            }
             searchFocused = true;
             return true;
         }
@@ -520,7 +540,9 @@ public final class AstraScreen extends Screen {
                 && mouseY >= categoryY && mouseY <= categoryY + rowHeight) {
                 category = nav;
                 scrollOffset = 0;
+                settingsScrollOffset = 0;
                 searchText = "";
+                searchFocused = false;
                 return true;
             }
             categoryY += step;
@@ -757,6 +779,14 @@ public final class AstraScreen extends Screen {
                 return true;
             }
             close();
+            return true;
+        }
+        if (!searchFocused && keyCode == GLFW.GLFW_KEY_SLASH) {
+            searchFocused = true;
+            return true;
+        }
+        if (searchFocused && keyCode == GLFW.GLFW_KEY_ENTER) {
+            searchFocused = false;
             return true;
         }
         if (searchFocused && keyCode == GLFW.GLFW_KEY_BACKSPACE) {
