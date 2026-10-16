@@ -1146,7 +1146,8 @@ public final class AstraClient implements ClientModInitializer {
     private static int lowHealthThreshold = 6;
     private static int effectAlertThresholdSeconds = 10;
     private static final String[] BLOCK_FINDER_TARGETS = {
-        "DIAMOND", "ANCIENT DEBRIS", "EMERALD", "GOLD", "IRON", "COAL"
+        "DIAMOND", "ANCIENT DEBRIS", "EMERALD", "GOLD", "IRON", "COAL",
+        "COPPER", "LAPIS", "REDSTONE", "QUARTZ"
     };
     private static String blockFinderTarget = "DIAMOND";
     private static int blockFinderRange = 24;
@@ -2026,6 +2027,10 @@ if (isEnabled("blockfinder")) {
             case "GOLD" -> block == Blocks.GOLD_ORE || block == Blocks.DEEPSLATE_GOLD_ORE || block == Blocks.NETHER_GOLD_ORE;
             case "IRON" -> block == Blocks.IRON_ORE || block == Blocks.DEEPSLATE_IRON_ORE;
             case "COAL" -> block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE;
+            case "COPPER" -> block == Blocks.COPPER_ORE || block == Blocks.DEEPSLATE_COPPER_ORE;
+            case "LAPIS" -> block == Blocks.LAPIS_ORE || block == Blocks.DEEPSLATE_LAPIS_ORE;
+            case "REDSTONE" -> block == Blocks.REDSTONE_ORE || block == Blocks.DEEPSLATE_REDSTONE_ORE;
+            case "QUARTZ" -> block == Blocks.NETHER_QUARTZ_ORE;
             default -> false;
         };
     }
