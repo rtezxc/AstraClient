@@ -1291,7 +1291,7 @@ public final class AstraClient implements ClientModInitializer {
             long elapsed = Math.max(0L, (System.currentTimeMillis() - sessionStartedAt) / 1000L);
             String session = String.format(Locale.ROOT, "%02d:%02d:%02d",
                 elapsed / 3600, (elapsed / 60) % 60, elapsed % 60);
-            drawHudLine(client, context, "sessionstats", 8, 302, "SESSION", session, accent);
+            drawHudLine(client, context, "sessionstats", 8, 449, "SESSION", session, accent);
         }
 
         if (System.currentTimeMillis() < notificationUntil && !notification.isEmpty()) {
