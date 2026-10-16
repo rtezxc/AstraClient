@@ -1,4 +1,5 @@
 name: Build Astra Client
+# CI refresh: validate the latest main branch after the Astra 1.1.0 update
 
 on:
   push:
