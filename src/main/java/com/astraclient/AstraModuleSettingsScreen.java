@@ -36,7 +36,7 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        renderBackground(ctx, mouseX, mouseY, delta);
+        ctx.fill(0, 0, width, height, 0xFF080B12);
         ctx.fill(0, 0, width, height, 0xAF080B12);
 
         int panelW = Math.min(600, width - 24);
