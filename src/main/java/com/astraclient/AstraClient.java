@@ -468,12 +468,16 @@ public final class AstraClient implements ClientModInitializer {
             HUD_X.clear();
             HUD_Y.clear();
             accentTheme = 0;
+            guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
+            guiKeyWasDown = false;
+            guiKeybindIgnoreUntil = System.currentTimeMillis() + 400L;
             clickSounds = true;
             autoSprintGroundOnly = true;
             autoSprintDisableInMenus = true;
             guiScale = 100;
             hudOpacity = 84;
             zoomFov = 30;
+            autoEatHungerThreshold = 16;
             espRange = 64;
             combatRange = 4;
             targetPlayers = true;
