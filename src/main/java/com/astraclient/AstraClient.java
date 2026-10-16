@@ -109,6 +109,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autosprint", false);
         MODULES.put("sprint", false);
         MODULES.put("fly", false);
+        MODULES.put("autowalk", false);
         MODULES.put("safewalk", false);
         MODULES.put("eagle", false);
         MODULES.put("inventorymove", false);
@@ -245,6 +246,7 @@ public final class AstraClient implements ClientModInitializer {
             case "autosprint" -> "Auto Sprint";
             case "sprint" -> "Sprint";
             case "fly" -> "Fly";
+            case "autowalk" -> "Auto Walk";
             case "safewalk" -> "Safe Walk";
             case "eagle" -> "Eagle";
             case "inventorymove" -> "Inventory Move";
@@ -536,6 +538,7 @@ public final class AstraClient implements ClientModInitializer {
 
             processModuleKeybinds(client);
             updateInventoryMove(client);
+            updateAutoWalk(client);
             updateCombatModules(client);
             updateAutoWeapon(client);
             updateAutoTool(client);
@@ -777,6 +780,21 @@ public final class AstraClient implements ClientModInitializer {
 
     /** Lets keyboard movement bindings remain active while the vanilla inventory is open. */
     /** Simple client-side flight: jump rises, sneak descends, neutral input holds altitude. */
+    private static boolean autoWalkWasForcing;
+    private static void updateAutoWalk(MinecraftClient client) {
+        if (client.options == null) return;
+        boolean enabled = isEnabled("autowalk") && client.player != null
+            && client.world != null && client.currentScreen == null;
+        if (enabled) {
+            client.options.forwardKey.setPressed(true);
+            autoWalkWasForcing = true;
+        } else if (autoWalkWasForcing) {
+            long window = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+            if (window != 0L) setPhysicalKey(client, client.options.forwardKey, window);
+            else client.options.forwardKey.setPressed(false);
+            autoWalkWasForcing = false;
+        }
+    }
     private static void updateFly(MinecraftClient client) {
         PlayerEntity player = client.player;
         if (player == null) {
