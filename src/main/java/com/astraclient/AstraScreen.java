@@ -56,6 +56,8 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("inventoryhud", "Inventory HUD", "Show the held item's name and stack count", "HUD", true),
         new ModuleInfo("healthhud", "Health HUD", "Show current and maximum health", "HUD", true),
         new ModuleInfo("hungerhud", "Hunger HUD", "Show food level and saturation", "HUD", true),
+        new ModuleInfo("blockreachhud", "Block Reach HUD", "Show distance to the targeted block", "HUD", true),
+        new ModuleInfo("frametimehud", "Frame Time HUD", "Estimate frame time from the current FPS", "HUD", true),
         new ModuleInfo("biome", "Biome Display", "Show the current biome name", "HUD", true),
         new ModuleInfo("fps", "FPS Counter", "Show live frame rate", "HUD", true),
         new ModuleInfo("coordinates", "Coordinates", "Show XYZ coordinates", "HUD", true),
