@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
@@ -96,6 +97,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("sprint", false);
         MODULES.put("safewalk", false);
         MODULES.put("eagle", false);
+        MODULES.put("inventorymove", false);
         MODULES.put("autotool", false);
         MODULES.put("biome", false);
         MODULES.put("cps", false);
@@ -224,6 +226,7 @@ public final class AstraClient implements ClientModInitializer {
             case "sprint" -> "Sprint";
             case "safewalk" -> "Safe Walk";
             case "eagle" -> "Eagle";
+            case "inventorymove" -> "Inventory Move";
             case "autotool" -> "Auto Tool";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -478,6 +481,7 @@ public final class AstraClient implements ClientModInitializer {
             }
 
             processModuleKeybinds(client);
+            updateInventoryMove(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -570,6 +574,29 @@ public final class AstraClient implements ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> restoreZoom(client));
 
         System.out.println("[Astra Client] Initialized for Minecraft 1.21.4");
+    }
+
+    /** Lets keyboard movement bindings remain active while the vanilla inventory is open. */
+    private static void updateInventoryMove(MinecraftClient client) {
+        if (client.player == null || !isEnabled("inventorymove")
+            || !(client.currentScreen instanceof InventoryScreen)) return;
+        long window = client.getWindow().getHandle();
+        setPhysicalKey(client, client.options.forwardKey, window);
+        setPhysicalKey(client, client.options.backKey, window);
+        setPhysicalKey(client, client.options.leftKey, window);
+        setPhysicalKey(client, client.options.rightKey, window);
+        setPhysicalKey(client, client.options.jumpKey, window);
+        setPhysicalKey(client, client.options.sneakKey, window);
+        setPhysicalKey(client, client.options.sprintKey, window);
+    }
+
+    private static void setPhysicalKey(MinecraftClient client, KeyBinding binding, long window) {
+        int code = binding.getBoundKey().getCode();
+        if (binding.getBoundKey().getCategory() == InputUtil.Type.KEYSYM) {
+            binding.setPressed(InputUtil.isKeyPressed(window, code));
+        } else {
+            binding.setPressed(false);
+        }
     }
 
     private static void updateZoom(MinecraftClient client) {
