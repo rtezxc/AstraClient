@@ -108,10 +108,12 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static void resetModuleDefaults() {
-        MODULES.replaceAll((id, ignored) ->
-            id.equals("fps") || id.equals("coordinates"));
+        MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
+        MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
+        KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
         alternateAccent = false;
         guiScale = 100;
+        notifyUser("Settings reset to defaults");
         saveConfig();
     }
 
@@ -130,6 +132,10 @@ public final class AstraClient implements ClientModInitializer {
             );
             guiScale = Math.max(75, Math.min(125,
                 Integer.parseInt(properties.getProperty("gui.scale", "100"))));
+            for (String id : MODULE_KEYBINDS.keySet()) {
+                MODULE_KEYBINDS.put(id, Integer.parseInt(
+                    properties.getProperty("keybind." + id, Integer.toString(GLFW.GLFW_KEY_UNKNOWN))));
+            }
         } catch (Exception exception) {
             System.err.println("[Astra Client] Could not load config: " + exception.getMessage());
         }
@@ -142,6 +148,9 @@ public final class AstraClient implements ClientModInitializer {
         }
         properties.setProperty("theme.alternateAccent", Boolean.toString(alternateAccent));
         properties.setProperty("gui.scale", Integer.toString(guiScale));
+        for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
+            properties.setProperty("keybind." + entry.getKey(), Integer.toString(entry.getValue()));
+        }
         try {
             Files.createDirectories(CONFIG_PATH.getParent());
             try (OutputStream output = Files.newOutputStream(CONFIG_PATH)) {
