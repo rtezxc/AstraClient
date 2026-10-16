@@ -22,6 +22,8 @@ public final class AstraModuleSettingsScreen extends Screen {
     private boolean draggingEspSlider;
     private boolean draggingCombatSlider;
     private boolean draggingAutoEatSlider;
+    private boolean draggingLowHealthSlider;
+    private boolean draggingEffectAlertSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
                                      String description, boolean implemented) {
@@ -107,6 +109,34 @@ public final class AstraModuleSettingsScreen extends Screen {
             ctx.drawText(textRenderer, "16", sliderX, sliderY + 13, MUTED, false);
             String maxRange = "128 blocks";
             ctx.drawText(textRenderer, maxRange, sliderX + sliderW - textRenderer.getWidth(maxRange),
+                sliderY + 13, MUTED, false);
+        } else if (moduleId.equals("lowhealthalert")) {
+            ctx.drawText(textRenderer, "ALERT WHEN HEALTH IS AT OR BELOW", x + 20, nextY + 3, WHITE, true);
+            String healthLimit = AstraClient.lowHealthThreshold() + " HP";
+            ctx.drawText(textRenderer, healthLimit, x + panelW - 20 - textRenderer.getWidth(healthLimit),
+                nextY + 3, accent(), true);
+            int sliderX = x + 20, sliderY = nextY + 27, sliderW = panelW - 40;
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
+            int fill = (AstraClient.lowHealthThreshold() - 2) * sliderW / 18;
+            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
+            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
+            ctx.drawText(textRenderer, "2 HP", sliderX, sliderY + 13, MUTED, false);
+            String maxHealth = "20 HP";
+            ctx.drawText(textRenderer, maxHealth, sliderX + sliderW - textRenderer.getWidth(maxHealth),
+                sliderY + 13, MUTED, false);
+        } else if (moduleId.equals("effectalert")) {
+            ctx.drawText(textRenderer, "WARN BEFORE AN EFFECT EXPIRES", x + 20, nextY + 3, WHITE, true);
+            String expiryLimit = AstraClient.effectAlertThresholdSeconds() + " seconds";
+            ctx.drawText(textRenderer, expiryLimit, x + panelW - 20 - textRenderer.getWidth(expiryLimit),
+                nextY + 3, accent(), true);
+            int sliderX = x + 20, sliderY = nextY + 27, sliderW = panelW - 40;
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
+            int fill = (AstraClient.effectAlertThresholdSeconds() - 3) * sliderW / 27;
+            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
+            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
+            ctx.drawText(textRenderer, "3 s", sliderX, sliderY + 13, MUTED, false);
+            String maxSeconds = "30 s";
+            ctx.drawText(textRenderer, maxSeconds, sliderX + sliderW - textRenderer.getWidth(maxSeconds),
                 sliderY + 13, MUTED, false);
         } else if (moduleId.equals("autoeat")) {
             ctx.drawText(textRenderer, "EAT WHEN FOOD LEVEL IS AT OR BELOW", x + 20, nextY + 3, WHITE, true);
@@ -244,6 +274,18 @@ public final class AstraModuleSettingsScreen extends Screen {
                 updateEspRangeFromMouse(mouseX, x + 20, pw - 40);
                 return true;
             }
+        } else if (moduleId.equals("lowhealthalert")) {
+            if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
+                draggingLowHealthSlider = true;
+                updateLowHealthThresholdFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
+        } else if (moduleId.equals("effectalert")) {
+            if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
+                draggingEffectAlertSlider = true;
+                updateEffectAlertThresholdFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
         } else if (moduleId.equals("autoeat")) {
             if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
                 draggingAutoEatSlider = true;
@@ -298,6 +340,16 @@ public final class AstraModuleSettingsScreen extends Screen {
         return mx >= x && mx <= x + w && my >= y && my <= y + h;
     }
 
+    private void updateLowHealthThresholdFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewLowHealthThreshold(2 + (int) Math.round(progress * 18.0));
+    }
+
+    private void updateEffectAlertThresholdFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewEffectAlertThresholdSeconds(3 + (int) Math.round(progress * 27.0));
+    }
+
     private void updateAutoEatThresholdFromMouse(double mouseX, int sliderX, int sliderW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
         AstraClient.previewAutoEatHungerThreshold(10 + (int) Math.round(progress * 9.0));
@@ -321,13 +373,16 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (button == 0 && (draggingZoomSlider || draggingEspSlider || draggingCombatSlider || draggingAutoEatSlider)) {
+        if (button == 0 && (draggingZoomSlider || draggingEspSlider || draggingCombatSlider
+            || draggingAutoEatSlider || draggingLowHealthSlider || draggingEffectAlertSlider)) {
             int pw = Math.min(600, width - 24);
             int x = (width - pw) / 2;
             int sliderX = x + 20;
             if (draggingZoomSlider) updateZoomFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingEspSlider) updateEspRangeFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingAutoEatSlider) updateAutoEatThresholdFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingLowHealthSlider) updateLowHealthThresholdFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingEffectAlertSlider) updateEffectAlertThresholdFromMouse(mouseX, sliderX, pw - 40);
             else updateCombatRangeFromMouse(mouseX, sliderX, pw - 40);
             return true;
         }
@@ -336,11 +391,14 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (draggingZoomSlider || draggingEspSlider || draggingCombatSlider || draggingAutoEatSlider) AstraClient.saveConfig();
+        if (draggingZoomSlider || draggingEspSlider || draggingCombatSlider || draggingAutoEatSlider
+            || draggingLowHealthSlider || draggingEffectAlertSlider) AstraClient.saveConfig();
         draggingZoomSlider = false;
         draggingEspSlider = false;
         draggingCombatSlider = false;
         draggingAutoEatSlider = false;
+        draggingLowHealthSlider = false;
+        draggingEffectAlertSlider = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 

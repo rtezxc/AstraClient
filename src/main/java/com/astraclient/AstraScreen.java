@@ -727,6 +727,10 @@ public final class AstraScreen extends Screen {
             actions.add("zoom");
         } else if (module.id.equals("autoeat")) {
             actions.add("hunger");
+        } else if (module.id.equals("lowhealthalert")) {
+            actions.add("healththreshold");
+        } else if (module.id.equals("effectalert")) {
+            actions.add("effectthreshold");
         } else if (isHudModule(module.id)) {
             actions.add("hud");
             actions.add("hudopacity");
@@ -759,6 +763,8 @@ public final class AstraScreen extends Screen {
             case "menus" -> "Pause in menus: " + (AstraClient.autoSprintDisableInMenus() ? "ON" : "OFF");
             case "zoom" -> "Cycle zoom FOV (" + AstraClient.zoomFov() + "°)";
             case "hunger" -> "Food threshold: " + AstraClient.autoEatHungerThreshold();
+            case "healththreshold" -> "Health alert: " + AstraClient.lowHealthThreshold() + " HP";
+            case "effectthreshold" -> "Effect warning: " + AstraClient.effectAlertThresholdSeconds() + " s";
             case "hud" -> "Open HUD editor...";
             default -> action;
         };
@@ -843,6 +849,10 @@ public final class AstraScreen extends Screen {
                 AstraClient.saveConfig();
                 AstraClient.notifyUser("Auto Eat threshold: " + AstraClient.autoEatHungerThreshold());
             }
+            case "healththreshold" -> AstraClient.setLowHealthThreshold(
+                AstraClient.lowHealthThreshold() >= 18 ? 2 : AstraClient.lowHealthThreshold() + 2);
+            case "effectthreshold" -> AstraClient.setEffectAlertThresholdSeconds(
+                AstraClient.effectAlertThresholdSeconds() >= 27 ? 3 : AstraClient.effectAlertThresholdSeconds() + 3);
             case "hud" -> {
                 contextMenuModuleId = null;
                 client.setScreen(new AstraHudEditorScreen(this));

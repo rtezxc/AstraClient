@@ -406,6 +406,24 @@ public final class AstraClient implements ClientModInitializer {
     public static int autoEatHungerThreshold() { return autoEatHungerThreshold; }
     public static void previewAutoEatHungerThreshold(int value) { autoEatHungerThreshold = Math.max(10, Math.min(19, value)); }
 
+    public static int lowHealthThreshold() { return lowHealthThreshold; }
+    public static void previewLowHealthThreshold(int value) { lowHealthThreshold = Math.max(2, Math.min(20, value)); }
+    public static void setLowHealthThreshold(int value) {
+        previewLowHealthThreshold(value);
+        notifyUser("Low health alert threshold: " + lowHealthThreshold + " HP");
+        saveConfig();
+    }
+
+    public static int effectAlertThresholdSeconds() { return effectAlertThresholdSeconds; }
+    public static void previewEffectAlertThresholdSeconds(int value) {
+        effectAlertThresholdSeconds = Math.max(3, Math.min(30, value));
+    }
+    public static void setEffectAlertThresholdSeconds(int value) {
+        previewEffectAlertThresholdSeconds(value);
+        notifyUser("Effect expiry warning: " + effectAlertThresholdSeconds + " seconds");
+        saveConfig();
+    }
+
     public static int zoomFov() { return zoomFov; }
 
     public static void setZoomFov(int value) {
@@ -575,6 +593,10 @@ public final class AstraClient implements ClientModInitializer {
                 Integer.parseInt(properties.getProperty("zoom.fov", "30"))));
             autoEatHungerThreshold = Math.max(10, Math.min(19,
                 Integer.parseInt(properties.getProperty("autoeat.hungerThreshold", "16"))));
+            lowHealthThreshold = Math.max(2, Math.min(20,
+                Integer.parseInt(properties.getProperty("lowhealth.threshold", "6"))));
+            effectAlertThresholdSeconds = Math.max(3, Math.min(30,
+                Integer.parseInt(properties.getProperty("effectalert.thresholdSeconds", "10"))));
             espRange = Math.max(16, Math.min(128,
                 Integer.parseInt(properties.getProperty("esp.range", "64"))));
             combatRange = Math.max(3, Math.min(6,
@@ -613,6 +635,8 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("hud.backgrounds", Boolean.toString(hudBackgrounds));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
         properties.setProperty("autoeat.hungerThreshold", Integer.toString(autoEatHungerThreshold));
+        properties.setProperty("lowhealth.threshold", Integer.toString(lowHealthThreshold));
+        properties.setProperty("effectalert.thresholdSeconds", Integer.toString(effectAlertThresholdSeconds));
         properties.setProperty("esp.range", Integer.toString(espRange));
         properties.setProperty("combat.range", Integer.toString(combatRange));
         properties.setProperty("combat.targetPlayers", Boolean.toString(targetPlayers));
@@ -942,6 +966,8 @@ public final class AstraClient implements ClientModInitializer {
     private static int autoEatSelectedSlot = -1;
     private static boolean autoEatNoFoodNotified;
     private static int autoEatHungerThreshold = 16;
+    private static int lowHealthThreshold = 6;
+    private static int effectAlertThresholdSeconds = 10;
     private static boolean autoWalkWasForcing;
     /**
      * Uses food from the hotbar when hunger is low. It stops when the player
@@ -1180,7 +1206,7 @@ public final class AstraClient implements ClientModInitializer {
 
         // A subtle pulsing warning stays out of the way until health is critical.
         if (isEnabled("lowhealthalert") && client.player.getHealth() > 0.0F
-                && client.player.getHealth() <= 6.0F) {
+                && client.player.getHealth() <= lowHealthThreshold) {
             int alpha = (int) (32 + (Math.sin(System.currentTimeMillis() / 180.0) + 1.0) * 30);
             int warningTint = (alpha << 24) | 0x00FF405D;
             context.fill(0, 0, screenWidth, 3, warningTint);
@@ -1239,7 +1265,7 @@ public final class AstraClient implements ClientModInitializer {
             int alertY = 38;
             for (StatusEffectInstance effect : client.player.getStatusEffects()) {
                 int ticks = effect.getDuration();
-                if (ticks < 0 || ticks > 200) continue;
+                if (ticks < 0 || ticks > effectAlertThresholdSeconds * 20) continue;
                 String effectName = effect.getEffectType().value().getName().getString();
                 String alert = effectName + " expires in " + formatDuration(ticks);
                 int alertX = (screenWidth - client.textRenderer.getWidth(alert)) / 2;
