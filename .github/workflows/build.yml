@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java 21
         uses: actions/setup-java@v5
@@ -39,45 +39,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          JAR="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
-          test -n "$JAR"
+          JAR="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | sort | head -n 1)"
+          if [[ -z "$JAR" ]]; then
+            echo "ERROR: production JAR not found"
+            find build/libs -maxdepth 1 -type f -print || true
+            exit 1
+          fi
           echo "Built artifact: $JAR"
           ls -lh "$JAR"
           jar tf "$JAR" | tee /tmp/jar-contents.txt
           grep -q '^fabric.mod.json$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/AstraClient.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraScreen.class
+          grep -q '^com/astraclient/AstraScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraModuleSettingsScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraHudEditorScreen.class$' /tmp/jar-contents.txt
+          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
 
-      - name: Upload verified mod JAR
+      - name: Upload verified production JAR only
         uses: actions/upload-artifact@v4
         with:
           name: AstraClient-1.21.4-JAR
           path: ${{ steps.verify.outputs.jar_file }}
           if-no-files-found: error
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraModuleSettingsScreen.class
-
-      - name: Upload verified mod JAR
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: build/libs/*.jar
-          if-no-files-found: error
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraHudEditorScreen.class
-
-      - name: Upload verified mod JAR
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: build/libs/*.jar
-          if-no-files-found: error
- /tmp/jar-contents.txt
-          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
-
-      - name: Upload verified mod JAR
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: build/libs/*.jar
-          if-no-files-found: error
+          retention-days: 14
