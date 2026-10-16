@@ -81,6 +81,10 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean hadNightVisionBeforeEnable;
     private static int zoomFov = 30;
     private static int espRange = 64;
+    private static int combatRange = 4;
+    private static boolean targetPlayers = true;
+    private static boolean targetHostile = true;
+    private static boolean targetPassive = false;
     private static int originalFov = 70;
     private static boolean zoomOverrideActive;
     private static boolean forcedSafeWalkSneak;
@@ -331,6 +335,21 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static int espRange() { return espRange; }
+    public static int combatRange() { return combatRange; }
+    public static boolean targetPlayers() { return targetPlayers; }
+    public static boolean targetHostile() { return targetHostile; }
+    public static boolean targetPassive() { return targetPassive; }
+    public static void previewCombatRange(int value) { combatRange = Math.max(3, Math.min(6, value)); }
+    public static void toggleCombatTarget(String kind) {
+        switch (kind) {
+            case "players" -> targetPlayers = !targetPlayers;
+            case "hostile" -> targetHostile = !targetHostile;
+            case "passive" -> targetPassive = !targetPassive;
+            default -> { return; }
+        }
+        notifyUser("Kill Aura target filter updated");
+        saveConfig();
+    }
 
     public static void setEspRange(int value) {
         espRange = Math.max(16, Math.min(128, value));
@@ -398,6 +417,11 @@ public final class AstraClient implements ClientModInitializer {
                 Integer.parseInt(properties.getProperty("zoom.fov", "30"))));
             espRange = Math.max(16, Math.min(128,
                 Integer.parseInt(properties.getProperty("esp.range", "64"))));
+            combatRange = Math.max(3, Math.min(6,
+                Integer.parseInt(properties.getProperty("combat.range", "4"))));
+            targetPlayers = Boolean.parseBoolean(properties.getProperty("combat.targetPlayers", "true"));
+            targetHostile = Boolean.parseBoolean(properties.getProperty("combat.targetHostile", "true"));
+            targetPassive = Boolean.parseBoolean(properties.getProperty("combat.targetPassive", "false"));
             for (String id : MODULE_KEYBINDS.keySet()) {
                 MODULE_KEYBINDS.put(id, Integer.parseInt(
                     properties.getProperty("keybind." + id, Integer.toString(GLFW.GLFW_KEY_UNKNOWN))));
@@ -426,6 +450,10 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
         properties.setProperty("esp.range", Integer.toString(espRange));
+        properties.setProperty("combat.range", Integer.toString(combatRange));
+        properties.setProperty("combat.targetPlayers", Boolean.toString(targetPlayers));
+        properties.setProperty("combat.targetHostile", Boolean.toString(targetHostile));
+        properties.setProperty("combat.targetPassive", Boolean.toString(targetPassive));
         for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
             properties.setProperty("keybind." + entry.getKey(), Integer.toString(entry.getValue()));
         }
@@ -594,8 +622,8 @@ public final class AstraClient implements ClientModInitializer {
         if (isEnabled("triggerbot")) {
             if (client.crosshairTarget instanceof EntityHitResult hit
                 && hit.getEntity() instanceof LivingEntity target
-                && target != client.player && target.isAlive()
-                && client.player.distanceTo(target) <= 4.0F
+                && isValidCombatTarget(target, client.player)
+                && client.player.distanceTo(target) <= combatRange
                 && isCriticalHitReady(client.player)) {
                 attackTarget(client, target);
             }
@@ -604,13 +632,13 @@ public final class AstraClient implements ClientModInitializer {
 
         if (!isEnabled("killaura")) return;
         LivingEntity bestTarget = null;
-        double bestDistance = 4.2D;
+        double bestDistance = combatRange;
         var look = client.player.getRotationVec(1.0F);
         var eye = client.player.getEyePos();
 
         for (LivingEntity candidate : client.world.getEntitiesByClass(
-            LivingEntity.class, client.player.getBoundingBox().expand(4.2D),
-            entity -> entity != client.player && entity.isAlive() && !entity.isSpectator())) {
+            LivingEntity.class, client.player.getBoundingBox().expand(combatRange),
+            entity -> entity instanceof LivingEntity living && isValidCombatTarget(living, client.player))) {
             double distance = client.player.distanceTo(candidate);
             if (distance > bestDistance) continue;
             var direction = candidate.getBoundingBox().getCenter().subtract(eye).normalize();
@@ -621,6 +649,13 @@ public final class AstraClient implements ClientModInitializer {
         }
 
         if (bestTarget != null) attackTarget(client, bestTarget);
+    }
+
+    private static boolean isValidCombatTarget(LivingEntity target, PlayerEntity self) {
+        if (target == self || !target.isAlive() || target.isSpectator()) return false;
+        if (target instanceof PlayerEntity) return targetPlayers;
+        return target.getGroup() == net.minecraft.entity.EntityGroup.MONSTER
+            ? targetHostile : targetPassive;
     }
 
     private static boolean isCriticalHitReady(PlayerEntity player) {
