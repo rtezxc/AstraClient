@@ -82,6 +82,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("fpsgraph", "FPS Graph", "Plot recent frame-rate samples over the last six seconds", "HUD", true),
         new ModuleInfo("lowhealthalert", "Low Health Alert", "Pulse a warning border when health drops to three hearts or less", "Player", true),
         new ModuleInfo("compasshud", "Compass HUD", "Show cardinal direction and heading in a movable compass strip", "HUD", true),
+        new ModuleInfo("breadcrumbs", "Breadcrumbs", "Display a small map of your recent path behind you", "HUD", true),
         new ModuleInfo("effectalert", "Effect Expiry Alert", "Warn when active potion effects have ten seconds or less remaining", "HUD", true),
         new ModuleInfo("noweather", "No Weather", "Hide weather effects", "World", false),
         new ModuleInfo("autotool", "Auto Tool", "Select the fastest hotbar tool for the targeted block", "World", true),
@@ -741,6 +742,9 @@ public final class AstraScreen extends Screen {
             actions.add("healththreshold");
         } else if (module.id.equals("effectalert")) {
             actions.add("effectthreshold");
+        } else if (module.id.equals("breadcrumbs")) {
+            actions.add("trailLength");
+            actions.add("hud");
         } else if (module.id.equals("blockfinder")) {
             actions.add("blocktarget");
             actions.add("blockrange");
@@ -786,6 +790,7 @@ public final class AstraScreen extends Screen {
             case "hunger" -> "Food threshold: " + AstraClient.autoEatHungerThreshold();
             case "healththreshold" -> "Health alert: " + AstraClient.lowHealthThreshold() + " HP";
             case "effectthreshold" -> "Effect warning: " + AstraClient.effectAlertThresholdSeconds() + " s";
+            case "trailLength" -> "Trail history: " + AstraClient.breadcrumbTrailLength();
             case "blocktarget" -> "Find: " + AstraClient.blockFinderTarget();
             case "blockrange" -> "Scan radius: " + AstraClient.blockFinderRange() + " blocks";
             case "hud" -> "Open HUD editor...";
@@ -881,6 +886,8 @@ public final class AstraScreen extends Screen {
                 AstraClient.lowHealthThreshold() >= 18 ? 2 : AstraClient.lowHealthThreshold() + 2);
             case "effectthreshold" -> AstraClient.setEffectAlertThresholdSeconds(
                 AstraClient.effectAlertThresholdSeconds() >= 27 ? 3 : AstraClient.effectAlertThresholdSeconds() + 3);
+            case "trailLength" -> AstraClient.setBreadcrumbTrailLength(
+                AstraClient.breadcrumbTrailLength() >= 108 ? 12 : AstraClient.breadcrumbTrailLength() + 12);
             case "blocktarget" -> AstraClient.cycleBlockFinderTarget();
             case "blockrange" -> AstraClient.setBlockFinderRange(
                 AstraClient.blockFinderRange() >= 40 ? 8 : AstraClient.blockFinderRange() + 8);

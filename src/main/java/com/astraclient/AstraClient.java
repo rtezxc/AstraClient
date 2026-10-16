@@ -72,7 +72,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "compasshud"
+        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "breadcrumbs", "compasshud"
     };
     private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
     private static final Map<String, HudBounds> HUD_RENDERED_BOUNDS = new LinkedHashMap<>();
@@ -106,6 +106,11 @@ public final class AstraClient implements ClientModInitializer {
     private static int crosshairSize = 7;
     private static int crosshairGap = 3;
     private static int crosshairThickness = 2;
+    private static int breadcrumbTrailLength = 48;
+    private static final List<TrailPoint> BREADCRUMB_TRAIL = new ArrayList<>();
+    private static Object breadcrumbWorld;
+    private static long lastBreadcrumbSampleAt;
+    private record TrailPoint(double x, double z) { }
     private static int espRange = 64;
     private static int combatRange = 4;
     private static boolean targetPlayers = true;
@@ -183,6 +188,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("fpsgraph", false);
         MODULES.put("lowhealthalert", false);
         MODULES.put("compasshud", false);
+        MODULES.put("breadcrumbs", false);
         MODULES.put("effectalert", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
@@ -328,6 +334,7 @@ public final class AstraClient implements ClientModInitializer {
             case "fpsgraph" -> "FPS Graph";
             case "lowhealthalert" -> "Low Health Alert";
             case "compasshud" -> "Compass HUD";
+            case "breadcrumbs" -> "Breadcrumbs";
             case "effectalert" -> "Effect Expiry Alert";
             default -> id;
         };
@@ -474,6 +481,17 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    public static int breadcrumbTrailLength() { return breadcrumbTrailLength; }
+    public static void previewBreadcrumbTrailLength(int value) {
+        breadcrumbTrailLength = Math.max(12, Math.min(120, value));
+        while (BREADCRUMB_TRAIL.size() > breadcrumbTrailLength) BREADCRUMB_TRAIL.remove(0);
+    }
+    public static void setBreadcrumbTrailLength(int value) {
+        previewBreadcrumbTrailLength(value);
+        notifyUser("Breadcrumb trail: " + breadcrumbTrailLength + " points");
+        saveConfig();
+    }
+
     public static int crosshairSize() { return crosshairSize; }
     public static int crosshairGap() { return crosshairGap; }
     public static int crosshairThickness() { return crosshairThickness; }
@@ -578,6 +596,8 @@ public final class AstraClient implements ClientModInitializer {
         crosshairSize = 7;
         crosshairGap = 3;
         crosshairThickness = 2;
+        breadcrumbTrailLength = 48;
+        BREADCRUMB_TRAIL.clear();
         autoEatHungerThreshold = 16;
         espRange = 64;
         combatRange = 4;
@@ -670,6 +690,7 @@ public final class AstraClient implements ClientModInitializer {
             crosshairSize = Math.max(3, Math.min(20, Integer.parseInt(properties.getProperty("crosshair.size", "7"))));
             crosshairGap = Math.max(1, Math.min(12, Integer.parseInt(properties.getProperty("crosshair.gap", "3"))));
             crosshairThickness = Math.max(1, Math.min(5, Integer.parseInt(properties.getProperty("crosshair.thickness", "2"))));
+            breadcrumbTrailLength = Math.max(12, Math.min(120, Integer.parseInt(properties.getProperty("breadcrumbs.length", "48"))));
             tracerPlayers = Boolean.parseBoolean(properties.getProperty("tracers.players", "true"));
             tracerMobs = Boolean.parseBoolean(properties.getProperty("tracers.mobs", "true"));
             autoEatHungerThreshold = Math.max(10, Math.min(19,
@@ -725,6 +746,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("crosshair.size", Integer.toString(crosshairSize));
         properties.setProperty("crosshair.gap", Integer.toString(crosshairGap));
         properties.setProperty("crosshair.thickness", Integer.toString(crosshairThickness));
+        properties.setProperty("breadcrumbs.length", Integer.toString(breadcrumbTrailLength));
         properties.setProperty("tracers.players", Boolean.toString(tracerPlayers));
         properties.setProperty("tracers.mobs", Boolean.toString(tracerMobs));
         properties.setProperty("autoeat.hungerThreshold", Integer.toString(autoEatHungerThreshold));
@@ -784,6 +806,7 @@ public final class AstraClient implements ClientModInitializer {
             updateDamageTracker(client);
             updateBlockFinder(client);
             updateTracers(client);
+            updateBreadcrumbs(client);
             boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
                 && GLFW.glfwGetKey(guiWindow, guiKeybindCode) == GLFW.GLFW_PRESS;
             if (guiDown && !guiKeyWasDown) {
@@ -1316,6 +1339,7 @@ public final class AstraClient implements ClientModInitializer {
         int screenHeight = context.getScaledWindowHeight();
 
         if (isEnabled("tracers")) renderTracers(client, context, screenWidth, screenHeight, accent);
+        if (isEnabled("breadcrumbs")) renderBreadcrumbs(client, context, screenWidth, screenHeight, accent);
 
         // A subtle pulsing warning stays out of the way until health is critical.
         if (isEnabled("lowhealthalert") && client.player.getHealth() > 0.0F
@@ -1684,6 +1708,71 @@ public final class AstraClient implements ClientModInitializer {
         }
 
         renderChatHudEditingOverlay(client, context);
+    }
+
+    private static void updateBreadcrumbs(MinecraftClient client) {
+        if (!isEnabled("breadcrumbs") || client.player == null || client.world == null) {
+            BREADCRUMB_TRAIL.clear();
+            breadcrumbWorld = null;
+            lastBreadcrumbSampleAt = 0L;
+            return;
+        }
+        if (breadcrumbWorld != client.world) {
+            breadcrumbWorld = client.world;
+            BREADCRUMB_TRAIL.clear();
+            lastBreadcrumbSampleAt = 0L;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastBreadcrumbSampleAt < 250L) return;
+        lastBreadcrumbSampleAt = now;
+        var pos = client.player.getPos();
+        BREADCRUMB_TRAIL.add(new TrailPoint(pos.x, pos.z));
+        while (BREADCRUMB_TRAIL.size() > breadcrumbTrailLength) BREADCRUMB_TRAIL.remove(0);
+    }
+
+    private static void renderBreadcrumbs(MinecraftClient client, DrawContext context,
+                                          int screenWidth, int screenHeight, int accent) {
+        if (client.player == null || BREADCRUMB_TRAIL.isEmpty()) return;
+        int boxW = 112, boxH = 112;
+        int x = clampInt(hudX("breadcrumbs", screenWidth - boxW - 12), 2, Math.max(2, screenWidth - boxW - 2));
+        int y = clampInt(hudY("breadcrumbs", screenHeight / 2 - boxH / 2), 2, Math.max(2, screenHeight - boxH - 2));
+        if (hudBackgrounds) context.fill(x, y, x + boxW, y + boxH, 0xD90B101A);
+        context.fill(x, y, x + boxW, y + 2, accent);
+        context.drawText(client.textRenderer, "BREADCRUMBS", x + 7, y + 6, 0xFFEFF2FA, true);
+        int centerX = x + boxW / 2;
+        int centerY = y + boxH / 2 + 6;
+        context.fill(centerX, y + 23, centerX + 1, y + boxH - 6, 0x403C465C);
+        context.fill(x + 6, centerY, x + boxW - 6, centerY + 1, 0x403C465C);
+        double yaw = Math.toRadians(client.player.getYaw());
+        double scale = 1.7D;
+        int previousX = Integer.MIN_VALUE, previousY = Integer.MIN_VALUE;
+        int start = Math.max(0, BREADCRUMB_TRAIL.size() - breadcrumbTrailLength);
+        for (int i = start; i < BREADCRUMB_TRAIL.size(); i++) {
+            TrailPoint point = BREADCRUMB_TRAIL.get(i);
+            double dx = point.x() - client.player.getX();
+            double dz = point.z() - client.player.getZ();
+            double localRight = dx * Math.cos(yaw) - dz * Math.sin(yaw);
+            double localForward = dx * Math.sin(yaw) + dz * Math.cos(yaw);
+            int px = centerX + (int) Math.round(localRight * scale);
+            int py = centerY - (int) Math.round(localForward * scale);
+            if (px < x + 4 || px > x + boxW - 4 || py < y + 23 || py > y + boxH - 4) {
+                previousX = Integer.MIN_VALUE;
+                previousY = Integer.MIN_VALUE;
+                continue;
+            }
+            float progress = (i + 1.0F) / Math.max(1, BREADCRUMB_TRAIL.size());
+            int alpha = Math.max(45, Math.min(220, Math.round(220.0F * progress)));
+            int trailColor = (alpha << 24) | (accent & 0x00FFFFFF);
+            if (previousX != Integer.MIN_VALUE) drawHudTracerLine(context, previousX, previousY, px, py, trailColor);
+            int dot = i == BREADCRUMB_TRAIL.size() - 1 ? 3 : 2;
+            context.fill(px - dot / 2, py - dot / 2, px + dot / 2 + 1, py + dot / 2 + 1, trailColor);
+            previousX = px;
+            previousY = py;
+        }
+        // Player heading marker.
+        context.fill(centerX - 1, centerY - 6, centerX + 2, centerY + 2, 0xFFFFFFFF);
+        context.fill(centerX - 4, centerY, centerX + 5, centerY + 2, 0xFFFFFFFF);
+        HUD_RENDERED_BOUNDS.put("breadcrumbs", new HudBounds(x, y, boxW, boxH));
     }
 
     private static void updateTracers(MinecraftClient client) {

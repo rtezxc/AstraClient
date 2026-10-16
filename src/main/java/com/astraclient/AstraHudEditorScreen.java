@@ -37,6 +37,7 @@ public final class AstraHudEditorScreen extends Screen {
         new Widget("targethud", "Target HUD", 150, -43),
         new Widget("damageindicators", "Damage Indicators", 150, -190),
         new Widget("blockfinder", "Block Finder", 150, -60),
+        new Widget("breadcrumbs", "Breadcrumb Trail", 500, 180),
         new Widget("sessionstats", "Session Stats", 8, 449),
         new Widget("arraylist", "Active Modules", 150, 8),
         new Widget("watermark", "Astra Watermark", 8, 160),
@@ -99,9 +100,11 @@ public final class AstraHudEditorScreen extends Screen {
 
         renderedBoxes.clear();
         for (Widget widget : WIDGETS) {
-            int defaultX = widget.id.equals("damageindicators") ? width / 2 - 44 : widget.defaultX;
+            int defaultX = widget.id.equals("damageindicators") ? width / 2 - 44
+                : (widget.id.equals("breadcrumbs") ? width - 124 : widget.defaultX);
             int defaultY = widget.id.equals("damageindicators") ? height / 2 + 26
-                : (widget.defaultY < 0 ? height + widget.defaultY : widget.defaultY);
+                : (widget.id.equals("breadcrumbs") ? height / 2 - 56
+                : (widget.defaultY < 0 ? height + widget.defaultY : widget.defaultY));
             int x = clamp(AstraClient.hudX(widget.id, defaultX), 2, Math.max(2, width - 82));
             int y = clamp(AstraClient.hudY(widget.id, defaultY), 66, Math.max(66, height - 28));
             boolean enabled = AstraClient.isEnabled(widget.id);
