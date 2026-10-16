@@ -33,7 +33,9 @@ public final class AstraHudEditorScreen extends Screen {
         new Widget("sessionstats", "Session Stats", 8, 302),
         new Widget("keystrokes", "Keystrokes", 8, -79),
         new Widget("healthhud", "Health HUD", 8, -58),
-        new Widget("hungerhud", "Hunger HUD", 8, -37)
+        new Widget("hungerhud", "Hunger HUD", 8, -37),
+        new Widget("blockreachhud", "Block Reach HUD", 8, -16),
+        new Widget("frametimehud", "Frame Time HUD", 8, 8)
     );
 
     private final List<Box> renderedBoxes = new ArrayList<>();
