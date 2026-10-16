@@ -95,6 +95,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autosprint", false);
         MODULES.put("sprint", false);
         MODULES.put("safewalk", false);
+        MODULES.put("eagle", false);
         MODULES.put("autotool", false);
         MODULES.put("biome", false);
         MODULES.put("cps", false);
@@ -222,6 +223,7 @@ public final class AstraClient implements ClientModInitializer {
             case "autosprint" -> "Auto Sprint";
             case "sprint" -> "Sprint";
             case "safewalk" -> "Safe Walk";
+            case "eagle" -> "Eagle";
             case "autotool" -> "Auto Tool";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -520,11 +522,13 @@ public final class AstraClient implements ClientModInitializer {
             // Safe Walk: use vanilla sneak-edge protection only while the player is
             // moving over a ledge. Never override the user's own sneak input.
             boolean userSneaking = client.options.sneakKey.isPressed();
-            boolean nearEdge = isEnabled("safewalk") && client.player.isOnGround()
-                && !userSneaking && (Math.abs(client.player.forwardSpeed) > 0.01F
-                    || Math.abs(client.player.sidewaysSpeed) > 0.01F)
-                && client.world.isSpaceEmpty(client.player, client.player.getBoundingBox()
-                    .offset(client.player.getVelocity().x, -0.6D, client.player.getVelocity().z));
+            boolean moving = Math.abs(client.player.forwardSpeed) > 0.01F || Math.abs(client.player.sidewaysSpeed) > 0.01F;
+            boolean nearEdge = (isEnabled("safewalk") && client.player.isOnGround()
+                && moving && client.world.isSpaceEmpty(client.player, client.player.getBoundingBox()
+                    .offset(client.player.getVelocity().x, -0.6D, client.player.getVelocity().z)))
+                || (isEnabled("eagle") && client.player.isOnGround() && moving
+                    && client.world.isSpaceEmpty(client.player, client.player.getBoundingBox().offset(0.0D, -0.1D, 0.0D));
+
             if (nearEdge) {
                 client.player.setSneaking(true);
                 forcedSafeWalkSneak = true;
