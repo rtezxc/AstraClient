@@ -88,6 +88,7 @@ public final class AstraScreen extends Screen {
     private boolean searchFocused;
     private boolean capturingGuiKey;
     private int scrollOffset;
+    private int settingsScrollOffset;
     private boolean draggingWindow;
     private boolean resizingWindow;
     private boolean draggingScale;
@@ -357,21 +358,21 @@ public final class AstraScreen extends Screen {
         DrawContext ctx, int mouseX, int mouseY, int top,
         int contentX, int contentW, int panelH, int accent
     ) {
-        ctx.drawText(textRenderer, "CLIENT SETTINGS", contentX, top + 62, WHITE, true);
-        ctx.drawText(textRenderer, "Preferences save automatically.", contentX, top + 79, MUTED, false);
+        ctx.drawText(textRenderer, "CLIENT SETTINGS", contentX, top + 62 - settingsScrollOffset, WHITE, true);
+        ctx.drawText(textRenderer, "Preferences save automatically.", contentX, top + 79 - settingsScrollOffset, MUTED, false);
 
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 96, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 96 - settingsScrollOffset - settingsScrollOffset, contentW,
             "Accent theme", AstraClient.accentName(), accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 132, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 132 - settingsScrollOffset - settingsScrollOffset, contentW,
             "Interface click sound", AstraClient.areClickSoundsEnabled() ? "ON" : "MUTED", accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 168, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 168 - settingsScrollOffset - settingsScrollOffset, contentW,
             "GUI open key", capturingGuiKey ? "PRESS A KEY  •  ESC = DEFAULT" : AstraClient.keyName(AstraClient.guiKeybindCode()), accent);
 
-        ctx.drawText(textRenderer, "GUI SCALE", contentX, top + 207, WHITE, true);
+        ctx.drawText(textRenderer, "GUI SCALE", contentX, top + 207 - settingsScrollOffset, WHITE, true);
         String value = AstraClient.guiScale() + "%";
         ctx.drawText(textRenderer, value, contentX + contentW - textRenderer.getWidth(value),
-            top + 207, accent, true);
-        int trackX = contentX, trackY = top + 226, trackW = contentW;
+            top + 207 - settingsScrollOffset, accent, true);
+        int trackX = contentX, trackY = top + 226 - settingsScrollOffset, trackW = contentW;
         ctx.fill(trackX, trackY, trackX + trackW, trackY + 6, 0xFF2B3344);
         int fillW = (AstraClient.guiScale() - 75) * trackW / 50;
         ctx.fill(trackX, trackY, trackX + fillW, trackY + 6, accent);
@@ -381,11 +382,11 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, max, trackX + trackW - textRenderer.getWidth(max),
             trackY + 12, MUTED, false);
 
-        ctx.drawText(textRenderer, "HUD OPACITY", contentX, top + 256, WHITE, true);
+        ctx.drawText(textRenderer, "HUD OPACITY", contentX, top + 256 - settingsScrollOffset, WHITE, true);
         String opacity = AstraClient.hudOpacity() + "%";
         ctx.drawText(textRenderer, opacity, contentX + contentW - textRenderer.getWidth(opacity),
-            top + 256, accent, true);
-        int opacityY = top + 275;
+            top + 256 - settingsScrollOffset, accent, true);
+        int opacityY = top + 275 - settingsScrollOffset;
         ctx.fill(contentX, opacityY, contentX + contentW, opacityY + 6, 0xFF2B3344);
         int opacityFill = (AstraClient.hudOpacity() - 35) * contentW / 65;
         ctx.fill(contentX, opacityY, contentX + opacityFill, opacityY + 6, accent);
@@ -395,11 +396,11 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, full, contentX + contentW - textRenderer.getWidth(full),
             opacityY + 12, MUTED, false);
 
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 310, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 310 - settingsScrollOffset - settingsScrollOffset, contentW,
             "Reset module defaults", "RESET", accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 346, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 346 - settingsScrollOffset - settingsScrollOffset, contentW,
             "Export config backup", "EXPORT", accent);
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 382, contentW,
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 382 - settingsScrollOffset - settingsScrollOffset, contentW,
             "Import config backup", "IMPORT", accent);
         if (panelH >= 390) {
             ctx.drawText(textRenderer, "HUD positions are saved from the HUD Editor.", contentX,
@@ -480,38 +481,38 @@ public final class AstraScreen extends Screen {
         }
 
         if (category.equals("Settings")) {
-            if (inside(mouseX, mouseY, contentX, top + 96, contentW, 31)) {
+            if (inside(mouseX, mouseY, contentX, top + 96 - settingsScrollOffset, contentW, 31)) {
                 AstraClient.toggleAccent();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 132, contentW, 31)) {
+            if (inside(mouseX, mouseY, contentX, top + 132 - settingsScrollOffset, contentW, 31)) {
                 AstraClient.toggleClickSounds();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 168, contentW, 34)) {
+            if (inside(mouseX, mouseY, contentX, top + 168 - settingsScrollOffset, contentW, 34)) {
                 capturingGuiKey = true;
                 AstraClient.notifyUser("Press a key for the Astra GUI (Esc restores Right Shift)");
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 219, contentW, 28)) {
+            if (inside(mouseX, mouseY, contentX, top + 219 - settingsScrollOffset, contentW, 28)) {
                 draggingScale = true;
                 updateScaleFromMouse(mouseX, contentX, contentW);
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 268, contentW, 28)) {
+            if (inside(mouseX, mouseY, contentX, top + 268 - settingsScrollOffset, contentW, 28)) {
                 draggingOpacity = true;
                 updateOpacityFromMouse(mouseX, contentX, contentW);
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 310, contentW, 34)) {
+            if (inside(mouseX, mouseY, contentX, top + 310 - settingsScrollOffset, contentW, 34)) {
                 AstraClient.resetModuleDefaults();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 346, contentW, 34)) {
+            if (inside(mouseX, mouseY, contentX, top + 346 - settingsScrollOffset, contentW, 34)) {
                 AstraClient.exportConfigBackup();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 382, contentW, 34)) {
+            if (inside(mouseX, mouseY, contentX, top + 382 - settingsScrollOffset, contentW, 34)) {
                 AstraClient.importConfigBackup();
                 return true;
             }
@@ -645,6 +646,13 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (category.equals("Settings")) {
+            int panelH = panelHeight();
+            int maxSettingsScroll = Math.max(0, 420 - Math.max(90, panelH - 130));
+            settingsScrollOffset = Math.max(0, Math.min(maxSettingsScroll,
+                settingsScrollOffset - (int) Math.round(verticalAmount * 32.0)));
+            return true;
+        }
         if (!category.equals("Settings")) {
             int panelW = panelWidth(), panelH = panelHeight();
             int left = panelLeft(panelW), top = panelTop(panelH);
