@@ -695,6 +695,8 @@ public final class AstraScreen extends Screen {
         ModuleInfo module = findModule(contextMenuModuleId);
         if (module == null) return actions;
         actions.add("settings");
+        actions.add("accent");
+        actions.add("sounds");
         if (module.implemented) {
             actions.add("toggle");
             actions.add("bind");
@@ -715,6 +717,7 @@ public final class AstraScreen extends Screen {
             actions.add("hunger");
         } else if (isHudModule(module.id)) {
             actions.add("hud");
+            actions.add("hudopacity");
         }
         return actions;
     }
@@ -729,6 +732,9 @@ public final class AstraScreen extends Screen {
         ModuleInfo module = findModule(contextMenuModuleId);
         return switch (action) {
             case "settings" -> "Open settings...";
+            case "accent" -> "Accent theme: " + AstraClient.accentName();
+            case "sounds" -> "UI click sounds: " + (AstraClient.areClickSoundsEnabled() ? "ON" : "OFF");
+            case "hudopacity" -> "HUD opacity: " + AstraClient.hudOpacity() + "%";
             case "toggle" -> module != null && AstraClient.isEnabled(module.id) ? "Disable module" : "Enable module";
             case "bind" -> "Change keybind...";
             case "resetbind" -> "Clear keybind";
@@ -801,6 +807,10 @@ public final class AstraScreen extends Screen {
                 contextMenuModuleId = null;
                 client.setScreen(new AstraModuleSettingsScreen(this, module.id, module.name, module.description, module.implemented));
             }
+            case "accent" -> AstraClient.toggleAccent();
+            case "sounds" -> AstraClient.toggleClickSounds();
+            case "hudopacity" -> AstraClient.setHudOpacity(AstraClient.hudOpacity() >= 95 ? 50 : AstraClient.hudOpacity() + 15);
+            case "resetbind" -> AstraClient.setModuleKeybind(module.id, GLFW.GLFW_KEY_UNKNOWN);
             case "toggle" -> AstraClient.toggle(module.id);
             case "bind" -> {
                 captureKeybindId = module.id;
