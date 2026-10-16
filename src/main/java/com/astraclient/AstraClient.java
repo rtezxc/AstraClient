@@ -67,7 +67,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark"
+        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph"
     };
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
@@ -102,6 +102,9 @@ public final class AstraClient implements ClientModInitializer {
     private static PlayerEntity flyPlayer;
     private static boolean flyWasActive;
     private static final Deque<Long> CLICK_TIMESTAMPS = new ArrayDeque<>();
+    private static final int[] FPS_HISTORY = new int[40];
+    private static int fpsHistoryIndex;
+    private static long lastFpsSampleAt;
 
     static {
         MODULES.put("fullbright", false);
@@ -150,6 +153,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("sessionstats", false);
         MODULES.put("arraylist", false);
         MODULES.put("watermark", true);
+        MODULES.put("fpsgraph", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -288,6 +292,7 @@ public final class AstraClient implements ClientModInitializer {
             case "sessionstats" -> "Session Stats";
             case "arraylist" -> "Active Modules";
             case "watermark" -> "Watermark";
+            case "fpsgraph" -> "FPS Graph";
             default -> id;
         };
     }
@@ -1138,7 +1143,10 @@ public final class AstraClient implements ClientModInitializer {
         if (isEnabled("customcrosshair")) {
             int cx = context.getScaledWindowWidth() / 2;
             int cy = screenHeight / 2;
-            int color = accent;
+            int color = client.crosshairTarget instanceof EntityHitResult entityHit
+                && entityHit.getEntity() instanceof LivingEntity ? 0xFFFF657A
+                : client.crosshairTarget != null && client.crosshairTarget.getType() == HitResult.Type.BLOCK
+                    ? 0xFF69E6B8 : accent;
             context.fill(cx - 1, cy - 7, cx + 1, cy - 3, color);
             context.fill(cx - 1, cy + 3, cx + 1, cy + 7, color);
             context.fill(cx - 7, cy - 1, cx - 3, cy + 1, color);
@@ -1298,6 +1306,34 @@ public final class AstraClient implements ClientModInitializer {
             String session = String.format(Locale.ROOT, "%02d:%02d:%02d",
                 elapsed / 3600, (elapsed / 60) % 60, elapsed % 60);
             drawHudLine(client, context, "sessionstats", 8, 449, "SESSION", session, accent);
+        }
+
+        if (isEnabled("fpsgraph")) {
+            long now = System.currentTimeMillis();
+            if (now - lastFpsSampleAt >= 150L) {
+                FPS_HISTORY[fpsHistoryIndex] = Math.max(0, client.getCurrentFps());
+                fpsHistoryIndex = (fpsHistoryIndex + 1) % FPS_HISTORY.length;
+                lastFpsSampleAt = now;
+            }
+            int gx = Math.max(2, Math.min(context.getScaledWindowWidth() - 124, hudX("fpsgraph", 150)));
+            int gy = Math.max(2, Math.min(screenHeight - 54, hudY("fpsgraph", 70)));
+            int graphWidth = 122;
+            int graphHeight = 52;
+            context.fill(gx, gy, gx + graphWidth, gy + graphHeight, 0xD90B101A);
+            context.fill(gx, gy, gx + graphWidth, gy + 2, accent);
+            context.drawText(client.textRenderer, "FPS HISTORY", gx + 5, gy + 5, 0xFFF2F5FC, false);
+            context.drawText(client.textRenderer, Integer.toString(client.getCurrentFps()), gx + graphWidth - 24, gy + 5, 0xFF4AD9F5, false);
+            int baseY = gy + graphHeight - 5;
+            context.fill(gx + 5, baseY, gx + graphWidth - 5, baseY + 1, 0xFF465064);
+            for (int i = 0; i < FPS_HISTORY.length; i++) {
+                int sample = FPS_HISTORY[(fpsHistoryIndex + i) % FPS_HISTORY.length];
+                if (sample <= 0) continue;
+                int barHeight = Math.max(1, Math.min(27, Math.round(sample / 120.0f * 27.0f)));
+                int bx = gx + 5 + i * 2;
+                int by = baseY - barHeight;
+                int barColor = sample >= 60 ? 0xFF69E6B8 : sample >= 30 ? accent : 0xFFFF829A;
+                context.fill(bx, by, bx + 1, baseY, barColor);
+            }
         }
 
         if (isEnabled("watermark")) {

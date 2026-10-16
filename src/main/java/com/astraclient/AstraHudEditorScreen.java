@@ -38,6 +38,7 @@ public final class AstraHudEditorScreen extends Screen {
         new Widget("sessionstats", "Session Stats", 8, 449),
         new Widget("arraylist", "Active Modules", 150, 8),
         new Widget("watermark", "Astra Watermark", 8, 160),
+        new Widget("fpsgraph", "FPS Graph", 150, 70),
         new Widget("keystrokes", "Keystrokes", 8, -79),
         new Widget("healthhud", "Health HUD", 8, -42),
         new Widget("hungerhud", "Hunger HUD", 8, -21),
