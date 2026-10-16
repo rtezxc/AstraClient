@@ -99,8 +99,12 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static void setGuiScale(int value) {
-        guiScale = Math.max(75, Math.min(125, value));
+        previewGuiScale(value);
         saveConfig();
+    }
+
+    public static void previewGuiScale(int value) {
+        guiScale = Math.max(75, Math.min(125, value));
     }
 
     public static void resetModuleDefaults() {
