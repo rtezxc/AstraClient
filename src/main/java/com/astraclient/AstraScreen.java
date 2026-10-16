@@ -28,8 +28,8 @@ public final class AstraScreen extends Screen {
     private static final List<ModuleInfo> MODULES = List.of(
         new ModuleInfo("fullbright", "FullBright", "Night vision for dark areas", "Render", true),
         new ModuleInfo("playeresp", "Player ESP", "Local glowing outline around other players", "Render", true),
-        new ModuleInfo("mobesp", "Mob ESP", "Highlight living entities", "Render", false),
-        new ModuleInfo("itemesp", "Item ESP", "Highlight dropped items", "Render", false),
+        new ModuleInfo("mobesp", "Mob ESP", "Local glowing outlines around nearby mobs", "Render", true),
+        new ModuleInfo("itemesp", "Item ESP", "Local glowing outlines around dropped items", "Render", true),
         new ModuleInfo("xray", "X-Ray", "Highlight selected blocks", "Render", false),
         new ModuleInfo("nametags", "Nametags", "Enhanced entity labels", "Render", false),
         new ModuleInfo("zoom", "Zoom", "Adjustable camera FOV zoom", "Render", true),
