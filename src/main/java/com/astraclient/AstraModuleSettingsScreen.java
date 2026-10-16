@@ -123,17 +123,18 @@ public final class AstraModuleSettingsScreen extends Screen {
             ctx.drawText(textRenderer, maxHunger, sliderX + sliderW - textRenderer.getWidth(maxHunger),
                 sliderY + 13, MUTED, false);
         } else if (moduleId.equals("killaura")) {
-            ctx.drawText(textRenderer, "MAXIMUM TARGET DISTANCE", x + 20, nextY + 3, WHITE, true);
-            String rangeLabel = AstraClient.combatRange() + " blocks";
+            // Keep the UI honest: the attack routine intentionally stays within
+            // normal vanilla melee reach. Servers may enforce an even shorter range.
+            ctx.drawText(textRenderer, "MAXIMUM MELEE REACH", x + 20, nextY + 3, WHITE, true);
+            String rangeLabel = "3 blocks";
             ctx.drawText(textRenderer, rangeLabel, x + panelW - 20 - textRenderer.getWidth(rangeLabel),
                 nextY + 3, accent(), true);
             int sliderX = x + 20, sliderY = nextY + 27, sliderW = panelW - 40;
             ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
-            int fill = (AstraClient.combatRange() - 3) * sliderW / 3;
-            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
-            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
-            ctx.drawText(textRenderer, "3 blocks", sliderX, sliderY + 13, MUTED, false);
-            ctx.drawText(textRenderer, "6 blocks", sliderX + sliderW - textRenderer.getWidth("6 blocks"),
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, accent());
+            ctx.drawText(textRenderer, "Vanilla client reach", sliderX, sliderY + 13, MUTED, false);
+            String serverRange = "Server enforced";
+            ctx.drawText(textRenderer, serverRange, sliderX + sliderW - textRenderer.getWidth(serverRange),
                 sliderY + 13, MUTED, false);
             drawRow(ctx, x + 20, nextY + 54, (panelW - 44) / 2, 27, "Target players",
                 AstraClient.targetPlayers() ? "ON" : "OFF", mouseX, mouseY, a);
@@ -252,8 +253,7 @@ public final class AstraModuleSettingsScreen extends Screen {
         } else if (moduleId.equals("killaura")) {
             int half = (pw - 44) / 2;
             if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
-                draggingCombatSlider = true;
-                updateCombatRangeFromMouse(mouseX, x + 20, pw - 40);
+                // Reach is fixed to vanilla melee distance; this bar is informational.
                 return true;
             }
             if (inside(mouseX, mouseY, x + 20, nextY + 54, half, 27)) {
