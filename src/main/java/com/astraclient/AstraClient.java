@@ -74,6 +74,7 @@ public final class AstraClient implements ClientModInitializer {
     private static KeyBinding openGuiKey;
     private static int guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
     private static boolean guiKeyWasDown;
+    private static long guiKeybindIgnoreUntil;
     private static int accentTheme;
     private static boolean clickSounds = true;
     private static boolean autoSprintGroundOnly = true;
@@ -342,6 +343,7 @@ public final class AstraClient implements ClientModInitializer {
     public static void setGuiKeybindCode(int keyCode) {
         guiKeybindCode = keyCode == GLFW.GLFW_KEY_UNKNOWN ? GLFW.GLFW_KEY_RIGHT_SHIFT : keyCode;
         guiKeyWasDown = false;
+        guiKeybindIgnoreUntil = System.currentTimeMillis() + 400L;
         notifyUser("GUI keybind: " + keyName(guiKeybindCode));
         saveConfig();
     }
