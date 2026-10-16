@@ -60,7 +60,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter"
+        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud"
     };
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
@@ -100,6 +100,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("cps", false);
         MODULES.put("worldinfo", false);
         MODULES.put("potioncounter", false);
+        MODULES.put("durabilityhud", false);
+        MODULES.put("inventoryhud", false);
         MODULES.put("fps", true);
         MODULES.put("coordinates", false);
         MODULES.put("direction", false);
@@ -225,6 +227,8 @@ public final class AstraClient implements ClientModInitializer {
             case "cps" -> "CPS Counter";
             case "worldinfo" -> "World Information";
             case "potioncounter" -> "Potion Counter";
+            case "durabilityhud" -> "Durability HUD";
+            case "inventoryhud" -> "Inventory HUD";
             case "fps" -> "FPS Counter";
             case "coordinates" -> "Coordinates";
             case "direction" -> "Direction";
@@ -706,11 +710,11 @@ public final class AstraClient implements ClientModInitializer {
         if (isEnabled("clock")) drawHudLine(client, context, "clock", 8, 134, "LOCAL TIME",
             LocalTime.now().format(CLOCK_FORMAT), accent);
         if (isEnabled("cps")) {
-            drawHudLine(client, context, "cps", 8, 155, "CPS", Integer.toString(CLICK_TIMESTAMPS.size()), accent);
+            drawHudLine(client, context, "cps", 8, 386, "CPS", Integer.toString(CLICK_TIMESTAMPS.size()), accent);
         }
         if (isEnabled("worldinfo")) {
             String dimension = client.world.getRegistryKey().getValue().getPath().replace('_', ' ').toUpperCase(Locale.ROOT);
-            drawHudLine(client, context, "worldinfo", 8, 176, "WORLD", dimension + " · DAY " + (client.world.getTimeOfDay() / 24000L), accent);
+            drawHudLine(client, context, "worldinfo", 8, 407, "WORLD", dimension + " · DAY " + (client.world.getTimeOfDay() / 24000L), accent);
         }
         if (isEnabled("potioncounter")) {
             int potions = 0;
@@ -719,13 +723,13 @@ public final class AstraClient implements ClientModInitializer {
                 if (stack.isOf(Items.POTION) || stack.isOf(Items.SPLASH_POTION)
                     || stack.isOf(Items.LINGERING_POTION)) potions += stack.getCount();
             }
-            drawHudLine(client, context, "potioncounter", 8, 197, "POTIONS", Integer.toString(potions), accent);
+            drawHudLine(client, context, "potioncounter", 8, 428, "POTIONS", Integer.toString(potions), accent);
         }
         if (isEnabled("biome")) {
             String biomeName = client.world.getBiome(client.player.getBlockPos()).getKey()
                 .map(key -> key.getValue().getPath().replace('_', ' ').toUpperCase(Locale.ROOT))
                 .orElse("UNKNOWN");
-            drawHudLine(client, context, "biome", 8, 155, "BIOME", biomeName, accent);
+            drawHudLine(client, context, "biome", 8, 365, "BIOME", biomeName, accent);
         }
         if (isEnabled("totemcounter")) drawHudLine(client, context, "totemcounter", 8, 218, "TOTEMS",
             Integer.toString(countItem(client, Items.TOTEM_OF_UNDYING)), accent);
@@ -742,7 +746,27 @@ public final class AstraClient implements ClientModInitializer {
             drawHudLine(client, context, "goldencounter", 8, 281, "GOLDEN APPLES", Integer.toString(apples), accent);
         }
         if (isEnabled("armorhud")) {
-            drawHudLine(client, context, "armorhud", 8, 302, "ARMOR", armorSummary(client), accent);
+            drawHudLine(client, context, "armorhud", 8, 281, "ARMOR", armorSummary(client), accent);
+        }
+        if (isEnabled("durabilityhud")) {
+            ItemStack weakest = ItemStack.EMPTY;
+            int lowestPercent = 101;
+            for (int slot = 0; slot < client.player.getInventory().size(); slot++) {
+                ItemStack stack = client.player.getInventory().getStack(slot);
+                if (stack.isEmpty() || !stack.isDamageable()) continue;
+                int remaining = Math.max(0, stack.getMaxDamage() - stack.getDamage());
+                int percent = Math.round(100.0f * remaining / Math.max(1, stack.getMaxDamage()));
+                if (percent < lowestPercent) { lowestPercent = percent; weakest = stack; }
+            }
+            String value = weakest.isEmpty() ? "No durable items"
+                : weakest.getName().getString() + " · " + lowestPercent + "%";
+            drawHudLine(client, context, "durabilityhud", 8, 323, "LOWEST DURABILITY", value, accent);
+        }
+        if (isEnabled("inventoryhud")) {
+            ItemStack selected = client.player.getMainHandStack();
+            String value = selected.isEmpty() ? "Empty hand"
+                : selected.getName().getString() + " ×" + selected.getCount();
+            drawHudLine(client, context, "inventoryhud", 8, 344, "HELD ITEM", value, accent);
         }
         if (isEnabled("potionhud")) {
             int effectY = hudY("potionhud", 260);
