@@ -187,7 +187,8 @@ public final class AstraScreen extends Screen {
             searchX + 8, searchY + 8, searchText.isEmpty() ? MUTED : WHITE, false);
         ctx.drawText(textRenderer, category.toUpperCase(Locale.ROOT),
             contentX, top + 17, WHITE, true);
-        ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.2.0",
+        ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.2.0  •  "
+            + net.minecraft.client.MinecraftClient.getInstance().getCurrentFps() + " FPS",
             contentX, top + 36, accent, false);
         if (category.equals("HUD")) {
             int ex = left + panelW - 121, ey = top + 66;
@@ -343,7 +344,7 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, "Preferences save automatically.", contentX, top + 79, MUTED, false);
 
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 96, contentW,
-            "Accent theme", AstraClient.isAlternateAccent() ? "CYAN" : "PURPLE", accent);
+            "Accent theme", AstraClient.accentName(), accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 132, contentW,
             "Interface click sound", AstraClient.areClickSoundsEnabled() ? "ON" : "MUTED", accent);
 
