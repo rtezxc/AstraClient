@@ -157,7 +157,8 @@ public final class AstraModuleSettingsScreen extends Screen {
         if (implemented) drawButton(ctx, x + 151, bottomY, 160, 28,
             AstraClient.isEnabled(moduleId) ? "DISABLE MODULE" : "ENABLE MODULE", mouseX, mouseY, a);
         drawButton(ctx, x + panelW - 136, bottomY, 116, 28, "RESET KEY", mouseX, mouseY, a);
-        super.render(ctx, mouseX, mouseY, delta);
+        // Controls are drawn manually; do not invoke the vanilla screen render path,
+        // which can re-apply Minecraft menu blur over Astra.
     }
 
     private void drawRow(DrawContext ctx, int x, int y, int w, int h, String label, String value,
