@@ -96,7 +96,7 @@ public final class AstraHudEditorScreen extends Screen {
             mouseX >= width - 98 && mouseX <= width - 12 && mouseY >= buttonY && mouseY <= buttonY + 22, accent);
         context.drawText(textRenderer, "Positions save after you release a dragged widget.",
             151, height - 24, MUTED, false);
-        super.render(context, mouseX, mouseY, delta);
+        // This screen uses manual drawing only. Skip the vanilla renderer to keep it crisp.
     }
 
     private void drawButton(DrawContext context, int x, int y, int w, int h, String label, boolean hover, int color) {
