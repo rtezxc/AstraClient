@@ -349,9 +349,10 @@ public final class AstraClient implements ClientModInitializer {
                     properties.getProperty("module." + id, Boolean.toString(MODULES.get(id)))
                 ));
             }
-            alternateAccent = Boolean.parseBoolean(
-                properties.getProperty("theme.alternateAccent", "false")
-            );
+            accentTheme = Math.max(0, Math.min(3, Integer.parseInt(
+                properties.getProperty("theme.accentTheme",
+                    Boolean.parseBoolean(properties.getProperty("theme.alternateAccent", "false")) ? "1" : "0")
+            )));
             guiScale = Math.max(75, Math.min(125,
                 Integer.parseInt(properties.getProperty("gui.scale", "100"))));
             zoomFov = Math.max(10, Math.min(60,
