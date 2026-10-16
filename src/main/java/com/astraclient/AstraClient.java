@@ -15,6 +15,7 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.util.math.Box;
 import java.util.HashMap;
@@ -658,8 +659,7 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean isValidCombatTarget(LivingEntity target, PlayerEntity self) {
         if (target == self || !target.isAlive() || target.isSpectator()) return false;
         if (target instanceof PlayerEntity) return targetPlayers;
-        return target.getGroup() == net.minecraft.entity.EntityGroup.MONSTER
-            ? targetHostile : targetPassive;
+        return target instanceof HostileEntity ? targetHostile : targetPassive;
     }
 
     private static boolean isCriticalHitReady(PlayerEntity player) {
