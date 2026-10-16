@@ -83,6 +83,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("lowhealthalert", "Low Health Alert", "Pulse a warning border when health drops to three hearts or less", "Player", true),
         new ModuleInfo("compasshud", "Compass HUD", "Show cardinal direction and heading in a movable compass strip", "HUD", true),
         new ModuleInfo("breadcrumbs", "Breadcrumbs", "Display a small map of your recent path behind you", "HUD", true),
+        new ModuleInfo("waypoint", "Waypoint", "Save a location and show its coordinates, distance, and relative direction", "HUD", true),
         new ModuleInfo("effectalert", "Effect Expiry Alert", "Warn when active potion effects have ten seconds or less remaining", "HUD", true),
         new ModuleInfo("noweather", "No Weather", "Hide weather effects", "World", false),
         new ModuleInfo("autotool", "Auto Tool", "Select the fastest hotbar tool for the targeted block", "World", true),
@@ -745,6 +746,10 @@ public final class AstraScreen extends Screen {
         } else if (module.id.equals("breadcrumbs")) {
             actions.add("trailLength");
             actions.add("hud");
+        } else if (module.id.equals("waypoint")) {
+            actions.add("setWaypoint");
+            actions.add("clearWaypoint");
+            actions.add("hud");
         } else if (module.id.equals("blockfinder")) {
             actions.add("blocktarget");
             actions.add("blockrange");
@@ -791,6 +796,8 @@ public final class AstraScreen extends Screen {
             case "healththreshold" -> "Health alert: " + AstraClient.lowHealthThreshold() + " HP";
             case "effectthreshold" -> "Effect warning: " + AstraClient.effectAlertThresholdSeconds() + " s";
             case "trailLength" -> "Trail history: " + AstraClient.breadcrumbTrailLength();
+            case "setWaypoint" -> "Set waypoint to current position";
+            case "clearWaypoint" -> "Clear saved waypoint";
             case "blocktarget" -> "Find: " + AstraClient.blockFinderTarget();
             case "blockrange" -> "Scan radius: " + AstraClient.blockFinderRange() + " blocks";
             case "hud" -> "Open HUD editor...";
@@ -888,6 +895,8 @@ public final class AstraScreen extends Screen {
                 AstraClient.effectAlertThresholdSeconds() >= 27 ? 3 : AstraClient.effectAlertThresholdSeconds() + 3);
             case "trailLength" -> AstraClient.setBreadcrumbTrailLength(
                 AstraClient.breadcrumbTrailLength() >= 108 ? 12 : AstraClient.breadcrumbTrailLength() + 12);
+            case "setWaypoint" -> AstraClient.setWaypointHere();
+            case "clearWaypoint" -> AstraClient.clearWaypoint();
             case "blocktarget" -> AstraClient.cycleBlockFinderTarget();
             case "blockrange" -> AstraClient.setBlockFinderRange(
                 AstraClient.blockFinderRange() >= 40 ? 8 : AstraClient.blockFinderRange() + 8);

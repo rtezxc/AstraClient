@@ -72,7 +72,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "breadcrumbs", "compasshud"
+        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "breadcrumbs", "compasshud", "waypoint"
     };
     private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
     private static final Map<String, HudBounds> HUD_RENDERED_BOUNDS = new LinkedHashMap<>();
@@ -107,6 +107,8 @@ public final class AstraClient implements ClientModInitializer {
     private static int crosshairGap = 3;
     private static int crosshairThickness = 2;
     private static int breadcrumbTrailLength = 48;
+    private static boolean waypointSet;
+    private static int waypointX, waypointY, waypointZ;
     private static final List<TrailPoint> BREADCRUMB_TRAIL = new ArrayList<>();
     private static Object breadcrumbWorld;
     private static long lastBreadcrumbSampleAt;
@@ -189,6 +191,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("lowhealthalert", false);
         MODULES.put("compasshud", false);
         MODULES.put("breadcrumbs", false);
+        MODULES.put("waypoint", false);
         MODULES.put("effectalert", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
@@ -335,6 +338,7 @@ public final class AstraClient implements ClientModInitializer {
             case "lowhealthalert" -> "Low Health Alert";
             case "compasshud" -> "Compass HUD";
             case "breadcrumbs" -> "Breadcrumbs";
+            case "waypoint" -> "Waypoint";
             case "effectalert" -> "Effect Expiry Alert";
             default -> id;
         };
@@ -481,6 +485,30 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    public static boolean isWaypointSet() { return waypointSet; }
+    public static int waypointX() { return waypointX; }
+    public static int waypointY() { return waypointY; }
+    public static int waypointZ() { return waypointZ; }
+    public static void setWaypointHere() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.player == null) {
+            notifyUser("Waypoint unavailable: join a world first");
+            return;
+        }
+        BlockPos pos = client.player.getBlockPos();
+        waypointX = pos.getX();
+        waypointY = pos.getY();
+        waypointZ = pos.getZ();
+        waypointSet = true;
+        notifyUser("Waypoint saved at " + waypointX + " " + waypointY + " " + waypointZ);
+        saveConfig();
+    }
+    public static void clearWaypoint() {
+        waypointSet = false;
+        notifyUser("Waypoint cleared");
+        saveConfig();
+    }
+
     public static int breadcrumbTrailLength() { return breadcrumbTrailLength; }
     public static void previewBreadcrumbTrailLength(int value) {
         breadcrumbTrailLength = Math.max(12, Math.min(120, value));
@@ -597,6 +625,8 @@ public final class AstraClient implements ClientModInitializer {
         crosshairGap = 3;
         crosshairThickness = 2;
         breadcrumbTrailLength = 48;
+        waypointSet = false;
+        waypointX = waypointY = waypointZ = 0;
         BREADCRUMB_TRAIL.clear();
         autoEatHungerThreshold = 16;
         espRange = 64;
@@ -691,6 +721,10 @@ public final class AstraClient implements ClientModInitializer {
             crosshairGap = Math.max(1, Math.min(12, Integer.parseInt(properties.getProperty("crosshair.gap", "3"))));
             crosshairThickness = Math.max(1, Math.min(5, Integer.parseInt(properties.getProperty("crosshair.thickness", "2"))));
             breadcrumbTrailLength = Math.max(12, Math.min(120, Integer.parseInt(properties.getProperty("breadcrumbs.length", "48"))));
+            waypointSet = Boolean.parseBoolean(properties.getProperty("waypoint.set", "false"));
+            waypointX = Integer.parseInt(properties.getProperty("waypoint.x", "0"));
+            waypointY = Integer.parseInt(properties.getProperty("waypoint.y", "0"));
+            waypointZ = Integer.parseInt(properties.getProperty("waypoint.z", "0"));
             tracerPlayers = Boolean.parseBoolean(properties.getProperty("tracers.players", "true"));
             tracerMobs = Boolean.parseBoolean(properties.getProperty("tracers.mobs", "true"));
             autoEatHungerThreshold = Math.max(10, Math.min(19,
@@ -747,6 +781,10 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("crosshair.gap", Integer.toString(crosshairGap));
         properties.setProperty("crosshair.thickness", Integer.toString(crosshairThickness));
         properties.setProperty("breadcrumbs.length", Integer.toString(breadcrumbTrailLength));
+        properties.setProperty("waypoint.set", Boolean.toString(waypointSet));
+        properties.setProperty("waypoint.x", Integer.toString(waypointX));
+        properties.setProperty("waypoint.y", Integer.toString(waypointY));
+        properties.setProperty("waypoint.z", Integer.toString(waypointZ));
         properties.setProperty("tracers.players", Boolean.toString(tracerPlayers));
         properties.setProperty("tracers.mobs", Boolean.toString(tracerMobs));
         properties.setProperty("autoeat.hungerThreshold", Integer.toString(autoEatHungerThreshold));
@@ -1477,7 +1515,27 @@ public final class AstraClient implements ClientModInitializer {
             String dimension = client.world.getRegistryKey().getValue().getPath().replace('_', ' ').toUpperCase(Locale.ROOT);
             drawHudLine(client, context, "worldinfo", 8, 407, "WORLD", dimension + " · DAY " + (client.world.getTimeOfDay() / 24000L), accent);
         }
-        if (isEnabled("blockfinder")) {
+                if (isEnabled("waypoint")) {
+            String value;
+            if (!waypointSet) {
+                value = "Not set • open module settings";
+            } else {
+                double dx = waypointX + 0.5 - client.player.getX();
+                double dz = waypointZ + 0.5 - client.player.getZ();
+                double distance = Math.sqrt(dx * dx + dz * dz
+                    + Math.pow(waypointY + 0.5 - client.player.getY(), 2));
+                double targetYaw = Math.toDegrees(Math.atan2(-dx, dz));
+                double relativeYaw = wrapDegrees(targetYaw - client.player.getYaw());
+                String bearing = Math.abs(relativeYaw) < 22.5 ? "AHEAD"
+                    : Math.abs(relativeYaw) > 157.5 ? "BEHIND"
+                    : relativeYaw < 0 ? "RIGHT" : "LEFT";
+                value = waypointX + " " + waypointY + " " + waypointZ + " • "
+                    + String.format(Locale.ROOT, "%.1f m", distance) + " • " + bearing;
+            }
+            drawHudLine(client, context, "waypoint", 8, screenHeight - 80, "WAYPOINT", value, accent);
+        }
+
+if (isEnabled("blockfinder")) {
             String value = nearestFoundBlock == null
                 ? "No " + blockFinderTarget.toLowerCase(Locale.ROOT) + " within " + blockFinderRange + " blocks"
                 : nearestFoundBlock.getX() + " " + nearestFoundBlock.getY() + " " + nearestFoundBlock.getZ()
@@ -2014,6 +2072,7 @@ public final class AstraClient implements ClientModInitializer {
             case "compasshud" -> screenWidth / 2 - 84;
             case "damageindicators" -> screenWidth / 2 - 44;
             case "blockfinder" -> 150;
+            case "waypoint" -> 8;
             default -> 8;
         };
     }
@@ -2047,6 +2106,7 @@ public final class AstraClient implements ClientModInitializer {
             case "targethud" -> screenHeight - 43;
             case "damageindicators" -> screenHeight / 2 + 26;
             case "blockfinder" -> screenHeight - 60;
+            case "waypoint" -> screenHeight - 80;
             case "healthhud" -> screenHeight - 42;
             case "hungerhud" -> screenHeight - 21;
             case "blockreachhud" -> screenHeight - 84;

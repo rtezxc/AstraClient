@@ -151,6 +151,14 @@ public final class AstraModuleSettingsScreen extends Screen {
                 drawRow(ctx, x + 20, nextY + 84, panelW - 40, 27, "Trace mobs",
                     AstraClient.tracerMobs() ? "ON" : "OFF", mouseX, mouseY, a);
             }
+        } else if (moduleId.equals("waypoint")) {
+            drawRow(ctx, x + 20, nextY, panelW - 40, 32, "Save current position", "SET HERE",
+                mouseX, mouseY, a);
+            drawRow(ctx, x + 20, nextY + 37, panelW - 40, 32, "Saved location",
+                AstraClient.isWaypointSet() ? (AstraClient.waypointX() + " " + AstraClient.waypointY() + " " + AstraClient.waypointZ()) : "NOT SET",
+                mouseX, mouseY, a);
+            drawRow(ctx, x + 20, nextY + 74, panelW - 40, 32, "Clear waypoint", "CLEAR",
+                mouseX, mouseY, a);
         } else if (moduleId.equals("breadcrumbs")) {
             int sliderX = x + 20, sliderW = panelW - 40;
             ctx.drawText(textRenderer, "TRAIL HISTORY", sliderX, nextY + 3, WHITE, true);
@@ -369,6 +377,15 @@ public final class AstraModuleSettingsScreen extends Screen {
             }
             if (moduleId.equals("tracers") && inside(mouseX, mouseY, x + 20, nextY + 84, pw - 40, 27)) {
                 AstraClient.toggleTracerMobs();
+                return true;
+            }
+        } else if (moduleId.equals("waypoint")) {
+            if (inside(mouseX, mouseY, x + 20, nextY, pw - 40, 32)) {
+                AstraClient.setWaypointHere();
+                return true;
+            }
+            if (inside(mouseX, mouseY, x + 20, nextY + 74, pw - 40, 32)) {
+                AstraClient.clearWaypoint();
                 return true;
             }
         } else if (moduleId.equals("breadcrumbs")) {
