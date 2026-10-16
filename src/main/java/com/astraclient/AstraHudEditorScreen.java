@@ -53,6 +53,7 @@ public final class AstraHudEditorScreen extends Screen {
         new Widget("biome", "Biome Display", 8, 365),
         new Widget("cps", "CPS Counter", 8, 386),
         new Widget("worldinfo", "World Information", 8, 407),
+        new Widget("serverinfo", "Server Information", 8, -122),
         new Widget("potioncounter", "Potion Counter", 8, 428),
         new Widget("durabilityhud", "Durability HUD", 8, 323),
         new Widget("inventoryhud", "Inventory HUD", 8, 344)

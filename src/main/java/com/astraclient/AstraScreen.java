@@ -54,6 +54,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("damageindicators", "Damage Indicators", "Show a short red indicator when your health drops", "Player", true),
         new ModuleInfo("cps", "CPS Counter", "Count left and right mouse clicks per second", "HUD", true),
         new ModuleInfo("worldinfo", "World Information", "Show dimension and in-game day", "HUD", true),
+        new ModuleInfo("serverinfo", "Server Information", "Show the current server/world name and connection ping", "HUD", true),
         new ModuleInfo("potioncounter", "Potion Counter", "Count potions in your inventory", "Inventory", true),
         new ModuleInfo("durabilityhud", "Durability HUD", "Show the lowest durability item in your inventory", "HUD", true),
         new ModuleInfo("inventoryhud", "Inventory HUD", "Show the held item's name and stack count", "HUD", true),

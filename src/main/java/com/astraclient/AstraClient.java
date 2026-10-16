@@ -73,7 +73,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "breadcrumbs", "compasshud", "waypoint", "storagefinder"
+        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "serverinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "breadcrumbs", "compasshud", "waypoint", "storagefinder"
     };
     private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
     private static final Map<String, HudBounds> HUD_RENDERED_BOUNDS = new LinkedHashMap<>();
@@ -163,6 +163,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("biome", false);
         MODULES.put("cps", false);
         MODULES.put("worldinfo", false);
+        MODULES.put("serverinfo", false);
         MODULES.put("blockfinder", false);
         MODULES.put("potioncounter", false);
         MODULES.put("durabilityhud", false);
@@ -315,6 +316,7 @@ public final class AstraClient implements ClientModInitializer {
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
             case "worldinfo" -> "World Information";
+            case "serverinfo" -> "Server Information";
             case "blockfinder" -> "Block Finder";
             case "potioncounter" -> "Potion Counter";
             case "durabilityhud" -> "Durability HUD";
@@ -690,7 +692,7 @@ public final class AstraClient implements ClientModInitializer {
                 "potionhud", "targethud", "tracers", "playeresp", "lowhealthalert", "compasshud");
             case "exploration" -> Set.of("fps", "watermark", "coordinates", "direction", "biome",
                 "waypoint", "breadcrumbs", "compasshud", "storagefinder", "blockfinder",
-                "worldinfo", "healthhud", "hungerhud", "armorhud", "sessionstats");
+                "worldinfo", "serverinfo", "healthhud", "hungerhud", "armorhud", "sessionstats");
             default -> {
                 notifyUser("Unknown profile");
                 yield null;
@@ -1600,6 +1602,20 @@ public final class AstraClient implements ClientModInitializer {
             String dimension = client.world.getRegistryKey().getValue().getPath().replace('_', ' ').toUpperCase(Locale.ROOT);
             drawHudLine(client, context, "worldinfo", 8, 407, "WORLD", dimension + " · DAY " + (client.world.getTimeOfDay() / 24000L), accent);
         }
+        if (isEnabled("serverinfo")) {
+            var server = client.getCurrentServerEntry();
+            String serverName = server == null ? "SINGLEPLAYER" : server.name;
+            if (serverName == null || serverName.isBlank()) serverName = server == null ? "LOCAL WORLD" : server.address;
+            if (serverName.length() > 30) serverName = serverName.substring(0, 27) + "...";
+            String serverPing = "LOCAL";
+            if (client.getNetworkHandler() != null) {
+                var entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
+                if (entry != null) serverPing = entry.getLatency() + " ms";
+            }
+            int serverX = hudX("serverinfo", 8);
+            int serverY = hudY("serverinfo", screenHeight - 122);
+            drawHudLineAt(client, context, serverX, serverY, "SERVER", serverName + " · " + serverPing, accent);
+        }
                 if (isEnabled("waypoint")) {
             String value;
             if (!waypointSet) {
@@ -1718,25 +1734,33 @@ if (isEnabled("blockfinder")) {
             String distance = String.format(Locale.ROOT, "%.1f m", client.player.distanceTo(entity));
             String healthText = entity instanceof LivingEntity living
                 ? String.format(Locale.ROOT, "%.1f / %.1f HP", Math.max(0.0F, living.getHealth()), living.getMaxHealth())
-                : "ENTITY";
+                : "NON-LIVING ENTITY";
+            String heldOrType = entity instanceof PlayerEntity targetPlayer
+                ? (targetPlayer.getMainHandStack().isEmpty() ? "Empty hand" : targetPlayer.getMainHandStack().getName().getString())
+                : entity.getType().getName().getString();
+            if (heldOrType.length() > 28) heldOrType = heldOrType.substring(0, 25) + "...";
             int x = hudX("targethud", 150);
-            int y = hudY("targethud", screenHeight - 43);
+            int y = hudY("targethud", screenHeight - 52);
             int panelWidth = Math.min(context.getScaledWindowWidth() - x - 8,
-                Math.max(142, Math.max(client.textRenderer.getWidth(targetName),
-                    client.textRenderer.getWidth(healthText) + client.textRenderer.getWidth(distance)) + 24));
-            if (hudBackgrounds) context.fill(x, y, x + panelWidth, y + 38, 0xD90B101A);
-            HUD_RENDERED_BOUNDS.put("targethud", new HudBounds(x, y, panelWidth, 38));
-            context.fill(x, y, x + 3, y + 38, accent);
+                Math.max(164, Math.max(client.textRenderer.getWidth(targetName),
+                    Math.max(client.textRenderer.getWidth(healthText) + client.textRenderer.getWidth(distance),
+                        client.textRenderer.getWidth(heldOrType))) + 24));
+            if (hudBackgrounds) context.fill(x, y, x + panelWidth, y + 49, 0xD90B101A);
+            HUD_RENDERED_BOUNDS.put("targethud", new HudBounds(x, y, panelWidth, 49));
+            context.fill(x, y, x + 3, y + 49, accent);
             context.drawText(client.textRenderer, targetName, x + 10, y + 5, 0xFFF3F5FC, true);
             context.drawText(client.textRenderer, distance, x + panelWidth - client.textRenderer.getWidth(distance) - 8,
                 y + 5, accent, false);
-            context.drawText(client.textRenderer, healthText, x + 10, y + 19, 0xFFD5DCEC, false);
+            context.drawText(client.textRenderer, heldOrType, x + 10, y + 19, 0xFF9FE7F4, false);
+            context.drawText(client.textRenderer, healthText, x + 10, y + 31, 0xFFD5DCEC, false);
             if (entity instanceof LivingEntity living && living.getMaxHealth() > 0.0F) {
-                int barX = x + 10, barY = y + 32, barWidth = panelWidth - 20;
+                int barX = x + 10, barY = y + 43, barWidth = panelWidth - 20;
                 context.fill(barX, barY, barX + barWidth, barY + 3, 0xFF303747);
                 int healthWidth = Math.max(0, Math.min(barWidth,
                     Math.round(barWidth * living.getHealth() / living.getMaxHealth())));
-                context.fill(barX, barY, barX + healthWidth, barY + 3, 0xFF69E6B8);
+                int healthColor = living.getHealth() / living.getMaxHealth() > 0.5F ? 0xFF69E6B8
+                    : living.getHealth() / living.getMaxHealth() > 0.25F ? 0xFFFFC266 : 0xFFFF657A;
+                context.fill(barX, barY, barX + healthWidth, barY + 3, healthColor);
             }
         }
         if (isEnabled("sessionstats")) {
@@ -1755,24 +1779,39 @@ if (isEnabled("blockfinder")) {
             }
             int gx = Math.max(2, Math.min(context.getScaledWindowWidth() - 124, hudX("fpsgraph", 150)));
             int gy = Math.max(2, Math.min(screenHeight - 54, hudY("fpsgraph", 70)));
-            int graphWidth = 122;
-            int graphHeight = 52;
+            int graphWidth = 154;
+            int graphHeight = 62;
             HUD_RENDERED_BOUNDS.put("fpsgraph", new HudBounds(gx, gy, graphWidth, graphHeight));
             if (hudBackgrounds) context.fill(gx, gy, gx + graphWidth, gy + graphHeight, 0xD90B101A);
             context.fill(gx, gy, gx + graphWidth, gy + 2, accent);
-            context.drawText(client.textRenderer, "FPS HISTORY", gx + 5, gy + 5, 0xFFF2F5FC, false);
-            context.drawText(client.textRenderer, Integer.toString(client.getCurrentFps()), gx + graphWidth - 24, gy + 5, 0xFF4AD9F5, false);
+            int currentFps = Math.max(0, client.getCurrentFps());
+            int validSamples = 0, minFps = Integer.MAX_VALUE, maxFps = 0, sumFps = 0;
+            for (int sample : FPS_HISTORY) {
+                if (sample <= 0) continue;
+                validSamples++;
+                minFps = Math.min(minFps, sample);
+                maxFps = Math.max(maxFps, sample);
+                sumFps += sample;
+            }
+            int averageFps = validSamples == 0 ? currentFps : sumFps / validSamples;
+            String graphTitle = "FPS  " + currentFps + "  AVG " + averageFps;
+            context.drawText(client.textRenderer, graphTitle, gx + 5, gy + 5, 0xFFF2F5FC, false);
             int baseY = gy + graphHeight - 5;
+            int graphTop = gy + 24;
             context.fill(gx + 5, baseY, gx + graphWidth - 5, baseY + 1, 0xFF465064);
+            context.fill(gx + 5, graphTop, gx + graphWidth - 5, graphTop + 1, 0x553F4B61);
+            int plotWidth = graphWidth - 10;
             for (int i = 0; i < FPS_HISTORY.length; i++) {
                 int sample = FPS_HISTORY[(fpsHistoryIndex + i) % FPS_HISTORY.length];
                 if (sample <= 0) continue;
-                int barHeight = Math.max(1, Math.min(27, Math.round(sample / 120.0f * 27.0f)));
-                int bx = gx + 5 + i * 2;
+                int barHeight = Math.max(1, Math.min(baseY - graphTop - 2, Math.round(sample / 240.0f * (baseY - graphTop - 2))));
+                int bx = gx + 5 + i * plotWidth / FPS_HISTORY.length;
                 int by = baseY - barHeight;
                 int barColor = sample >= 60 ? 0xFF69E6B8 : sample >= 30 ? accent : 0xFFFF829A;
-                context.fill(bx, by, bx + 1, baseY, barColor);
+                context.fill(bx, by, Math.min(gx + graphWidth - 5, bx + Math.max(1, plotWidth / FPS_HISTORY.length - 1)), baseY, barColor);
             }
+            String range = validSamples == 0 ? "MIN --  MAX --" : "MIN " + minFps + "   MAX " + maxFps;
+            context.drawText(client.textRenderer, range, gx + 5, gy + graphHeight - 15, 0xFFB5BED0, false);
         }
 
         if (isEnabled("watermark")) {
@@ -2207,6 +2246,7 @@ if (isEnabled("blockfinder")) {
     private static int defaultHudX(String id, int screenWidth) {
         return switch (id) {
             case "arraylist", "potionhud", "targethud", "blockreachhud", "frametimehud", "fpsgraph" -> 150;
+            case "serverinfo" -> 8;
             case "compasshud" -> screenWidth / 2 - 84;
             case "damageindicators" -> screenWidth / 2 - 44;
             case "blockfinder" -> 150;
@@ -2238,6 +2278,7 @@ if (isEnabled("blockfinder")) {
             case "biome" -> 365;
             case "cps" -> 386;
             case "worldinfo" -> 407;
+            case "serverinfo" -> screenHeight - 122;
             case "potioncounter" -> 428;
             case "sessionstats" -> 449;
             case "potionhud" -> 260;
