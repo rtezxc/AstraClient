@@ -49,6 +49,8 @@ public final class AstraClient implements ClientModInitializer {
     private static KeyBinding openGuiKey;
     private static boolean alternateAccent;
     private static boolean clickSounds = true;
+    private static boolean autoSprintGroundOnly = true;
+    private static boolean autoSprintDisableInMenus = true;
     private static int guiScale = 100;
     private static int hudOpacity = 84;
     private static long sessionStartedAt = System.currentTimeMillis();
@@ -257,6 +259,8 @@ public final class AstraClient implements ClientModInitializer {
         HUD_Y.clear();
         alternateAccent = false;
         clickSounds = true;
+        autoSprintGroundOnly = true;
+        autoSprintDisableInMenus = true;
         guiScale = 100;
         hudOpacity = 84;
         notifyUser("Settings reset to defaults");
@@ -300,6 +304,8 @@ public final class AstraClient implements ClientModInitializer {
         }
         properties.setProperty("theme.alternateAccent", Boolean.toString(alternateAccent));
         properties.setProperty("ui.clickSounds", Boolean.toString(clickSounds));
+        properties.setProperty("autosprint.groundOnly", Boolean.toString(autoSprintGroundOnly));
+        properties.setProperty("autosprint.disableInMenus", Boolean.toString(autoSprintDisableInMenus));
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
@@ -326,6 +332,18 @@ public final class AstraClient implements ClientModInitializer {
     public static boolean isAutoSprintEnabled() { return isEnabled("autosprint"); }
     public static void setFullBright(boolean enabled) { setEnabled("fullbright", enabled); }
     public static void setAutoSprint(boolean enabled) { setEnabled("autosprint", enabled); }
+    public static boolean autoSprintGroundOnly() { return autoSprintGroundOnly; }
+    public static boolean autoSprintDisableInMenus() { return autoSprintDisableInMenus; }
+    public static void toggleAutoSprintGroundOnly() {
+        autoSprintGroundOnly = !autoSprintGroundOnly;
+        notifyUser("Auto Sprint ground-only: " + autoSprintGroundOnly);
+        saveConfig();
+    }
+    public static void toggleAutoSprintDisableInMenus() {
+        autoSprintDisableInMenus = !autoSprintDisableInMenus;
+        notifyUser("Auto Sprint pauses in menus: " + autoSprintDisableInMenus);
+        saveConfig();
+    }
 
     @Override
     public void onInitializeClient() {
@@ -368,7 +386,9 @@ public final class AstraClient implements ClientModInitializer {
             if (isEnabled("autosprint")
                 && client.player.forwardSpeed > 0.0F
                 && !client.player.isSneaking()
-                && !client.player.horizontalCollision) {
+                && !client.player.horizontalCollision
+                && (!autoSprintGroundOnly || client.player.isOnGround())
+                && (!autoSprintDisableInMenus || client.currentScreen == null)) {
                 client.player.setSprinting(true);
             }
 
