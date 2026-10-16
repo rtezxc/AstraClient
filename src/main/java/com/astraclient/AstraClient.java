@@ -13,6 +13,9 @@ import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.util.math.Box;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -45,7 +48,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
     private static final Map<String, Integer> MODULE_KEYBINDS = new LinkedHashMap<>();
     private static final Map<String, Boolean> KEY_WAS_DOWN = new LinkedHashMap<>();
-    private static final Map<UUID, Boolean> ORIGINAL_PLAYER_GLOW = new HashMap<>();
+    private static final Map<UUID, Boolean> ORIGINAL_ENTITY_GLOW = new HashMap<>();
     private static Object lastGlowWorld;
     private static final Map<String, Integer> HUD_X = new LinkedHashMap<>();
     private static final Map<String, Integer> HUD_Y = new LinkedHashMap<>();
@@ -74,6 +77,8 @@ public final class AstraClient implements ClientModInitializer {
     static {
         MODULES.put("fullbright", false);
         MODULES.put("playeresp", false);
+        MODULES.put("mobesp", false);
+        MODULES.put("itemesp", false);
         MODULES.put("zoom", false);
         MODULES.put("autosprint", false);
         MODULES.put("fps", true);
@@ -405,7 +410,7 @@ public final class AstraClient implements ClientModInitializer {
             }
 
             processModuleKeybinds(client);
-            updatePlayerEsp(client);
+            updateEsp(client);
             updateZoom(client);
             if (client.player == null || client.world == null) return;
 
@@ -473,37 +478,58 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     /**
-     * Local-only player glow outlines. Original glowing state is remembered and restored
-     * when the module turns off; no player/entity state is sent to the server.
+     * Local client outlines for selected entity groups. Original glow flags are remembered
+     * and restored when modules are disabled; no entity state is sent to the server.
      */
-    private static void updatePlayerEsp(MinecraftClient client) {
-        if (client.world == null) {
-            ORIGINAL_PLAYER_GLOW.clear();
+    private static void updateEsp(MinecraftClient client) {
+        if (client.world == null || client.player == null) {
+            ORIGINAL_ENTITY_GLOW.clear();
             lastGlowWorld = null;
             return;
         }
         if (lastGlowWorld != client.world) {
-            ORIGINAL_PLAYER_GLOW.clear();
+            ORIGINAL_ENTITY_GLOW.clear();
             lastGlowWorld = client.world;
         }
 
-        boolean enabled = isEnabled("playeresp");
+        boolean playerEsp = isEnabled("playeresp");
+        boolean mobEsp = isEnabled("mobesp");
+        boolean itemEsp = isEnabled("itemesp");
+        if (!playerEsp && !mobEsp && !itemEsp && ORIGINAL_ENTITY_GLOW.isEmpty()) return;
+
+        List<Entity> candidates = new ArrayList<>();
+        candidates.addAll(client.world.getPlayers());
+
+        Box nearby = client.player.getBoundingBox().expand(64.0);
+        if (mobEsp) {
+            candidates.addAll(client.world.getEntitiesByClass(LivingEntity.class, nearby,
+                entity -> entity.isAlive() && !(entity instanceof PlayerEntity)));
+        }
+        if (itemEsp) {
+            candidates.addAll(client.world.getEntitiesByClass(ItemEntity.class, nearby,
+                entity -> !entity.isRemoved()));
+        }
+
         Set<UUID> seen = new HashSet<>();
-        for (PlayerEntity target : client.world.getPlayers()) {
-            if (client.player != null && target == client.player) continue;
-            UUID uuid = target.getUuid();
+        for (Entity entity : candidates) {
+            if (entity == client.player || entity.isRemoved()) continue;
+            boolean desired = entity instanceof PlayerEntity
+                ? playerEsp && client.player.squaredDistanceTo(entity) <= 96.0 * 96.0
+                : (entity instanceof LivingEntity && mobEsp)
+                    || (entity instanceof ItemEntity && itemEsp);
+            UUID uuid = entity.getUuid();
             seen.add(uuid);
-            if (enabled) {
-                ORIGINAL_PLAYER_GLOW.putIfAbsent(uuid, target.isGlowing());
-                if (!target.isGlowing()) target.setGlowing(true);
+            if (desired) {
+                ORIGINAL_ENTITY_GLOW.putIfAbsent(uuid, entity.isGlowing());
+                if (!entity.isGlowing()) entity.setGlowing(true);
             } else {
-                Boolean previous = ORIGINAL_PLAYER_GLOW.remove(uuid);
-                if (previous != null && target.isGlowing() != previous) target.setGlowing(previous);
+                Boolean original = ORIGINAL_ENTITY_GLOW.remove(uuid);
+                if (original != null && entity.isGlowing() != original) entity.setGlowing(original);
             }
         }
 
-        // Forget departed players to prevent stale per-world entries from accumulating.
-        ORIGINAL_PLAYER_GLOW.keySet().removeIf(uuid -> !seen.contains(uuid));
+        // Forget unloaded entities so the tracking map does not grow between chunks/worlds.
+        ORIGINAL_ENTITY_GLOW.keySet().removeIf(uuid -> !seen.contains(uuid));
     }
 
     private static void processModuleKeybinds(MinecraftClient client) {
