@@ -9,46 +9,73 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/** Responsive, searchable Astra module browser. Unimplemented modules are visible but locked. */
 public final class AstraScreen extends Screen {
     private static final int BG = 0xF20A0D16;
-    private static final int SIDEBAR = 0xFF111622;
+    private static final int SIDEBAR = 0xFF101520;
     private static final int PANEL = 0xFF171D2A;
-    private static final int PANEL_HOVER = 0xFF222B3D;
+    private static final int PANEL_HOVER = 0xFF252D3F;
     private static final int WHITE = 0xFFF3F5FF;
     private static final int MUTED = 0xFF929BB0;
     private static final int LINE = 0xFF2A3142;
+    private static final int GREEN = 0xFF69E6B8;
+    private static final int AMBER = 0xFFFFC66E;
 
     private static final String[] CATEGORIES = {
-        "Combat", "Render", "Movement", "Player", "World", "HUD", "Settings"
+        "Combat", "Render", "Movement", "Player", "Inventory", "World", "Utility", "HUD", "Settings"
     };
 
     private static final List<ModuleInfo> MODULES = List.of(
-        new ModuleInfo("fullbright", "FullBright", "Clearer vision in dark areas", "Render", true),
-        new ModuleInfo("playeresp", "Player ESP", "Highlight other players through blocks", "Render", false),
+        new ModuleInfo("fullbright", "FullBright", "Night vision for dark areas", "Render", true),
+        new ModuleInfo("playeresp", "Player ESP", "Highlight other players", "Render", false),
+        new ModuleInfo("mobesp", "Mob ESP", "Highlight living entities", "Render", false),
         new ModuleInfo("itemesp", "Item ESP", "Highlight dropped items", "Render", false),
-        new ModuleInfo("xray", "X-Ray", "Reveal selected block types", "Render", false),
+        new ModuleInfo("xray", "X-Ray", "Highlight selected blocks", "Render", false),
+        new ModuleInfo("nametags", "Nametags", "Enhanced entity labels", "Render", false),
+        new ModuleInfo("zoom", "Zoom", "Camera zoom", "Render", false),
         new ModuleInfo("autosprint", "Auto Sprint", "Sprint while moving forward", "Movement", true),
-        new ModuleInfo("noslow", "No Slow", "Reduce item-use movement slowdown", "Movement", false),
-        new ModuleInfo("speed", "Speed", "Adjust movement speed", "Movement", false),
+        new ModuleInfo("noslow", "No Slow", "Reduce action slowdown", "Movement", false),
+        new ModuleInfo("speed", "Speed", "Movement speed adjustment", "Movement", false),
+        new ModuleInfo("safewalk", "Safe Walk", "Prevent walking off edges", "Movement", false),
+        new ModuleInfo("inventorymove", "Inventory Move", "Move with inventory open", "Movement", false),
         new ModuleInfo("fly", "Fly", "Custom flight movement", "Movement", false),
-        new ModuleInfo("aimassist", "Aim Assist", "Adjust aim toward valid targets", "Combat", false),
-        new ModuleInfo("triggerbot", "TriggerBot", "Attack when a target is under the crosshair", "Combat", false),
-        new ModuleInfo("killaura", "Kill Aura", "Automatic nearby-target attacks", "Combat", false),
-        new ModuleInfo("autototem", "Auto Totem", "Automatically manage the offhand totem", "Player", false),
-        new ModuleInfo("antiknockback", "Anti Knockback", "Reduce received knockback", "Player", false),
-        new ModuleInfo("freecam", "Freecam", "Move a camera independently", "World", false),
-        new ModuleInfo("noweather", "No Weather", "Hide rain and snow", "World", false),
-        new ModuleInfo("fps", "FPS Counter", "Show the current frame rate", "HUD", true),
-        new ModuleInfo("coordinates", "Coordinates", "Show your block coordinates", "HUD", true),
-        new ModuleInfo("direction", "Direction", "Show the direction you face", "HUD", true),
-        new ModuleInfo("keystrokes", "Keystrokes", "Show movement keys on screen", "HUD", true)
+        new ModuleInfo("aimassist", "Aim Assist", "Aim assistance", "Combat", false),
+        new ModuleInfo("triggerbot", "TriggerBot", "Crosshair-activated combat", "Combat", false),
+        new ModuleInfo("killaura", "Kill Aura", "Automatic nearby targeting", "Combat", false),
+        new ModuleInfo("autototem", "Auto Totem", "Automatic offhand management", "Combat", false),
+        new ModuleInfo("antiknockback", "Anti Knockback", "Reduce received knockback", "Combat", false),
+        new ModuleInfo("targethud", "Target HUD", "Show target name and distance", "HUD", true),
+        new ModuleInfo("fps", "FPS Counter", "Show live frame rate", "HUD", true),
+        new ModuleInfo("coordinates", "Coordinates", "Show XYZ coordinates", "HUD", true),
+        new ModuleInfo("direction", "Direction", "Show facing direction", "HUD", true),
+        new ModuleInfo("keystrokes", "Keystrokes", "Show movement-key states", "HUD", true),
+        new ModuleInfo("ping", "Ping Display", "Show server latency", "HUD", true),
+        new ModuleInfo("memory", "Memory Display", "Show JVM memory use", "HUD", true),
+        new ModuleInfo("speedometer", "Speedometer", "Show horizontal movement speed", "HUD", true),
+        new ModuleInfo("armorhud", "Armor HUD", "Show armor durability summary", "HUD", true),
+        new ModuleInfo("potionhud", "Potion HUD", "Show active effects and durations", "HUD", true),
+        new ModuleInfo("clock", "Clock", "Show local clock", "HUD", true),
+        new ModuleInfo("totemcounter", "Totem Counter", "Count inventory totems", "Inventory", true),
+        new ModuleInfo("pearlcounter", "Ender Pearl Counter", "Count inventory pearls", "Inventory", true),
+        new ModuleInfo("arrowcounter", "Arrow Counter", "Count inventory arrows", "Inventory", true),
+        new ModuleInfo("goldencounter", "Golden Apple Counter", "Count golden apples", "Inventory", true),
+        new ModuleInfo("sessionstats", "Session Stats", "Show time since client start", "Utility", true),
+        new ModuleInfo("noweather", "No Weather", "Hide weather effects", "World", false),
+        new ModuleInfo("autotool", "Auto Tool", "Select a tool for a target block", "World", false),
+        new ModuleInfo("fastplace", "Fast Place", "Placement assistance", "World", false),
+        new ModuleInfo("fastbreak", "Fast Break", "Breaking assistance", "World", false),
+        new ModuleInfo("scaffold", "Scaffold", "Automated block placement", "World", false)
     );
 
     private String category = "Render";
     private String searchText = "";
     private boolean searchFocused;
     private int scrollOffset;
-    private int settingsActionY;
+    private boolean draggingWindow;
+    private boolean resizingWindow;
+    private int dragOffsetX, dragOffsetY, resizeStartX, resizeStartScale;
+    private int windowOffsetX, windowOffsetY;
+    private final long openedAt = System.currentTimeMillis();
 
     private static final class ModuleInfo {
         final String id;
@@ -70,71 +97,114 @@ public final class AstraScreen extends Screen {
         super(Text.literal("Astra Client"));
     }
 
+    private int panelWidth() {
+        return Math.max(220, Math.min(Math.round(760 * AstraClient.guiScale() / 100.0f), width - 24));
+    }
+
+    private int panelHeight() {
+        return Math.max(210, Math.min(Math.round(470 * AstraClient.guiScale() / 100.0f), height - 24));
+    }
+
+    private int panelLeft(int panelW) {
+        int centered = (width - panelW) / 2 + windowOffsetX;
+        return Math.max(0, Math.min(width - panelW, centered));
+    }
+
+    private int panelTop(int panelH) {
+        int centered = (height - panelH) / 2 + windowOffsetY;
+        return Math.max(0, Math.min(height - panelH, centered));
+    }
+
+    private int sidebarWidth(int panelW) {
+        return Math.min(154, Math.max(100, panelW / 4));
+    }
+
+    private int categoryStep(int panelH) {
+        return panelH < 390 ? 27 : 35;
+    }
+
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         renderBackground(ctx, mouseX, mouseY, delta);
-
-        int panelW = Math.min(760, width - 24);
-        int panelH = Math.min(470, height - 24);
-        int left = (width - panelW) / 2;
-        int top = (height - panelH) / 2;
-        int sideW = Math.min(154, Math.max(112, panelW / 4));
+        int panelW = panelWidth();
+        int panelH = panelHeight();
+        int left = panelLeft(panelW);
+        int top = panelTop(panelH);
+        int sideW = sidebarWidth(panelW);
         int accent = AstraClient.accentColor();
         int contentX = left + sideW + 18;
         int contentW = panelW - sideW - 34;
-        int listTop = top + 91;
+        int listTop = top + 105;
         int listBottom = top + panelH - 43;
-        int viewportH = Math.max(0, listBottom - listTop);
+        int viewportH = Math.max(1, listBottom - listTop);
 
-        ctx.fill(left - 2, top - 2, left + panelW + 2, top + panelH + 2, 0x884D36A8);
+        int fadeAlpha = Math.max(0, Math.min(72,
+            Math.round((1.0f - Math.min(1.0f, (System.currentTimeMillis() - openedAt) / 180.0f)) * 72)));
+        if (fadeAlpha > 0) ctx.fill(0, 0, width, height, fadeAlpha << 24);
+
+        // Shell, glow rails and title bar
+        ctx.fill(left - 3, top - 3, left + panelW + 3, top + panelH + 3, 0x664E37AA);
         ctx.fill(left, top, left + panelW, top + panelH, BG);
         ctx.fill(left, top, left + panelW, top + 3, accent);
-        ctx.fill(left, top, left + sideW, top + panelH, SIDEBAR);
-        ctx.fill(left + sideW, top + 57, left + panelW, top + 58, LINE);
+        ctx.fill(left, top + 3, left + 1, top + panelH, 0xFF32284A);
+        ctx.fill(left + panelW - 1, top + 3, left + panelW, top + panelH, 0xFF242B3B);
+        ctx.fill(left, top + 3, left + panelW, top + 58, 0xFF111621);
 
-        // Brand block
-        ctx.fill(left + 14, top + 15, left + 40, top + 41, accent);
-        ctx.drawText(textRenderer, "A", left + 22, top + 21, 0xFF10131C, true);
-        ctx.drawText(textRenderer, "ASTRA", left + 48, top + 16, WHITE, true);
-        ctx.drawText(textRenderer, "CLIENT  /  1.21.4", left + 48, top + 33, MUTED, false);
+        // Custom Astra mark
+        ctx.fill(left + 14, top + 14, left + 42, top + 42, 0xFF29213F);
+        ctx.fill(left + 14, top + 14, left + 17, top + 42, accent);
+        ctx.fill(left + 22, top + 20, left + 34, top + 23, accent);
+        ctx.fill(left + 22, top + 20, left + 25, top + 35, accent);
+        ctx.fill(left + 22, top + 32, left + 34, top + 35, 0xFF54E8FF);
+        ctx.drawText(textRenderer, "ASTRA", left + 50, top + 14, WHITE, true);
+        ctx.drawText(textRenderer, "CLIENT  /  FABRIC 1.21.4", left + 50, top + 32, MUTED, false);
+        ctx.fill(left + panelW - 31, top + 17, left + panelW - 11, top + 37, 0xFF242B3B);
+        ctx.drawText(textRenderer, "×", left + panelW - 25, top + 22, WHITE, true);
 
-        // Search field
-        int searchW = Math.min(190, contentW);
-        int searchX = left + panelW - searchW - 14;
+        // Search field and active category title
+        int searchW = Math.min(190, Math.max(100, contentW - 10));
+        int searchX = left + panelW - searchW - 42;
         int searchY = top + 17;
         ctx.fill(searchX, searchY, searchX + searchW, searchY + 25,
-            searchFocused ? 0xFF252D40 : PANEL);
-        ctx.fill(searchX, searchY + 24, searchX + searchW, searchY + 25, searchFocused ? accent : LINE);
+            searchFocused ? 0xFF28213F : PANEL);
+        ctx.fill(searchX, searchY + 24, searchX + searchW, searchY + 25,
+            searchFocused ? accent : LINE);
         String searchLabel = searchText.isEmpty() ? "Search modules..." : searchText;
-        ctx.drawText(textRenderer, searchLabel, searchX + 8, searchY + 8,
-            searchText.isEmpty() ? MUTED : WHITE, false);
-
+        ctx.drawText(textRenderer, truncateToWidth(searchLabel, searchW - 15),
+            searchX + 8, searchY + 8, searchText.isEmpty() ? MUTED : WHITE, false);
         ctx.drawText(textRenderer, category.toUpperCase(Locale.ROOT),
             contentX, top + 17, WHITE, true);
-        ctx.drawText(textRenderer, "MODULE CONTROL CENTER",
+        ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.0.0",
             contentX, top + 36, accent, false);
 
-        // Sidebar categories
-        int catY = top + 76;
-        for (String name : CATEGORIES) {
-            boolean selected = category.equals(name);
-            int rowH = 29;
+        // Sidebar navigation
+        ctx.fill(left, top + 58, left + sideW, top + panelH, SIDEBAR);
+        ctx.drawText(textRenderer, "WORKSPACE", left + 12, top + 65, 0xFF717D92, false);
+        int step = categoryStep(panelH);
+        int rowHeight = step - 6;
+        int categoryY = top + 76;
+        for (String nav : CATEGORIES) {
+            boolean selected = category.equals(nav);
+            boolean hover = mouseX >= left + 7 && mouseX <= left + sideW - 7
+                && mouseY >= categoryY && mouseY <= categoryY + rowHeight;
             if (selected) {
-                ctx.fill(left + 8, catY, left + sideW - 8, catY + rowH, 0xFF252237);
-                ctx.fill(left + 8, catY, left + 11, catY + rowH, accent);
+                ctx.fill(left + 7, categoryY, left + sideW - 7, categoryY + rowHeight, 0xFF29233F);
+                ctx.fill(left + 7, categoryY, left + 10, categoryY + rowHeight, accent);
+            } else if (hover) {
+                ctx.fill(left + 7, categoryY, left + sideW - 7, categoryY + rowHeight, 0xFF1A202D);
             }
-            ctx.drawText(textRenderer, selected ? "◆" : "·",
-                left + 18, catY + 10, selected ? accent : MUTED, false);
-            ctx.drawText(textRenderer, name, left + 32, catY + 10,
-                selected ? WHITE : MUTED, selected);
-            catY += 35;
+            ctx.drawText(textRenderer, selected ? "◆" : "·", left + 16,
+                categoryY + Math.max(1, (rowHeight - 9) / 2), selected ? accent : MUTED, false);
+            ctx.drawText(textRenderer, nav, left + 31,
+                categoryY + Math.max(1, (rowHeight - 9) / 2), selected ? WHITE : MUTED, selected);
+            categoryY += step;
         }
-
-        ctx.drawText(textRenderer, "RIGHT SHIFT", left + 13, top + panelH - 32, accent, false);
-        ctx.drawText(textRenderer, "TOGGLE MENU", left + 13, top + panelH - 19, MUTED, false);
+        ctx.fill(left + 12, top + panelH - 47, left + sideW - 12, top + panelH - 46, LINE);
+        ctx.drawText(textRenderer, "RIGHT SHIFT", left + 13, top + panelH - 37, accent, false);
+        ctx.drawText(textRenderer, "ASTRA • LOCAL", left + 13, top + panelH - 23, MUTED, false);
 
         if (category.equals("Settings")) {
-            renderSettings(ctx, mouseX, mouseY, left, top, contentX, contentW, panelH, accent);
+            renderSettings(ctx, mouseX, mouseY, top, contentX, contentW, panelH, accent);
         } else {
             List<ModuleInfo> visible = getVisibleModules();
             if (visible.isEmpty()) {
@@ -142,65 +212,85 @@ public final class AstraScreen extends Screen {
                     ? "No modules in this category yet."
                     : "No matching modules found.", contentX, listTop + 10, MUTED, false);
             } else {
-                int stride = 76;
-                int cardH = 65;
                 int gap = 10;
-                int cardW = (contentW - gap) / 2;
+                int cardW = Math.max(70, (contentW - gap) / 2);
+                int cardH = 65;
+                int stride = 76;
                 int rows = (visible.size() + 1) / 2;
                 int maxScroll = Math.max(0, rows * stride - viewportH);
                 scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
-
                 ctx.enableScissor(contentX, listTop, contentX + contentW, listBottom);
+
                 for (int i = 0; i < visible.size(); i++) {
                     ModuleInfo module = visible.get(i);
-                    int col = i % 2;
-                    int row = i / 2;
-                    int cardX = contentX + col * (cardW + gap);
-                    int cardY = listTop + row * stride - scrollOffset;
-                    boolean hovered = mouseX >= cardX && mouseX <= cardX + cardW
-                        && mouseY >= cardY && mouseY <= cardY + cardH;
+                    int col = i % 2, row = i / 2;
+                    int x = contentX + col * (cardW + gap);
+                    int y = listTop + row * stride - scrollOffset;
+                    if (y + cardH < listTop || y > listBottom) continue;
+                    boolean hover = mouseX >= x && mouseX <= x + cardW && mouseY >= y && mouseY <= y + cardH;
                     boolean enabled = module.implemented && AstraClient.isEnabled(module.id);
+                    ctx.fill(x, y, x + cardW, y + cardH, hover ? PANEL_HOVER : PANEL);
+                    ctx.fill(x, y, x + 3, y + cardH, module.implemented
+                        ? (enabled ? accent : LINE) : 0xFF3A4050);
+                    ctx.fill(x + 10, y + 10, x + 29, y + 29, enabled ? 0xFF302747 : 0xFF252B37);
+                    ctx.drawText(textRenderer, iconFor(module.name), x + 15, y + 15,
+                        module.implemented ? accent : 0xFF727B8D, true);
 
-                    ctx.fill(cardX, cardY, cardX + cardW, cardY + cardH,
-                        hovered ? PANEL_HOVER : PANEL);
-                    ctx.fill(cardX, cardY, cardX + 2, cardY + cardH,
-                        enabled ? accent : (module.implemented ? LINE : 0xFF3A4050));
-                    ctx.drawText(textRenderer, module.name, cardX + 11, cardY + 10,
-                        module.implemented ? WHITE : MUTED, true);
-
-                    String status = module.implemented
-                        ? (enabled ? "ON" : "OFF") : "COMING SOON";
-                    int statusColor = !module.implemented ? MUTED : (enabled ? accent : 0xFFB4BBCB);
+                    String status = module.implemented ? (enabled ? "ON" : "OFF") : "LOCKED";
+                    int statusColor = !module.implemented ? 0xFF777F90 : (enabled ? GREEN : MUTED);
                     int statusW = textRenderer.getWidth(status);
-                    ctx.drawText(textRenderer, status, cardX + cardW - statusW - 9,
-                        cardY + 11, statusColor, true);
+                    ctx.drawText(textRenderer, status, x + cardW - statusW - 8, y + 11, statusColor, true);
 
-                    String description = module.description;
-                    int maxDescWidth = Math.max(35, cardW - 20);
-                    while (textRenderer.getWidth(description) > maxDescWidth && description.length() > 4) {
-                        description = description.substring(0, description.length() - 4) + "...";
-                    }
-                    ctx.drawText(textRenderer, description, cardX + 11, cardY + 31, MUTED, false);
+                    ctx.drawText(textRenderer, truncateToWidth(module.name, Math.max(8, cardW - 82)),
+                        x + 36, y + 9, WHITE, true);
+                    ctx.drawText(textRenderer, truncateToWidth(module.description, Math.max(12, cardW - 22)),
+                        x + 10, y + 34, MUTED, false);
                     if (module.implemented) {
-                        ctx.fill(cardX + 11, cardY + 49, cardX + 36, cardY + 57,
-                            enabled ? accent : 0xFF30384A);
-                        ctx.fill(cardX + 37, cardY + 49, cardX + 47, cardY + 57,
-                            enabled ? 0xFFB9A0FF : 0xFF30384A);
+                        ctx.fill(x + 10, y + 51, x + 39, y + 58, enabled ? accent : 0xFF30384A);
+                        ctx.fill(x + 42, y + 51, x + 49, y + 58, enabled ? 0xFFBDA7FF : 0xFF30384A);
                     } else {
-                        ctx.drawText(textRenderer, "NOT AVAILABLE IN THIS BUILD",
-                            cardX + 11, cardY + 50, 0xFF70798E, false);
+                        ctx.drawText(textRenderer, "NOT IMPLEMENTED", x + 10, y + 51, 0xFF727B8D, false);
                     }
                 }
                 ctx.disableScissor();
-
-                ctx.drawText(textRenderer,
-                    visible.size() + " MODULES  ·  " + visible.stream().filter(m -> m.implemented).count()
-                        + " IMPLEMENTED",
-                    contentX, top + panelH - 27, MUTED, false);
+                long ready = visible.stream().filter(m -> m.implemented).count();
+                ctx.drawText(textRenderer, visible.size() + " MODULES  •  " + ready + " AVAILABLE",
+                    contentX, top + panelH - 26, MUTED, false);
             }
         }
 
+        // Resize grip in the lower-right corner.
+        int gx = left + panelW - 13;
+        int gy = top + panelH - 13;
+        ctx.fill(gx + 3, gy + 7, gx + 10, gy + 10, accent);
+        ctx.fill(gx + 6, gy + 3, gx + 10, gy + 6, accent);
         super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    private String iconFor(String name) {
+        return switch (name) {
+            case "FullBright" -> "☼";
+            case "Player ESP", "Mob ESP", "Item ESP" -> "◎";
+            case "Auto Sprint" -> "➤";
+            case "FPS Counter", "Memory Display", "Ping Display" -> "▥";
+            case "Coordinates", "Direction" -> "⌖";
+            case "Keystrokes" -> "⌨";
+            case "Target HUD" -> "◈";
+            case "Armor HUD", "Totem Counter" -> "◇";
+            case "Potion HUD" -> "✚";
+            case "Clock" -> "◷";
+            default -> "✦";
+        };
+    }
+
+    private String truncateToWidth(String value, int maxWidth) {
+        if (maxWidth <= 0) return "";
+        String result = value;
+        while (!result.isEmpty() && textRenderer.getWidth(result) > maxWidth) {
+            result = result.substring(0, result.length() - 1);
+        }
+        if (!result.equals(value) && maxWidth >= textRenderer.getWidth("…")) return result + "…";
+        return result;
     }
 
     private List<ModuleInfo> getVisibleModules() {
@@ -218,119 +308,136 @@ public final class AstraScreen extends Screen {
     }
 
     private void renderSettings(
-        DrawContext ctx, int mouseX, int mouseY, int left, int top,
+        DrawContext ctx, int mouseX, int mouseY, int top,
         int contentX, int contentW, int panelH, int accent
     ) {
-        ctx.drawText(textRenderer, "CLIENT SETTINGS", contentX, top + 88, WHITE, true);
-        ctx.drawText(textRenderer, "Settings are saved to config/astraclient.properties.",
-            contentX, top + 108, MUTED, false);
+        ctx.drawText(textRenderer, "CLIENT SETTINGS", contentX, top + 75, WHITE, true);
+        ctx.drawText(textRenderer, "Preferences save automatically.", contentX, top + 94, MUTED, false);
 
-        int y = top + 144;
-        int rowH = 43;
-        settingsActionY = y;
-        renderSettingRow(ctx, mouseX, mouseY, contentX, y, contentW,
-            "Accent color", AstraClient.isAlternateAccent() ? "CYAN" : "PURPLE", accent);
-        y += rowH + 8;
-        renderSettingRow(ctx, mouseX, mouseY, contentX, y, contentW,
-            "Reset module toggles", "RESET", accent);
-        y += rowH + 8;
-        renderSettingRow(ctx, mouseX, mouseY, contentX, y, contentW,
-            "Save configuration", "SAVE NOW", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 116, contentW,
+            "Accent theme", AstraClient.isAlternateAccent() ? "CYAN" : "PURPLE", accent);
 
-        ctx.drawText(textRenderer, "Only modules marked implemented can be enabled.",
-            contentX, top + panelH - 55, MUTED, false);
+        ctx.drawText(textRenderer, "GUI SCALE", contentX, top + 169, WHITE, true);
+        String value = AstraClient.guiScale() + "%";
+        ctx.drawText(textRenderer, value, contentX + contentW - textRenderer.getWidth(value),
+            top + 169, accent, true);
+        int trackX = contentX, trackY = top + 190;
+        int trackW = contentW;
+        ctx.fill(trackX, trackY, trackX + trackW, trackY + 6, 0xFF2B3344);
+        int fillW = (AstraClient.guiScale() - 75) * trackW / 50;
+        ctx.fill(trackX, trackY, trackX + fillW, trackY + 6, accent);
+        ctx.fill(trackX + fillW - 4, trackY - 4, trackX + fillW + 4, trackY + 10, WHITE);
+        ctx.drawText(textRenderer, "75%", trackX, trackY + 12, MUTED, false);
+        String max = "125%";
+        ctx.drawText(textRenderer, max, trackX + trackW - textRenderer.getWidth(max),
+            trackY + 12, MUTED, false);
+
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 218, contentW,
+            "Reset module defaults", "RESET", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 263, contentW,
+            "Save configuration", "SAVE", accent);
+        ctx.drawText(textRenderer, "Planned modules remain locked until implemented.",
+            contentX, top + panelH - 50, MUTED, false);
     }
 
     private void renderSettingRow(
         DrawContext ctx, int mouseX, int mouseY, int x, int y, int w,
         String label, String action, int accent
     ) {
-        boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + 43;
-        ctx.fill(x, y, x + w, y + 43, hovered ? PANEL_HOVER : PANEL);
+        boolean hover = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + 43;
+        ctx.fill(x, y, x + w, y + 43, hover ? PANEL_HOVER : PANEL);
         ctx.fill(x, y, x + 2, y + 43, accent);
         ctx.drawText(textRenderer, label, x + 12, y + 10, WHITE, true);
-        int actionW = textRenderer.getWidth(action);
-        ctx.drawText(textRenderer, action, x + w - actionW - 12, y + 10, accent, true);
+        ctx.drawText(textRenderer, action, x + w - textRenderer.getWidth(action) - 12,
+            y + 10, accent, true);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
-        int panelW = Math.min(760, width - 24);
-        int panelH = Math.min(470, height - 24);
-        int left = (width - panelW) / 2;
-        int top = (height - panelH) / 2;
-        int sideW = Math.min(154, Math.max(112, panelW / 4));
+        int panelW = panelWidth(), panelH = panelHeight();
+        int left = panelLeft(panelW), top = panelTop(panelH);
+        int sideW = sidebarWidth(panelW);
         int contentX = left + sideW + 18;
         int contentW = panelW - sideW - 34;
-        int searchW = Math.min(190, contentW);
-        int searchX = left + panelW - searchW - 14;
+        int searchW = Math.min(190, Math.max(100, contentW - 10));
+        int searchX = left + panelW - searchW - 42;
         int searchY = top + 17;
 
+        if (mouseX >= left + panelW - 34 && mouseX <= left + panelW - 9
+            && mouseY >= top + 13 && mouseY <= top + 40) {
+            close();
+            return true;
+        }
+        if (mouseX >= left + panelW - 18 && mouseY >= top + panelH - 18) {
+            resizingWindow = true;
+            resizeStartX = (int) mouseX;
+            resizeStartScale = AstraClient.guiScale();
+            return true;
+        }
         if (mouseX >= searchX && mouseX <= searchX + searchW
             && mouseY >= searchY && mouseY <= searchY + 25) {
             searchFocused = true;
             return true;
-        } else {
-            searchFocused = false;
+        }
+        searchFocused = false;
+
+        if (mouseY >= top + 3 && mouseY < top + 57
+            && mouseX >= left && mouseX <= left + panelW) {
+            draggingWindow = true;
+            dragOffsetX = (int) mouseX - left;
+            dragOffsetY = (int) mouseY - top;
+            return true;
         }
 
-        int catY = top + 76;
-        for (String name : CATEGORIES) {
-            if (mouseX >= left + 8 && mouseX <= left + sideW - 8
-                && mouseY >= catY && mouseY <= catY + 29) {
-                category = name;
+        int step = categoryStep(panelH), rowHeight = step - 6;
+        int categoryY = top + 76;
+        for (String nav : CATEGORIES) {
+            if (mouseX >= left + 7 && mouseX <= left + sideW - 7
+                && mouseY >= categoryY && mouseY <= categoryY + rowHeight) {
+                category = nav;
                 scrollOffset = 0;
                 searchText = "";
                 return true;
             }
-            catY += 35;
+            categoryY += step;
         }
 
         if (category.equals("Settings")) {
-            int y = top + 144;
-            if (mouseX >= contentX && mouseX <= contentX + contentW
-                && mouseY >= y && mouseY <= y + 43) {
+            if (inside(mouseX, mouseY, contentX, top + 116, contentW, 43)) {
                 AstraClient.toggleAccent();
                 return true;
             }
-            y += 51;
-            if (mouseX >= contentX && mouseX <= contentX + contentW
-                && mouseY >= y && mouseY <= y + 43) {
+            if (inside(mouseX, mouseY, contentX, top + 183, contentW, 20)) {
+                updateScaleFromMouse(mouseX, contentX, contentW);
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 218, contentW, 43)) {
                 AstraClient.resetModuleDefaults();
                 return true;
             }
-            y += 51;
-            if (mouseX >= contentX && mouseX <= contentX + contentW
-                && mouseY >= y && mouseY <= y + 43) {
+            if (inside(mouseX, mouseY, contentX, top + 263, contentW, 43)) {
                 AstraClient.saveConfig();
                 return true;
             }
             return true;
         }
 
-        int listTop = top + 91;
-        int listBottom = top + panelH - 43;
+        int listTop = top + 105, listBottom = top + panelH - 43;
         if (mouseY < listTop || mouseY > listBottom) return true;
-
         List<ModuleInfo> visible = getVisibleModules();
-        int gap = 10;
-        int cardW = (contentW - gap) / 2;
-        int cardH = 65;
-        int stride = 76;
-        int viewportH = Math.max(0, listBottom - listTop);
+        int gap = 10, cardW = Math.max(70, (contentW - gap) / 2);
+        int stride = 76, cardH = 65;
+        int viewportH = Math.max(1, listBottom - listTop);
         int rows = (visible.size() + 1) / 2;
         int maxScroll = Math.max(0, rows * stride - viewportH);
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
-
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int col = i % 2;
-            int row = i / 2;
-            int x = contentX + col * (cardW + gap);
-            int y = listTop + row * stride - scrollOffset;
-            if (mouseX >= x && mouseX <= x + cardW && mouseY >= y && mouseY <= y + cardH) {
+            int x = contentX + (i % 2) * (cardW + gap);
+            int y = listTop + (i / 2) * stride - scrollOffset;
+            if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 if (module.implemented) AstraClient.toggle(module.id);
                 return true;
             }
@@ -338,17 +445,60 @@ public final class AstraScreen extends Screen {
         return true;
     }
 
+    private boolean inside(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    }
+
+    private void updateScaleFromMouse(double mouseX, int x, int trackW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - x) / Math.max(1.0, trackW)));
+        AstraClient.setGuiScale(75 + (int) Math.round(progress * 50.0));
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (button == 0 && resizingWindow) {
+            AstraClient.previewGuiScale(resizeStartScale + (int) Math.round((mouseX - resizeStartX) / 4.0));
+            return true;
+        }
+        if (button == 0 && draggingWindow) {
+            int left = (width - panelWidth()) / 2;
+            int top = (height - panelHeight()) / 2;
+            windowOffsetX = (int) mouseX - dragOffsetX - left;
+            windowOffsetY = (int) mouseY - dragOffsetY - top;
+            windowOffsetX = Math.max(-left, Math.min(width - panelWidth() - left, windowOffsetX));
+            windowOffsetY = Math.max(-top, Math.min(height - panelHeight() - top, windowOffsetY));
+            return true;
+        }
+        if (button == 0 && searchFocused && category.equals("Settings")) {
+            int panelW = panelWidth(), sideW = sidebarWidth(panelW);
+            int x = panelLeft(panelW) + sideW + 18;
+            int w = panelW - sideW - 34;
+            updateScaleFromMouse(mouseX, x, w);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (resizingWindow) AstraClient.saveConfig();
+        draggingWindow = false;
+        resizingWindow = false;
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (!category.equals("Settings")) {
-            int panelW = Math.min(760, width - 24);
-            int panelH = Math.min(470, height - 24);
-            int left = (width - panelW) / 2;
-            int top = (height - panelH) / 2;
-            int sideW = Math.min(154, Math.max(112, panelW / 4));
-            int contentX = left + sideW + 18;
+            int panelW = panelWidth(), panelH = panelHeight();
+            int left = panelLeft(panelW), top = panelTop(panelH);
+            int sideW = sidebarWidth(panelW), contentX = left + sideW + 18;
             int contentW = panelW - sideW - 34;
-            int viewportH = Math.max(0, (top + panelH - 43) - (top + 91));
+            int listTop = top + 105, listBottom = top + panelH - 43;
+            if (!inside(mouseX, mouseY, contentX, listTop, contentW, Math.max(1, listBottom - listTop))) {
+                return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+            }
+            int viewportH = Math.max(1, listBottom - listTop);
             List<ModuleInfo> visible = getVisibleModules();
             int rows = (visible.size() + 1) / 2;
             int maxScroll = Math.max(0, rows * 76 - viewportH);
@@ -371,14 +521,16 @@ public final class AstraScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            if (searchFocused) {
+                searchFocused = false;
+                return true;
+            }
             close();
             return true;
         }
         if (searchFocused && keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-            if (!searchText.isEmpty()) {
-                searchText = searchText.substring(0, searchText.length() - 1);
-                scrollOffset = 0;
-            }
+            if (!searchText.isEmpty()) searchText = searchText.substring(0, searchText.length() - 1);
+            scrollOffset = 0;
             return true;
         }
         if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
