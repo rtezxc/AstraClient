@@ -122,7 +122,7 @@ public final class AstraScreen extends Screen {
     }
 
     private int categoryStep(int panelH) {
-        return panelH < 390 ? 27 : 35;
+        return Math.max(16, Math.min(35, (panelH - 150) / CATEGORIES.length));
     }
 
     @Override
@@ -449,7 +449,15 @@ public final class AstraScreen extends Screen {
             int x = contentX + (i % 2) * (cardW + gap);
             int y = listTop + (i / 2) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
-                if (module.implemented) AstraClient.toggle(module.id);
+                // Tap the key label (bottom-right) to bind on touchscreen; right-click
+                // anywhere on the card also opens capture mode for mouse users.
+                if (module.implemented && mouseY >= y + 49 && mouseX >= x + Math.min(54, cardW - 10)) {
+                    captureKeybindId = module.id;
+                    searchFocused = false;
+                    AstraClient.notifyUser("Press a key to bind " + module.name + " (Esc clears)");
+                } else if (module.implemented) {
+                    AstraClient.toggle(module.id);
+                }
                 return true;
             }
         }
