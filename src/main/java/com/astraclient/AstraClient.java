@@ -681,6 +681,27 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+
+    /** Applies a named, opt-in module preset. Combat automation is deliberately never enabled by presets. */
+    public static void applyQuickProfile(String profile) {
+        Set<String> enabled = switch (profile.toLowerCase(Locale.ROOT)) {
+            case "performance" -> Set.of("fps", "watermark");
+            case "pvp" -> Set.of("fps", "watermark", "keystrokes", "cps", "armorhud",
+                "potionhud", "targethud", "tracers", "playeresp", "lowhealthalert", "compasshud");
+            case "exploration" -> Set.of("fps", "watermark", "coordinates", "direction", "biome",
+                "waypoint", "breadcrumbs", "compasshud", "storagefinder", "blockfinder",
+                "worldinfo", "healthhud", "hungerhud", "armorhud", "sessionstats");
+            default -> {
+                notifyUser("Unknown profile");
+                yield null;
+            }
+        };
+        if (enabled == null) return;
+        MODULES.replaceAll((id, oldValue) -> enabled.contains(id));
+        notifyUser("Applied " + profile + " profile");
+        saveConfig();
+    }
+
     /** Writes a portable copy of the current settings next to the live config file. */
     public static void exportConfigBackup() {
         saveConfig();

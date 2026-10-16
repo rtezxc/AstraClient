@@ -513,6 +513,8 @@ public final class AstraScreen extends Screen {
             "Export config backup", "EXPORT", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 454 - settingsScrollOffset, contentW,
             "Import config backup", "IMPORT", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 490 - settingsScrollOffset, contentW,
+            "Quick module profiles", "OPEN", accent);
     }
 
     private void renderSettingRow(
@@ -649,6 +651,10 @@ public final class AstraScreen extends Screen {
             }
             if (inside(mouseX, mouseY, contentX, top + 454 - settingsScrollOffset, contentW, 34)) {
                 AstraClient.importConfigBackup();
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 490 - settingsScrollOffset, contentW, 34)) {
+                client.setScreen(new AstraProfileScreen(this));
                 return true;
             }
             return true;
@@ -1037,7 +1043,7 @@ public final class AstraScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (category.equals("Settings")) {
             int panelH = panelHeight();
-            int maxSettingsScroll = Math.max(0, 492 - Math.max(90, panelH - 130));
+            int maxSettingsScroll = Math.max(0, 528 - Math.max(90, panelH - 130));
             settingsScrollOffset = Math.max(0, Math.min(maxSettingsScroll,
                 settingsScrollOffset - (int) Math.round(verticalAmount * 32.0)));
             return true;
