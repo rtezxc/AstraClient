@@ -3,7 +3,6 @@ package com.astraclient;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
@@ -71,7 +70,6 @@ public final class AstraClient implements ClientModInitializer {
     };
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
-    private static KeyBinding openGuiKey;
     private static int guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
     private static boolean guiKeyWasDown;
     private static long guiKeybindIgnoreUntil;
@@ -596,15 +594,6 @@ public final class AstraClient implements ClientModInitializer {
     public void onInitializeClient() {
         loadConfig();
 
-        openGuiKey = KeyBindingHelper.registerKeyBinding(
-            new KeyBinding(
-                "key.astraclient.open_gui",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_RIGHT_SHIFT,
-                "category.astraclient"
-            )
-        );
-
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             long guiWindow = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
@@ -617,9 +606,6 @@ public final class AstraClient implements ClientModInitializer {
                 }
             }
             guiKeyWasDown = guiDown;
-            // Drain the legacy vanilla binding's press counter; Astra uses the persisted key above.
-            while (openGuiKey.wasPressed()) { }
-
             processModuleKeybinds(client);
             updateInventoryMove(client);
             updateAutoEat(client);
