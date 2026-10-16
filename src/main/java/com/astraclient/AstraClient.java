@@ -10,6 +10,8 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
@@ -18,6 +20,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.RaycastContext;
 import java.util.HashMap;
 import java.util.ArrayDeque;
@@ -68,7 +71,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "damageindicators", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "compasshud"
+        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "compasshud"
     };
     private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
     private static final Map<String, HudBounds> HUD_RENDERED_BOUNDS = new LinkedHashMap<>();
@@ -145,6 +148,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("biome", false);
         MODULES.put("cps", false);
         MODULES.put("worldinfo", false);
+        MODULES.put("blockfinder", false);
         MODULES.put("potioncounter", false);
         MODULES.put("durabilityhud", false);
         MODULES.put("inventoryhud", false);
@@ -292,6 +296,7 @@ public final class AstraClient implements ClientModInitializer {
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
             case "worldinfo" -> "World Information";
+            case "blockfinder" -> "Block Finder";
             case "potioncounter" -> "Potion Counter";
             case "durabilityhud" -> "Durability HUD";
             case "inventoryhud" -> "Inventory HUD";
@@ -421,6 +426,30 @@ public final class AstraClient implements ClientModInitializer {
     public static void setEffectAlertThresholdSeconds(int value) {
         previewEffectAlertThresholdSeconds(value);
         notifyUser("Effect expiry warning: " + effectAlertThresholdSeconds + " seconds");
+        saveConfig();
+    }
+
+    public static String blockFinderTarget() { return blockFinderTarget; }
+    public static void cycleBlockFinderTarget() {
+        int current = 0;
+        for (int i = 0; i < BLOCK_FINDER_TARGETS.length; i++) {
+            if (BLOCK_FINDER_TARGETS[i].equals(blockFinderTarget)) { current = i; break; }
+        }
+        blockFinderTarget = BLOCK_FINDER_TARGETS[(current + 1) % BLOCK_FINDER_TARGETS.length];
+        nearestFoundBlock = null;
+        lastBlockFinderScanAt = 0L;
+        notifyUser("Block Finder target: " + blockFinderTarget);
+        saveConfig();
+    }
+    public static int blockFinderRange() { return blockFinderRange; }
+    public static void previewBlockFinderRange(int value) {
+        blockFinderRange = Math.max(8, Math.min(48, value));
+    }
+    public static void setBlockFinderRange(int value) {
+        previewBlockFinderRange(value);
+        nearestFoundBlock = null;
+        lastBlockFinderScanAt = 0L;
+        notifyUser("Block Finder range: " + blockFinderRange + " blocks");
         saveConfig();
     }
 
@@ -597,6 +626,13 @@ public final class AstraClient implements ClientModInitializer {
                 Integer.parseInt(properties.getProperty("lowhealth.threshold", "6"))));
             effectAlertThresholdSeconds = Math.max(3, Math.min(30,
                 Integer.parseInt(properties.getProperty("effectalert.thresholdSeconds", "10"))));
+            String savedFinderTarget = properties.getProperty("blockfinder.target", "DIAMOND").trim().toUpperCase(Locale.ROOT);
+            blockFinderTarget = savedFinderTarget;
+            boolean knownFinderTarget = false;
+            for (String candidate : BLOCK_FINDER_TARGETS) if (candidate.equals(blockFinderTarget)) knownFinderTarget = true;
+            if (!knownFinderTarget) blockFinderTarget = "DIAMOND";
+            blockFinderRange = Math.max(8, Math.min(48,
+                Integer.parseInt(properties.getProperty("blockfinder.range", "24"))));
             espRange = Math.max(16, Math.min(128,
                 Integer.parseInt(properties.getProperty("esp.range", "64"))));
             combatRange = Math.max(3, Math.min(6,
@@ -637,6 +673,8 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("autoeat.hungerThreshold", Integer.toString(autoEatHungerThreshold));
         properties.setProperty("lowhealth.threshold", Integer.toString(lowHealthThreshold));
         properties.setProperty("effectalert.thresholdSeconds", Integer.toString(effectAlertThresholdSeconds));
+        properties.setProperty("blockfinder.target", blockFinderTarget);
+        properties.setProperty("blockfinder.range", Integer.toString(blockFinderRange));
         properties.setProperty("esp.range", Integer.toString(espRange));
         properties.setProperty("combat.range", Integer.toString(combatRange));
         properties.setProperty("combat.targetPlayers", Boolean.toString(targetPlayers));
@@ -687,6 +725,7 @@ public final class AstraClient implements ClientModInitializer {
             long guiWindow = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             updateChatHudEditor(client);
             updateDamageTracker(client);
+            updateBlockFinder(client);
             boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
                 && GLFW.glfwGetKey(guiWindow, guiKeybindCode) == GLFW.GLFW_PRESS;
             if (guiDown && !guiKeyWasDown) {
@@ -968,6 +1007,15 @@ public final class AstraClient implements ClientModInitializer {
     private static int autoEatHungerThreshold = 16;
     private static int lowHealthThreshold = 6;
     private static int effectAlertThresholdSeconds = 10;
+    private static final String[] BLOCK_FINDER_TARGETS = {
+        "DIAMOND", "ANCIENT DEBRIS", "EMERALD", "GOLD", "IRON", "COAL"
+    };
+    private static String blockFinderTarget = "DIAMOND";
+    private static int blockFinderRange = 24;
+    private static long lastBlockFinderScanAt;
+    private static BlockPos nearestFoundBlock;
+    private static double nearestFoundDistance = Double.POSITIVE_INFINITY;
+    private static Object blockFinderWorld;
     private static boolean autoWalkWasForcing;
     /**
      * Uses food from the hotbar when hunger is low. It stops when the player
@@ -1335,6 +1383,13 @@ public final class AstraClient implements ClientModInitializer {
             String dimension = client.world.getRegistryKey().getValue().getPath().replace('_', ' ').toUpperCase(Locale.ROOT);
             drawHudLine(client, context, "worldinfo", 8, 407, "WORLD", dimension + " · DAY " + (client.world.getTimeOfDay() / 24000L), accent);
         }
+        if (isEnabled("blockfinder")) {
+            String value = nearestFoundBlock == null
+                ? "No " + blockFinderTarget.toLowerCase(Locale.ROOT) + " within " + blockFinderRange + " blocks"
+                : nearestFoundBlock.getX() + " " + nearestFoundBlock.getY() + " " + nearestFoundBlock.getZ()
+                    + " · " + String.format(Locale.ROOT, "%.1f m", nearestFoundDistance);
+            drawHudLine(client, context, "blockfinder", 150, screenHeight - 60, "BLOCK FINDER", value, accent);
+        }
         if (isEnabled("potioncounter")) {
             int potions = 0;
             for (int slot = 0; slot < client.player.getInventory().size(); slot++) {
@@ -1561,6 +1616,56 @@ public final class AstraClient implements ClientModInitializer {
         renderChatHudEditingOverlay(client, context);
     }
 
+    private static void updateBlockFinder(MinecraftClient client) {
+        if (!isEnabled("blockfinder") || client.player == null || client.world == null) {
+            nearestFoundBlock = null;
+            nearestFoundDistance = Double.POSITIVE_INFINITY;
+            blockFinderWorld = null;
+            lastBlockFinderScanAt = 0L;
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (blockFinderWorld != client.world) {
+            blockFinderWorld = client.world;
+            lastBlockFinderScanAt = 0L;
+            nearestFoundBlock = null;
+        }
+        // Throttle scanning to about once every 1.8 seconds. The scan is limited to
+        // loaded-world lookup calls in a bounded box around the player, never each frame.
+        if (now - lastBlockFinderScanAt < 1800L) return;
+        lastBlockFinderScanAt = now;
+        BlockPos center = client.player.getBlockPos();
+        int radius = blockFinderRange;
+        int bottom = Math.max(client.world.getBottomY(), center.getY() - 8);
+        int top = Math.min(client.world.getTopYInclusive(), center.getY() + 8);
+        BlockPos start = new BlockPos(center.getX() - radius, bottom, center.getZ() - radius);
+        BlockPos end = new BlockPos(center.getX() + radius, top, center.getZ() + radius);
+        BlockPos closest = null;
+        double closestSquared = Double.POSITIVE_INFINITY;
+        for (BlockPos pos : BlockPos.iterate(start, end)) {
+            double distanceSquared = pos.toCenterPos().squaredDistanceTo(client.player.getPos());
+            if (distanceSquared > radius * radius || distanceSquared >= closestSquared) continue;
+            if (isBlockFinderTarget(client.world.getBlockState(pos).getBlock())) {
+                closest = new BlockPos(pos.getX(), pos.getY(), pos.getZ());
+                closestSquared = distanceSquared;
+            }
+        }
+        nearestFoundBlock = closest;
+        nearestFoundDistance = closest == null ? Double.POSITIVE_INFINITY : Math.sqrt(closestSquared);
+    }
+
+    private static boolean isBlockFinderTarget(Block block) {
+        return switch (blockFinderTarget) {
+            case "DIAMOND" -> block == Blocks.DIAMOND_ORE || block == Blocks.DEEPSLATE_DIAMOND_ORE;
+            case "ANCIENT DEBRIS" -> block == Blocks.ANCIENT_DEBRIS;
+            case "EMERALD" -> block == Blocks.EMERALD_ORE || block == Blocks.DEEPSLATE_EMERALD_ORE;
+            case "GOLD" -> block == Blocks.GOLD_ORE || block == Blocks.DEEPSLATE_GOLD_ORE || block == Blocks.NETHER_GOLD_ORE;
+            case "IRON" -> block == Blocks.IRON_ORE || block == Blocks.DEEPSLATE_IRON_ORE;
+            case "COAL" -> block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE;
+            default -> false;
+        };
+    }
+
     private static void updateDamageTracker(MinecraftClient client) {
         if (client.player == null) {
             damageTrackedPlayer = null;
@@ -1676,6 +1781,7 @@ public final class AstraClient implements ClientModInitializer {
             case "arraylist", "potionhud", "targethud", "blockreachhud", "frametimehud", "fpsgraph" -> 150;
             case "compasshud" -> screenWidth / 2 - 84;
             case "damageindicators" -> screenWidth / 2 - 44;
+            case "blockfinder" -> 150;
             default -> 8;
         };
     }
@@ -1708,6 +1814,7 @@ public final class AstraClient implements ClientModInitializer {
             case "potionhud" -> 260;
             case "targethud" -> screenHeight - 43;
             case "damageindicators" -> screenHeight / 2 + 26;
+            case "blockfinder" -> screenHeight - 60;
             case "healthhud" -> screenHeight - 42;
             case "hungerhud" -> screenHeight - 21;
             case "blockreachhud" -> screenHeight - 84;

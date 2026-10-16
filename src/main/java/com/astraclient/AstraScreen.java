@@ -84,6 +84,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("effectalert", "Effect Expiry Alert", "Warn when active potion effects have ten seconds or less remaining", "HUD", true),
         new ModuleInfo("noweather", "No Weather", "Hide weather effects", "World", false),
         new ModuleInfo("autotool", "Auto Tool", "Select the fastest hotbar tool for the targeted block", "World", true),
+        new ModuleInfo("blockfinder", "Block Finder", "Find nearby diamond, emerald, gold, iron, coal ore, or ancient debris", "World", true),
         new ModuleInfo("autoweapon", "Auto Weapon", "Selects a sword or axe while aiming at a living target", "Combat", true),
         new ModuleInfo("fastplace", "Fast Place", "Placement assistance", "World", false),
         new ModuleInfo("fastbreak", "Fast Break", "Breaking assistance", "World", false),
@@ -731,6 +732,10 @@ public final class AstraScreen extends Screen {
             actions.add("healththreshold");
         } else if (module.id.equals("effectalert")) {
             actions.add("effectthreshold");
+        } else if (module.id.equals("blockfinder")) {
+            actions.add("blocktarget");
+            actions.add("blockrange");
+            actions.add("hud");
         } else if (isHudModule(module.id)) {
             actions.add("hud");
             actions.add("hudopacity");
@@ -765,6 +770,8 @@ public final class AstraScreen extends Screen {
             case "hunger" -> "Food threshold: " + AstraClient.autoEatHungerThreshold();
             case "healththreshold" -> "Health alert: " + AstraClient.lowHealthThreshold() + " HP";
             case "effectthreshold" -> "Effect warning: " + AstraClient.effectAlertThresholdSeconds() + " s";
+            case "blocktarget" -> "Find: " + AstraClient.blockFinderTarget();
+            case "blockrange" -> "Scan radius: " + AstraClient.blockFinderRange() + " blocks";
             case "hud" -> "Open HUD editor...";
             default -> action;
         };
@@ -853,6 +860,9 @@ public final class AstraScreen extends Screen {
                 AstraClient.lowHealthThreshold() >= 18 ? 2 : AstraClient.lowHealthThreshold() + 2);
             case "effectthreshold" -> AstraClient.setEffectAlertThresholdSeconds(
                 AstraClient.effectAlertThresholdSeconds() >= 27 ? 3 : AstraClient.effectAlertThresholdSeconds() + 3);
+            case "blocktarget" -> AstraClient.cycleBlockFinderTarget();
+            case "blockrange" -> AstraClient.setBlockFinderRange(
+                AstraClient.blockFinderRange() >= 40 ? 8 : AstraClient.blockFinderRange() + 8);
             case "hud" -> {
                 contextMenuModuleId = null;
                 client.setScreen(new AstraHudEditorScreen(this));

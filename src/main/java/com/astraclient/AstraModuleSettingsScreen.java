@@ -24,6 +24,7 @@ public final class AstraModuleSettingsScreen extends Screen {
     private boolean draggingAutoEatSlider;
     private boolean draggingLowHealthSlider;
     private boolean draggingEffectAlertSlider;
+    private boolean draggingBlockFinderSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
                                      String description, boolean implemented) {
@@ -108,6 +109,22 @@ public final class AstraModuleSettingsScreen extends Screen {
             ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
             ctx.drawText(textRenderer, "16", sliderX, sliderY + 13, MUTED, false);
             String maxRange = "128 blocks";
+            ctx.drawText(textRenderer, maxRange, sliderX + sliderW - textRenderer.getWidth(maxRange),
+                sliderY + 13, MUTED, false);
+        } else if (moduleId.equals("blockfinder")) {
+            drawRow(ctx, x + 20, nextY, panelW - 40, 32, "Search target",
+                AstraClient.blockFinderTarget(), mouseX, mouseY, a);
+            ctx.drawText(textRenderer, "SCAN RADIUS", x + 20, nextY + 43, WHITE, true);
+            String scanRadius = AstraClient.blockFinderRange() + " blocks";
+            ctx.drawText(textRenderer, scanRadius, x + panelW - 20 - textRenderer.getWidth(scanRadius),
+                nextY + 43, accent(), true);
+            int sliderX = x + 20, sliderY = nextY + 66, sliderW = panelW - 40;
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
+            int fill = (AstraClient.blockFinderRange() - 8) * sliderW / 40;
+            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
+            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
+            ctx.drawText(textRenderer, "8 blocks", sliderX, sliderY + 13, MUTED, false);
+            String maxRange = "48 blocks";
             ctx.drawText(textRenderer, maxRange, sliderX + sliderW - textRenderer.getWidth(maxRange),
                 sliderY + 13, MUTED, false);
         } else if (moduleId.equals("lowhealthalert")) {
@@ -274,6 +291,16 @@ public final class AstraModuleSettingsScreen extends Screen {
                 updateEspRangeFromMouse(mouseX, x + 20, pw - 40);
                 return true;
             }
+        } else if (moduleId.equals("blockfinder")) {
+            if (inside(mouseX, mouseY, x + 20, nextY, pw - 40, 32)) {
+                AstraClient.cycleBlockFinderTarget();
+                return true;
+            }
+            if (inside(mouseX, mouseY, x + 20, nextY + 59, pw - 40, 27)) {
+                draggingBlockFinderSlider = true;
+                updateBlockFinderRangeFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
         } else if (moduleId.equals("lowhealthalert")) {
             if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
                 draggingLowHealthSlider = true;
@@ -340,6 +367,11 @@ public final class AstraModuleSettingsScreen extends Screen {
         return mx >= x && mx <= x + w && my >= y && my <= y + h;
     }
 
+    private void updateBlockFinderRangeFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewBlockFinderRange(8 + (int) Math.round(progress * 40.0));
+    }
+
     private void updateLowHealthThresholdFromMouse(double mouseX, int sliderX, int sliderW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
         AstraClient.previewLowHealthThreshold(2 + (int) Math.round(progress * 18.0));
@@ -374,7 +406,8 @@ public final class AstraModuleSettingsScreen extends Screen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (button == 0 && (draggingZoomSlider || draggingEspSlider || draggingCombatSlider
-            || draggingAutoEatSlider || draggingLowHealthSlider || draggingEffectAlertSlider)) {
+            || draggingAutoEatSlider || draggingLowHealthSlider || draggingEffectAlertSlider
+            || draggingBlockFinderSlider)) {
             int pw = Math.min(600, width - 24);
             int x = (width - pw) / 2;
             int sliderX = x + 20;
@@ -383,6 +416,7 @@ public final class AstraModuleSettingsScreen extends Screen {
             else if (draggingAutoEatSlider) updateAutoEatThresholdFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingLowHealthSlider) updateLowHealthThresholdFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingEffectAlertSlider) updateEffectAlertThresholdFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingBlockFinderSlider) updateBlockFinderRangeFromMouse(mouseX, sliderX, pw - 40);
             else updateCombatRangeFromMouse(mouseX, sliderX, pw - 40);
             return true;
         }
@@ -392,13 +426,14 @@ public final class AstraModuleSettingsScreen extends Screen {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (draggingZoomSlider || draggingEspSlider || draggingCombatSlider || draggingAutoEatSlider
-            || draggingLowHealthSlider || draggingEffectAlertSlider) AstraClient.saveConfig();
+            || draggingLowHealthSlider || draggingEffectAlertSlider || draggingBlockFinderSlider) AstraClient.saveConfig();
         draggingZoomSlider = false;
         draggingEspSlider = false;
         draggingCombatSlider = false;
         draggingAutoEatSlider = false;
         draggingLowHealthSlider = false;
         draggingEffectAlertSlider = false;
+        draggingBlockFinderSlider = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 

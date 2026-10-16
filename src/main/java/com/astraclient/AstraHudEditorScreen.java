@@ -36,6 +36,7 @@ public final class AstraHudEditorScreen extends Screen {
         new Widget("potionhud", "Potion HUD", 150, 260),
         new Widget("targethud", "Target HUD", 150, -43),
         new Widget("damageindicators", "Damage Indicators", 150, -190),
+        new Widget("blockfinder", "Block Finder", 150, -60),
         new Widget("sessionstats", "Session Stats", 8, 449),
         new Widget("arraylist", "Active Modules", 150, 8),
         new Widget("watermark", "Astra Watermark", 8, 160),
