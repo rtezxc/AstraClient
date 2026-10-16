@@ -86,6 +86,7 @@ public final class AstraScreen extends Screen {
     private String category = "Render";
     private String searchText = "";
     private boolean searchFocused;
+    private boolean capturingGuiKey;
     private int scrollOffset;
     private boolean draggingWindow;
     private boolean resizingWindow;
@@ -362,12 +363,14 @@ public final class AstraScreen extends Screen {
             "Accent theme", AstraClient.accentName(), accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 132, contentW,
             "Interface click sound", AstraClient.areClickSoundsEnabled() ? "ON" : "MUTED", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 168, contentW,
+            "GUI open key", capturingGuiKey ? "PRESS A KEY  •  ESC = DEFAULT" : AstraClient.keyName(AstraClient.guiKeybindCode()), accent);
 
-        ctx.drawText(textRenderer, "GUI SCALE", contentX, top + 171, WHITE, true);
+        ctx.drawText(textRenderer, "GUI SCALE", contentX, top + 207, WHITE, true);
         String value = AstraClient.guiScale() + "%";
         ctx.drawText(textRenderer, value, contentX + contentW - textRenderer.getWidth(value),
-            top + 171, accent, true);
-        int trackX = contentX, trackY = top + 190, trackW = contentW;
+            top + 207, accent, true);
+        int trackX = contentX, trackY = top + 226, trackW = contentW;
         ctx.fill(trackX, trackY, trackX + trackW, trackY + 6, 0xFF2B3344);
         int fillW = (AstraClient.guiScale() - 75) * trackW / 50;
         ctx.fill(trackX, trackY, trackX + fillW, trackY + 6, accent);
@@ -377,11 +380,11 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, max, trackX + trackW - textRenderer.getWidth(max),
             trackY + 12, MUTED, false);
 
-        ctx.drawText(textRenderer, "HUD OPACITY", contentX, top + 220, WHITE, true);
+        ctx.drawText(textRenderer, "HUD OPACITY", contentX, top + 256, WHITE, true);
         String opacity = AstraClient.hudOpacity() + "%";
         ctx.drawText(textRenderer, opacity, contentX + contentW - textRenderer.getWidth(opacity),
-            top + 220, accent, true);
-        int opacityY = top + 239;
+            top + 256, accent, true);
+        int opacityY = top + 275;
         ctx.fill(contentX, opacityY, contentX + contentW, opacityY + 6, 0xFF2B3344);
         int opacityFill = (AstraClient.hudOpacity() - 35) * contentW / 65;
         ctx.fill(contentX, opacityY, contentX + opacityFill, opacityY + 6, accent);
@@ -391,11 +394,11 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, full, contentX + contentW - textRenderer.getWidth(full),
             opacityY + 12, MUTED, false);
 
-        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 274, contentW,
-            "Reset module defaults", "RESET", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 310, contentW,
-            "Export config backup", "EXPORT", accent);
+            "Reset module defaults", "RESET", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 346, contentW,
+            "Export config backup", "EXPORT", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 382, contentW,
             "Import config backup", "IMPORT", accent);
         if (panelH >= 390) {
             ctx.drawText(textRenderer, "HUD positions are saved from the HUD Editor.", contentX,
@@ -484,25 +487,30 @@ public final class AstraScreen extends Screen {
                 AstraClient.toggleClickSounds();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 183, contentW, 28)) {
+            if (inside(mouseX, mouseY, contentX, top + 168, contentW, 34)) {
+                capturingGuiKey = true;
+                AstraClient.notifyUser("Press a key for the Astra GUI (Esc restores Right Shift)");
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 219, contentW, 28)) {
                 draggingScale = true;
                 updateScaleFromMouse(mouseX, contentX, contentW);
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 232, contentW, 28)) {
+            if (inside(mouseX, mouseY, contentX, top + 268, contentW, 28)) {
                 draggingOpacity = true;
                 updateOpacityFromMouse(mouseX, contentX, contentW);
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 274, contentW, 31)) {
+            if (inside(mouseX, mouseY, contentX, top + 310, contentW, 34)) {
                 AstraClient.resetModuleDefaults();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 310, contentW, 34)) {
+            if (inside(mouseX, mouseY, contentX, top + 346, contentW, 34)) {
                 AstraClient.exportConfigBackup();
                 return true;
             }
-            if (inside(mouseX, mouseY, contentX, top + 346, contentW, 34)) {
+            if (inside(mouseX, mouseY, contentX, top + 382, contentW, 34)) {
                 AstraClient.importConfigBackup();
                 return true;
             }
@@ -667,6 +675,12 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (capturingGuiKey) {
+            AstraClient.setGuiKeybindCode(keyCode == GLFW.GLFW_KEY_ESCAPE
+                ? GLFW.GLFW_KEY_RIGHT_SHIFT : keyCode);
+            capturingGuiKey = false;
+            return true;
+        }
         if (captureKeybindId != null) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 AstraClient.setModuleKeybind(captureKeybindId, GLFW.GLFW_KEY_UNKNOWN);
