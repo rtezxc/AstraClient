@@ -29,6 +29,7 @@ public final class AstraModuleSettingsScreen extends Screen {
     private boolean draggingCrosshairGapSlider;
     private boolean draggingCrosshairThicknessSlider;
     private boolean draggingBreadcrumbSlider;
+    private boolean draggingStorageFinderSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
                                      String description, boolean implemented) {
@@ -151,6 +152,23 @@ public final class AstraModuleSettingsScreen extends Screen {
                 drawRow(ctx, x + 20, nextY + 84, panelW - 40, 27, "Trace mobs",
                     AstraClient.tracerMobs() ? "ON" : "OFF", mouseX, mouseY, a);
             }
+        } else if (moduleId.equals("storagefinder")) {
+            int sliderX = x + 20, sliderW = panelW - 40;
+            ctx.drawText(textRenderer, "STORAGE SEARCH RADIUS", sliderX, nextY + 3, WHITE, true);
+            String rangeLabel = AstraClient.storageFinderRange() + " blocks";
+            ctx.drawText(textRenderer, rangeLabel, sliderX + sliderW - textRenderer.getWidth(rangeLabel),
+                nextY + 3, accent(), true);
+            int sliderY = nextY + 27;
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
+            int fill = (AstraClient.storageFinderRange() - 8) * sliderW / 24;
+            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
+            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
+            ctx.drawText(textRenderer, "8 blocks", sliderX, sliderY + 13, MUTED, false);
+            String maxRange = "32 blocks";
+            ctx.drawText(textRenderer, maxRange, sliderX + sliderW - textRenderer.getWidth(maxRange),
+                sliderY + 13, MUTED, false);
+            ctx.drawText(textRenderer, "Search is cached and refreshes periodically.", sliderX,
+                nextY + 55, MUTED, false);
         } else if (moduleId.equals("waypoint")) {
             drawRow(ctx, x + 20, nextY, panelW - 40, 32, "Save current position", "SET HERE",
                 mouseX, mouseY, a);
@@ -379,6 +397,12 @@ public final class AstraModuleSettingsScreen extends Screen {
                 AstraClient.toggleTracerMobs();
                 return true;
             }
+        } else if (moduleId.equals("storagefinder")) {
+            if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
+                draggingStorageFinderSlider = true;
+                updateStorageFinderRangeFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
         } else if (moduleId.equals("waypoint")) {
             if (inside(mouseX, mouseY, x + 20, nextY, pw - 40, 32)) {
                 AstraClient.setWaypointHere();
@@ -470,6 +494,11 @@ public final class AstraModuleSettingsScreen extends Screen {
         return mx >= x && mx <= x + w && my >= y && my <= y + h;
     }
 
+    private void updateStorageFinderRangeFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewStorageFinderRange(8 + (int) Math.round(progress * 24.0));
+    }
+
     private void updateBreadcrumbLengthFromMouse(double mouseX, int sliderX, int sliderW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
         AstraClient.previewBreadcrumbTrailLength(12 + (int) Math.round(progress * 108.0));
@@ -532,7 +561,7 @@ public final class AstraModuleSettingsScreen extends Screen {
             || draggingAutoEatSlider || draggingLowHealthSlider || draggingEffectAlertSlider
             || draggingBlockFinderSlider || draggingCrosshairSizeSlider
             || draggingCrosshairGapSlider || draggingCrosshairThicknessSlider
-            || draggingBreadcrumbSlider)) {
+            || draggingBreadcrumbSlider || draggingStorageFinderSlider)) {
             int pw = Math.min(600, width - 24);
             int x = (width - pw) / 2;
             int sliderX = x + 20;
@@ -546,6 +575,7 @@ public final class AstraModuleSettingsScreen extends Screen {
             else if (draggingCrosshairGapSlider) updateCrosshairGapFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingCrosshairThicknessSlider) updateCrosshairThicknessFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingBreadcrumbSlider) updateBreadcrumbLengthFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingStorageFinderSlider) updateStorageFinderRangeFromMouse(mouseX, sliderX, pw - 40);
             else updateCombatRangeFromMouse(mouseX, sliderX, pw - 40);
             return true;
         }
@@ -557,7 +587,7 @@ public final class AstraModuleSettingsScreen extends Screen {
         if (draggingZoomSlider || draggingEspSlider || draggingCombatSlider || draggingAutoEatSlider
             || draggingLowHealthSlider || draggingEffectAlertSlider || draggingBlockFinderSlider
             || draggingCrosshairSizeSlider || draggingCrosshairGapSlider || draggingCrosshairThicknessSlider
-            || draggingBreadcrumbSlider) AstraClient.saveConfig();
+            || draggingBreadcrumbSlider || draggingStorageFinderSlider) AstraClient.saveConfig();
         draggingZoomSlider = false;
         draggingEspSlider = false;
         draggingCombatSlider = false;
@@ -569,6 +599,7 @@ public final class AstraModuleSettingsScreen extends Screen {
         draggingCrosshairGapSlider = false;
         draggingCrosshairThicknessSlider = false;
         draggingBreadcrumbSlider = false;
+        draggingStorageFinderSlider = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 

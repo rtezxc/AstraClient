@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
@@ -72,7 +73,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "breadcrumbs", "compasshud", "waypoint"
+        "potionhud", "targethud", "damageindicators", "blockfinder", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "breadcrumbs", "compasshud", "waypoint", "storagefinder"
     };
     private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
     private static final Map<String, HudBounds> HUD_RENDERED_BOUNDS = new LinkedHashMap<>();
@@ -192,6 +193,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("compasshud", false);
         MODULES.put("breadcrumbs", false);
         MODULES.put("waypoint", false);
+        MODULES.put("storagefinder", false);
         MODULES.put("effectalert", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
@@ -339,6 +341,7 @@ public final class AstraClient implements ClientModInitializer {
             case "compasshud" -> "Compass HUD";
             case "breadcrumbs" -> "Breadcrumbs";
             case "waypoint" -> "Waypoint";
+            case "storagefinder" -> "Storage Finder";
             case "effectalert" -> "Effect Expiry Alert";
             default -> id;
         };
@@ -482,6 +485,18 @@ public final class AstraClient implements ClientModInitializer {
         tracerMobs = !tracerMobs;
         cachedTracerTargets.clear();
         notifyUser("Mob tracers " + (tracerMobs ? "enabled" : "disabled"));
+        saveConfig();
+    }
+
+    public static int storageFinderRange() { return storageFinderRange; }
+    public static void previewStorageFinderRange(int value) {
+        storageFinderRange = Math.max(8, Math.min(32, value));
+        nearestStorageBlock = null;
+        lastStorageScanAt = 0L;
+    }
+    public static void setStorageFinderRange(int value) {
+        previewStorageFinderRange(value);
+        notifyUser("Storage Finder range: " + storageFinderRange + " blocks");
         saveConfig();
     }
 
@@ -740,6 +755,8 @@ public final class AstraClient implements ClientModInitializer {
             if (!knownFinderTarget) blockFinderTarget = "DIAMOND";
             blockFinderRange = Math.max(8, Math.min(48,
                 Integer.parseInt(properties.getProperty("blockfinder.range", "24"))));
+            storageFinderRange = Math.max(8, Math.min(32,
+                Integer.parseInt(properties.getProperty("storagefinder.range", "16"))));
             espRange = Math.max(16, Math.min(128,
                 Integer.parseInt(properties.getProperty("esp.range", "64"))));
             combatRange = Math.max(3, Math.min(6,
@@ -792,6 +809,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("effectalert.thresholdSeconds", Integer.toString(effectAlertThresholdSeconds));
         properties.setProperty("blockfinder.target", blockFinderTarget);
         properties.setProperty("blockfinder.range", Integer.toString(blockFinderRange));
+        properties.setProperty("storagefinder.range", Integer.toString(storageFinderRange));
         properties.setProperty("esp.range", Integer.toString(espRange));
         properties.setProperty("combat.range", Integer.toString(combatRange));
         properties.setProperty("combat.targetPlayers", Boolean.toString(targetPlayers));
@@ -843,6 +861,7 @@ public final class AstraClient implements ClientModInitializer {
             updateChatHudEditor(client);
             updateDamageTracker(client);
             updateBlockFinder(client);
+            updateStorageFinder(client);
             updateTracers(client);
             updateBreadcrumbs(client);
             boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
@@ -1131,6 +1150,12 @@ public final class AstraClient implements ClientModInitializer {
     };
     private static String blockFinderTarget = "DIAMOND";
     private static int blockFinderRange = 24;
+    private static int storageFinderRange = 16;
+    private static BlockPos nearestStorageBlock;
+    private static double nearestStorageDistance = Double.POSITIVE_INFINITY;
+    private static String nearestStorageType = "Storage";
+    private static long lastStorageScanAt;
+    private static Object storageFinderWorld;
     private static long lastBlockFinderScanAt;
     private static BlockPos nearestFoundBlock;
     private static double nearestFoundDistance = Double.POSITIVE_INFINITY;
@@ -1535,6 +1560,15 @@ public final class AstraClient implements ClientModInitializer {
             drawHudLine(client, context, "waypoint", 8, screenHeight - 80, "WAYPOINT", value, accent);
         }
 
+        if (isEnabled("storagefinder")) {
+            String value = nearestStorageBlock == null
+                ? "No storage within " + storageFinderRange + " blocks"
+                : nearestStorageType + " " + nearestStorageBlock.getX() + " "
+                    + nearestStorageBlock.getY() + " " + nearestStorageBlock.getZ()
+                    + " • " + String.format(Locale.ROOT, "%.1f m", nearestStorageDistance);
+            drawHudLine(client, context, "storagefinder", 8, screenHeight - 100, "STORAGE", value, accent);
+        }
+
 if (isEnabled("blockfinder")) {
             String value = nearestFoundBlock == null
                 ? "No " + blockFinderTarget.toLowerCase(Locale.ROOT) + " within " + blockFinderRange + " blocks"
@@ -1906,6 +1940,46 @@ if (isEnabled("blockfinder")) {
         context.getMatrices().pop();
     }
 
+    private static void updateStorageFinder(MinecraftClient client) {
+        if (!isEnabled("storagefinder") || client.player == null || client.world == null) {
+            nearestStorageBlock = null;
+            nearestStorageDistance = Double.POSITIVE_INFINITY;
+            storageFinderWorld = null;
+            lastStorageScanAt = 0L;
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (storageFinderWorld != client.world) {
+            storageFinderWorld = client.world;
+            lastStorageScanAt = 0L;
+            nearestStorageBlock = null;
+        }
+        if (now - lastStorageScanAt < 2500L) return;
+        lastStorageScanAt = now;
+        BlockPos center = client.player.getBlockPos();
+        int radius = storageFinderRange;
+        int bottom = Math.max(client.world.getBottomY(), center.getY() - 6);
+        int top = Math.min(client.world.getTopYInclusive(), center.getY() + 6);
+        BlockPos start = new BlockPos(center.getX() - radius, bottom, center.getZ() - radius);
+        BlockPos end = new BlockPos(center.getX() + radius, top, center.getZ() + radius);
+        BlockPos closest = null;
+        String closestType = "Storage";
+        double closestSquared = Double.POSITIVE_INFINITY;
+        for (BlockPos pos : BlockPos.iterate(start, end)) {
+            double distanceSquared = pos.toCenterPos().squaredDistanceTo(client.player.getPos());
+            if (distanceSquared > radius * radius || distanceSquared >= closestSquared) continue;
+            Block block = client.world.getBlockState(pos).getBlock();
+            if (block != Blocks.CHEST && block != Blocks.TRAPPED_CHEST && block != Blocks.ENDER_CHEST
+                && block != Blocks.BARREL && !(block instanceof ShulkerBoxBlock)) continue;
+            closest = new BlockPos(pos.getX(), pos.getY(), pos.getZ());
+            closestType = block.getName().getString();
+            closestSquared = distanceSquared;
+        }
+        nearestStorageBlock = closest;
+        nearestStorageType = closestType;
+        nearestStorageDistance = closest == null ? Double.POSITIVE_INFINITY : Math.sqrt(closestSquared);
+    }
+
     private static void updateBlockFinder(MinecraftClient client) {
         if (!isEnabled("blockfinder") || client.player == null || client.world == null) {
             nearestFoundBlock = null;
@@ -2072,7 +2146,7 @@ if (isEnabled("blockfinder")) {
             case "compasshud" -> screenWidth / 2 - 84;
             case "damageindicators" -> screenWidth / 2 - 44;
             case "blockfinder" -> 150;
-            case "waypoint" -> 8;
+            case "waypoint", "storagefinder" -> 8;
             default -> 8;
         };
     }
@@ -2107,6 +2181,7 @@ if (isEnabled("blockfinder")) {
             case "damageindicators" -> screenHeight / 2 + 26;
             case "blockfinder" -> screenHeight - 60;
             case "waypoint" -> screenHeight - 80;
+            case "storagefinder" -> screenHeight - 100;
             case "healthhud" -> screenHeight - 42;
             case "hungerhud" -> screenHeight - 21;
             case "blockreachhud" -> screenHeight - 84;
