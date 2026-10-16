@@ -840,6 +840,7 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean autoEatWasForcing;
     private static int autoEatOriginalSlot = -1;
     private static int autoEatSelectedSlot = -1;
+    private static boolean autoEatNoFoodNotified;
     private static boolean autoWalkWasForcing;
     /**
      * Uses food from the hotbar when hunger is low. It stops when the player
@@ -863,6 +864,7 @@ public final class AstraClient implements ClientModInitializer {
             autoEatWasForcing = false;
             autoEatOriginalSlot = -1;
             autoEatSelectedSlot = -1;
+            autoEatNoFoodNotified = false;
         }
 
         if (!wantsFood || autoEatWasForcing || player == null) return;
@@ -877,9 +879,11 @@ public final class AstraClient implements ClientModInitializer {
             }
         }
         if (foodSlot < 0) {
-            notifyUser("Auto Eat: no food in hotbar");
+            if (!autoEatNoFoodNotified) notifyUser("Auto Eat: no food in hotbar");
+            autoEatNoFoodNotified = true;
             return;
         }
+        autoEatNoFoodNotified = false;
         autoEatOriginalSlot = selected;
         autoEatSelectedSlot = foodSlot;
         player.getInventory().selectedSlot = foodSlot;
