@@ -114,6 +114,14 @@ public final class AstraClient implements ClientModInitializer {
 
     public static void setModuleKeybind(String id, int keyCode) {
         if (!MODULES.containsKey(id)) return;
+        if (keyCode != GLFW.GLFW_KEY_UNKNOWN) {
+            for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
+                if (!entry.getKey().equals(id) && entry.getValue() == keyCode) {
+                    MODULE_KEYBINDS.put(entry.getKey(), GLFW.GLFW_KEY_UNKNOWN);
+                    KEY_WAS_DOWN.put(entry.getKey(), false);
+                }
+            }
+        }
         MODULE_KEYBINDS.put(id, keyCode);
         KEY_WAS_DOWN.put(id, false);
         notifyUser("Keybind " + readableName(id) + ": " + keyName(keyCode));
