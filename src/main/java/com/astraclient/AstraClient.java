@@ -689,24 +689,6 @@ public final class AstraClient implements ClientModInitializer {
                 forcedSafeWalkSneak = false;
             }
 
-            // Auto Tool: while mining a block, select the hotbar tool with the
-            // highest vanilla mining-speed multiplier for that block.
-            if (isEnabled("autotool") && client.options.attackKey.isPressed()
-                && client.crosshairTarget instanceof BlockHitResult blockHit) {
-                var state = client.world.getBlockState(blockHit.getBlockPos());
-                int bestSlot = client.player.getInventory().selectedSlot;
-                float bestSpeed = client.player.getInventory().getStack(bestSlot).getMiningSpeedMultiplier(state);
-                for (int slot = 0; slot < 9; slot++) {
-                    ItemStack stack = client.player.getInventory().getStack(slot);
-                    float speed = stack.getMiningSpeedMultiplier(state);
-                    if (speed > bestSpeed) {
-                        bestSpeed = speed;
-                        bestSlot = slot;
-                    }
-                }
-                client.player.getInventory().selectedSlot = bestSlot;
-            }
-
             // Refresh only the effect Astra itself needs. If the player already had
             // Night Vision before enabling FullBright, leave that external effect alone.
             if (fullBrightEnabled && client.player.age % 100 == 0 && !hadNightVisionBeforeEnable) {
