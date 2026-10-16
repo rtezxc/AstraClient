@@ -2,6 +2,8 @@ package com.astraclient;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
+import net.minecraft.text.Text;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.loader.api.FabricLoader;
@@ -771,6 +773,130 @@ public final class AstraClient implements ClientModInitializer {
         }
     }
 
+    private static final Path NAMED_CONFIGS_DIR =
+        FabricLoader.getInstance().getConfigDir().resolve("astraclient-configs");
+
+    private static boolean isValidConfigName(String name) {
+        return name != null && name.matches("[A-Za-z0-9_-]{1,24}");
+    }
+
+    public static List<String> namedConfigNames() {
+        List<String> names = new ArrayList<>();
+        try {
+            if (!Files.isDirectory(NAMED_CONFIGS_DIR)) return names;
+            try (var files = Files.list(NAMED_CONFIGS_DIR)) {
+                files.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().endsWith(".properties"))
+                    .map(path -> path.getFileName().toString().replaceFirst("\\.properties$", ""))
+                    .filter(AstraClient::isValidConfigName)
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .forEach(names::add);
+            }
+        } catch (Exception exception) {
+            System.err.println("[Astra Client] Could not list named configs: " + exception.getMessage());
+        }
+        return names;
+    }
+
+    private static Path namedConfigPath(String name) {
+        if (!isValidConfigName(name)) throw new IllegalArgumentException("Invalid config name");
+        return NAMED_CONFIGS_DIR.resolve(name + ".properties");
+    }
+
+    public static void handleConfigsChatCommand(String rawMessage) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        String[] args = rawMessage.trim().split("\\s+");
+        if (args.length == 1) {
+            client.player.sendMessage(Text.literal("§b[Astra] §fConfigs: §e.configs add <name>§7, §e.configs remove <name>§7, §e.configs use <name>§7, §e.configs list"), false);
+            return;
+        }
+        String action = args[1].toLowerCase(Locale.ROOT);
+        if (action.equals("list")) {
+            List<String> names = namedConfigNames();
+            client.player.sendMessage(Text.literal(names.isEmpty()
+                ? "§b[Astra] §7No saved configs yet. Use §e.configs add <name>§7."
+                : "§b[Astra] §fSaved configs: §a" + String.join("§7, §a", names)), false);
+            return;
+        }
+        if (args.length < 3) {
+            client.player.sendMessage(Text.literal("§b[Astra] §cUsage: .configs add/remove/use <name>"), false);
+            return;
+        }
+        String name = args[2];
+        if (!isValidConfigName(name)) {
+            client.player.sendMessage(Text.literal("§b[Astra] §cName must be 1-24 characters: letters, numbers, _ or -."), false);
+            return;
+        }
+        Path path = namedConfigPath(name);
+        switch (action) {
+            case "add" -> {
+                try {
+                    saveConfig();
+                    Files.createDirectories(NAMED_CONFIGS_DIR);
+                    Files.copy(CONFIG_PATH, path, StandardCopyOption.REPLACE_EXISTING);
+                    client.player.sendMessage(Text.literal("§b[Astra] §aSaved config §f" + name), false);
+                } catch (Exception exception) {
+                    System.err.println("[Astra Client] Could not save config " + name + ": " + exception.getMessage());
+                    client.player.sendMessage(Text.literal("§b[Astra] §cCould not save config. Check the game log."), false);
+                }
+            }
+            case "remove" -> {
+                try {
+                    if (!Files.isRegularFile(path)) {
+                        client.player.sendMessage(Text.literal("§b[Astra] §cNo config named " + name), false);
+                        return;
+                    }
+                    Files.delete(path);
+                    client.player.sendMessage(Text.literal("§b[Astra] §aRemoved config §f" + name), false);
+                } catch (Exception exception) {
+                    System.err.println("[Astra Client] Could not remove config " + name + ": " + exception.getMessage());
+                    client.player.sendMessage(Text.literal("§b[Astra] §cCould not remove config."), false);
+                }
+            }
+            case "use" -> {
+                if (!Files.isRegularFile(path)) {
+                    client.player.sendMessage(Text.literal("§b[Astra] §cNo config named " + name + ". Use §e.configs list"), false);
+                    return;
+                }
+                try {
+                    Properties validation = new Properties();
+                    try (InputStream input = Files.newInputStream(path)) { validation.load(input); }
+                    MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
+                    MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
+                    KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
+                    HUD_X.clear();
+                    HUD_Y.clear();
+                    accentTheme = 0;
+                    guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
+                    guiKeyWasDown = false;
+                    guiKeybindIgnoreUntil = System.currentTimeMillis() + 400L;
+                    clickSounds = true;
+                    autoSprintGroundOnly = true;
+                    autoSprintDisableInMenus = true;
+                    guiScale = 100;
+                    hudOpacity = 84;
+                    hudBackgrounds = true;
+                    zoomFov = 30;
+                    autoEatHungerThreshold = 16;
+                    espRange = 64;
+                    combatRange = 4;
+                    targetPlayers = true;
+                    targetHostile = true;
+                    targetPassive = false;
+                    Files.copy(path, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
+                    loadConfig();
+                    saveConfig();
+                    client.player.sendMessage(Text.literal("§b[Astra] §aLoaded config §f" + name), false);
+                } catch (Exception exception) {
+                    System.err.println("[Astra Client] Could not load config " + name + ": " + exception.getMessage());
+                    client.player.sendMessage(Text.literal("§b[Astra] §cCould not load config. Check the game log."), false);
+                }
+            }
+            default -> client.player.sendMessage(Text.literal("§b[Astra] §cUnknown action. Use .configs for help."), false);
+        }
+    }
+
     /** Writes a portable copy of the current settings next to the live config file. */
     public static void exportConfigBackup() {
         saveConfig();
@@ -983,6 +1109,16 @@ public final class AstraClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         loadConfig();
+
+        // Intercept only Astra's local dot-command; never send it to a multiplayer server.
+        ClientSendMessageEvents.ALLOW_CHAT.register(message -> {
+            if (message != null && (message.equalsIgnoreCase(".configs")
+                || message.toLowerCase(Locale.ROOT).startsWith(".configs "))) {
+                handleConfigsChatCommand(message);
+                return false;
+            }
+            return true;
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             long guiWindow = client.getWindow() == null ? 0L : client.getWindow().getHandle();
