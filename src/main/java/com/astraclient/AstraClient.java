@@ -72,6 +72,8 @@ public final class AstraClient implements ClientModInitializer {
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
     private static KeyBinding openGuiKey;
+    private static int guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
+    private static boolean guiKeyWasDown;
     private static int accentTheme;
     private static boolean clickSounds = true;
     private static boolean autoSprintGroundOnly = true;
@@ -336,6 +338,14 @@ public final class AstraClient implements ClientModInitializer {
         };
     }
 
+    public static int guiKeybindCode() { return guiKeybindCode; }
+    public static void setGuiKeybindCode(int keyCode) {
+        guiKeybindCode = keyCode == GLFW.GLFW_KEY_UNKNOWN ? GLFW.GLFW_KEY_RIGHT_SHIFT : keyCode;
+        guiKeyWasDown = false;
+        notifyUser("GUI keybind: " + keyName(guiKeybindCode));
+        saveConfig();
+    }
+
     public static int guiScale() {
         return guiScale;
     }
@@ -412,6 +422,8 @@ public final class AstraClient implements ClientModInitializer {
         HUD_X.clear();
         HUD_Y.clear();
         accentTheme = 0;
+        guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
+        guiKeyWasDown = false;
         clickSounds = true;
         autoSprintGroundOnly = true;
         autoSprintDisableInMenus = true;
@@ -531,6 +543,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("ui.clickSounds", Boolean.toString(clickSounds));
         properties.setProperty("autosprint.groundOnly", Boolean.toString(autoSprintGroundOnly));
         properties.setProperty("autosprint.disableInMenus", Boolean.toString(autoSprintDisableInMenus));
+        properties.setProperty("gui.keybind", Integer.toString(guiKeybindCode));
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
@@ -591,13 +604,19 @@ public final class AstraClient implements ClientModInitializer {
         );
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openGuiKey.wasPressed()) {
+            long guiWindow = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+            boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
+                && GLFW.glfwGetKey(guiWindow, guiKeybindCode) == GLFW.GLFW_PRESS;
+            if (guiDown && !guiKeyWasDown) {
                 if (client.currentScreen == null) {
                     client.setScreen(new AstraScreen());
                 } else if (client.currentScreen instanceof AstraScreen) {
                     client.setScreen(null);
                 }
             }
+            guiKeyWasDown = guiDown;
+            // Drain the legacy vanilla binding's press counter; Astra uses the persisted key above.
+            while (openGuiKey.wasPressed()) { }
 
             processModuleKeybinds(client);
             updateInventoryMove(client);
