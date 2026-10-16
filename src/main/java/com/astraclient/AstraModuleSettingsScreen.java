@@ -20,6 +20,7 @@ public final class AstraModuleSettingsScreen extends Screen {
     private boolean capturingKey;
     private boolean draggingZoomSlider;
     private boolean draggingEspSlider;
+    private boolean draggingCombatSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
                                      String description, boolean implemented) {
@@ -106,6 +107,25 @@ public final class AstraModuleSettingsScreen extends Screen {
             String maxRange = "128 blocks";
             ctx.drawText(textRenderer, maxRange, sliderX + sliderW - textRenderer.getWidth(maxRange),
                 sliderY + 13, MUTED, false);
+        } else if (moduleId.equals("killaura")) {
+            ctx.drawText(textRenderer, "MAXIMUM TARGET DISTANCE", x + 20, nextY + 3, WHITE, true);
+            String rangeLabel = AstraClient.combatRange() + " blocks";
+            ctx.drawText(textRenderer, rangeLabel, x + panelW - 20 - textRenderer.getWidth(rangeLabel),
+                nextY + 3, accent(), true);
+            int sliderX = x + 20, sliderY = nextY + 27, sliderW = panelW - 40;
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
+            int fill = (AstraClient.combatRange() - 3) * sliderW / 3;
+            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
+            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
+            ctx.drawText(textRenderer, "3 blocks", sliderX, sliderY + 13, MUTED, false);
+            ctx.drawText(textRenderer, "6 blocks", sliderX + sliderW - textRenderer.getWidth("6 blocks"),
+                sliderY + 13, MUTED, false);
+            drawRow(ctx, x + 20, nextY + 54, (panelW - 44) / 2, 27, "Target players",
+                AstraClient.targetPlayers() ? "ON" : "OFF", mouseX, mouseY, a);
+            drawRow(ctx, x + 24 + (panelW - 44) / 2, nextY + 54, (panelW - 44) / 2, 27, "Hostile mobs",
+                AstraClient.targetHostile() ? "ON" : "OFF", mouseX, mouseY, a);
+            drawRow(ctx, x + 20, nextY + 84, panelW - 40, 27, "Passive mobs",
+                AstraClient.targetPassive() ? "ON" : "OFF", mouseX, mouseY, a);
         } else if (isHudModule(moduleId)) {
             drawRow(ctx, x + 20, nextY, panelW - 40, 32, "HUD layout",
                 "OPEN EDITOR", mouseX, mouseY, a);
@@ -207,6 +227,25 @@ public final class AstraModuleSettingsScreen extends Screen {
                 updateEspRangeFromMouse(mouseX, x + 20, pw - 40);
                 return true;
             }
+        } else if (moduleId.equals("killaura")) {
+            int half = (pw - 44) / 2;
+            if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
+                draggingCombatSlider = true;
+                updateCombatRangeFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
+            if (inside(mouseX, mouseY, x + 20, nextY + 54, half, 27)) {
+                AstraClient.toggleCombatTarget("players");
+                return true;
+            }
+            if (inside(mouseX, mouseY, x + 24 + half, nextY + 54, half, 27)) {
+                AstraClient.toggleCombatTarget("hostile");
+                return true;
+            }
+            if (inside(mouseX, mouseY, x + 20, nextY + 84, pw - 40, 27)) {
+                AstraClient.toggleCombatTarget("passive");
+                return true;
+            }
         } else if (isHudModule(moduleId)) {
             if (inside(mouseX, mouseY, x + 20, nextY, pw - 40, 32)) {
                 client.setScreen(new AstraHudEditorScreen(this));
@@ -248,14 +287,20 @@ public final class AstraModuleSettingsScreen extends Screen {
         AstraClient.previewZoomFov(10 + (int) Math.round(progress * 50.0));
     }
 
+    private void updateCombatRangeFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewCombatRange(3 + (int) Math.round(progress * 3.0));
+    }
+
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (button == 0 && (draggingZoomSlider || draggingEspSlider)) {
+        if (button == 0 && (draggingZoomSlider || draggingEspSlider || draggingCombatSlider)) {
             int pw = Math.min(600, width - 24);
             int x = (width - pw) / 2;
             int sliderX = x + 20;
             if (draggingZoomSlider) updateZoomFromMouse(mouseX, sliderX, pw - 40);
-            else updateEspRangeFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingEspSlider) updateEspRangeFromMouse(mouseX, sliderX, pw - 40);
+            else updateCombatRangeFromMouse(mouseX, sliderX, pw - 40);
             return true;
         }
         return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
@@ -263,9 +308,10 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (draggingZoomSlider || draggingEspSlider) AstraClient.saveConfig();
+        if (draggingZoomSlider || draggingEspSlider || draggingCombatSlider) AstraClient.saveConfig();
         draggingZoomSlider = false;
         draggingEspSlider = false;
+        draggingCombatSlider = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
