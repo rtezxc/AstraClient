@@ -39,6 +39,13 @@ public final class AstraClient implements ClientModInitializer {
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
     private static final Map<String, Integer> MODULE_KEYBINDS = new LinkedHashMap<>();
     private static final Map<String, Boolean> KEY_WAS_DOWN = new LinkedHashMap<>();
+    private static final Map<String, Integer> HUD_X = new LinkedHashMap<>();
+    private static final Map<String, Integer> HUD_Y = new LinkedHashMap<>();
+    private static final String[] HUD_WIDGET_IDS = {
+        "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
+        "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
+        "potionhud", "targethud", "sessionstats", "keystrokes"
+    };
     private static KeyBinding openGuiKey;
     private static boolean alternateAccent;
     private static boolean clickSounds = true;
@@ -109,6 +116,29 @@ public final class AstraClient implements ClientModInitializer {
         notifyUser("Keybind " + readableName(id) + ": " + keyName(keyCode));
         saveConfig();
     }
+
+    public static int hudX(String id, int fallback) { return HUD_X.getOrDefault(id, fallback); }
+    public static int hudY(String id, int fallback) { return HUD_Y.getOrDefault(id, fallback); }
+
+    public static void setHudPosition(String id, int x, int y) {
+        boolean known = false;
+        for (String candidate : HUD_WIDGET_IDS) {
+            if (candidate.equals(id)) { known = true; break; }
+        }
+        if (!known) return;
+        HUD_X.put(id, Math.max(0, x));
+        HUD_Y.put(id, Math.max(0, y));
+        saveConfig();
+    }
+
+    public static void resetHudPositions() {
+        HUD_X.clear();
+        HUD_Y.clear();
+        saveConfig();
+        notifyUser("HUD layout reset");
+    }
+
+    public static String[] hudWidgetIds() { return HUD_WIDGET_IDS.clone(); }
 
     public static String keyName(int keyCode) {
         if (keyCode == GLFW.GLFW_KEY_UNKNOWN) return "NONE";
@@ -204,6 +234,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
         MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
         KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
+        HUD_X.clear();
+        HUD_Y.clear();
         alternateAccent = false;
         clickSounds = true;
         guiScale = 100;
@@ -230,6 +262,12 @@ public final class AstraClient implements ClientModInitializer {
                 MODULE_KEYBINDS.put(id, Integer.parseInt(
                     properties.getProperty("keybind." + id, Integer.toString(GLFW.GLFW_KEY_UNKNOWN))));
             }
+            for (String id : HUD_WIDGET_IDS) {
+                String x = properties.getProperty("hud." + id + ".x");
+                String y = properties.getProperty("hud." + id + ".y");
+                if (x != null) HUD_X.put(id, Integer.parseInt(x));
+                if (y != null) HUD_Y.put(id, Integer.parseInt(y));
+            }
         } catch (Exception exception) {
             System.err.println("[Astra Client] Could not load config: " + exception.getMessage());
         }
@@ -245,6 +283,12 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
             properties.setProperty("keybind." + entry.getKey(), Integer.toString(entry.getValue()));
+        }
+        for (Map.Entry<String, Integer> entry : HUD_X.entrySet()) {
+            properties.setProperty("hud." + entry.getKey() + ".x", Integer.toString(entry.getValue()));
+        }
+        for (Map.Entry<String, Integer> entry : HUD_Y.entrySet()) {
+            properties.setProperty("hud." + entry.getKey() + ".y", Integer.toString(entry.getValue()));
         }
         try {
             Files.createDirectories(CONFIG_PATH.getParent());
