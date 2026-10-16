@@ -45,7 +45,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("fly", "Fly", "Client-side flight: jump to rise, sneak to descend", "Movement", true),
         new ModuleInfo("autowalk", "Auto Walk", "Automatically holds forward while in the world", "Movement", true),
         new ModuleInfo("aimassist", "Aim Assist", "Aim assistance", "Combat", false),
-        new ModuleInfo("triggerbot", "Critical TriggerBot", "Attacks the crosshair target only during a valid critical hit", "Combat", true),
+        new ModuleInfo("triggerbot", "TriggerBot", "Attacks a valid target under your crosshair when the vanilla attack cooldown is ready", "Combat", true),
         new ModuleInfo("killaura", "Kill Aura", "Automatically attacks nearby living targets in front of you", "Combat", true),
         new ModuleInfo("autototem", "Auto Totem", "Automatic offhand management", "Combat", false),
         new ModuleInfo("antiknockback", "Anti Knockback", "Reduce received knockback", "Combat", false),
