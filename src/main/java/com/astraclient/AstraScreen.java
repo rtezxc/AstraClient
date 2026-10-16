@@ -158,11 +158,15 @@ public final class AstraScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         // Fully opaque canvas: never expose Minecraft's blurred world behind Astra.
         // This also avoids translucent compositing on mobile OpenGL renderers.
-        ctx.fill(0, 0, width, height, 0xFF080B12);
+        long now = System.currentTimeMillis();
+        float progress = Math.min(1.0f, Math.max(0.0f, (now - openedAt) / 260.0f));
+        float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0);
+        int shade = Math.round(8 + 3 * eased);
+        ctx.fill(0, 0, width, height, 0xFF000000 | (shade << 16) | (shade << 8) | (shade + 4));
         int panelW = panelWidth();
         int panelH = panelHeight();
         int left = panelLeft(panelW);
-        int top = panelTop(panelH);
+        int top = panelTop(panelH) + Math.round((1.0f - eased) * 14.0f);
         int sideW = sidebarWidth(panelW);
         int accent = AstraClient.accentColor();
         int contentX = left + sideW + 18;
@@ -176,6 +180,14 @@ public final class AstraScreen extends Screen {
         ctx.fill(left - 1, top - 1, left + panelW + 1, top + panelH + 1, 0xFF32284A);
         ctx.fill(left, top, left + panelW, top + panelH, BG);
         ctx.fill(left, top, left + panelW, top + 3, accent);
+        // Animated gloss sweeps across the accent rail; the edge glow gently pulses.
+        int shineW = Math.max(12, panelW / 9);
+        int shineX = left + (int) ((now / 5L) % Math.max(1, panelW + shineW)) - shineW;
+        int shineLeft = Math.max(left, shineX);
+        int shineRight = Math.min(left + panelW, shineX + shineW);
+        if (shineRight > shineLeft) ctx.fill(shineLeft, top, shineRight, top + 2, 0xBFFFFFFF);
+        int pulseAlpha = 45 + (int) (35 * (0.5 + 0.5 * Math.sin(now / 240.0)));
+        ctx.fill(left - 1, top - 1, left + panelW + 1, top, (pulseAlpha << 24) | (accent & 0x00FFFFFF));
         ctx.fill(left, top + 3, left + 1, top + panelH, 0xFF32284A);
         ctx.fill(left + panelW - 1, top + 3, left + panelW, top + panelH, 0xFF242B3B);
         ctx.fill(left, top + 3, left + panelW, top + 58, 0xFF111621);
