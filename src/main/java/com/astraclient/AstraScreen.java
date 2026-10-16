@@ -704,10 +704,6 @@ public final class AstraScreen extends Screen {
             scrollOffset = 0;
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
-            close();
-            return true;
-        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
