@@ -7,234 +7,107 @@ import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
-public class AstraScreen extends Screen {
+public final class AstraScreen extends Screen {
+    private static final int BG = 0xF20A0D16;
+    private static final int SIDEBAR = 0xFF111622;
+    private static final int PURPLE = 0xFFAA70FF;
+    private static final int CYAN = 0xFF54E8FF;
+    private static final int WHITE = 0xFFF3F5FF;
+    private static final int MUTED = 0xFF929BB0;
 
-    private static final int BACKGROUND = 0xF20B0D16;
-    private static final int PANEL = 0xFF121622;
-    private static final int CARD = 0xFF191F2D;
-    private static final int PURPLE = 0xFF9B5CFF;
-    private static final int CYAN = 0xFF45E6FF;
-    private static final int WHITE = 0xFFF2F4FF;
-    private static final int MUTED = 0xFF8992A8;
+    private final List<ModuleInfo> modules = new ArrayList<>();
+    private String category = "Render";
 
-    private final List<ModuleButton> modules = new ArrayList<>();
-    private String category = "Combat";
-    private int scroll = 0;
+    private static final class ModuleInfo {
+        final String name;
+        final String description;
+        final String category;
+        final Runnable toggle;
+        final BooleanSupplier enabled;
 
-    private static class ModuleButton {
-        String name;
-        String description;
-        boolean enabled;
-
-        ModuleButton(String name, String description) {
+        ModuleInfo(String name, String description, String category,
+                   Runnable toggle, BooleanSupplier enabled) {
             this.name = name;
             this.description = description;
+            this.category = category;
+            this.toggle = toggle;
+            this.enabled = enabled;
         }
     }
 
     public AstraScreen() {
         super(Text.literal("Astra Client"));
-        addModules();
-    }
-
-    private void addModules() {
-        modules.add(new ModuleButton("FullBright",
-                "Improves visibility in dark areas"));
-        modules.add(new ModuleButton("Sprint",
-                "Automatically maintains sprint"));
-        modules.add(new ModuleButton("Player ESP",
-                "Highlights player entities"));
-        modules.add(new ModuleButton("Entity ESP",
-                "Highlights nearby entities"));
-        modules.add(new ModuleButton("Zoom",
-                "Zooms the camera"));
-        modules.add(new ModuleButton("Coordinates",
-                "Displays your current position"));
-        modules.add(new ModuleButton("FPS Counter",
-                "Displays frames per second"));
-        modules.add(new ModuleButton("Keystrokes",
-                "Displays movement keys"));
+        modules.add(new ModuleInfo("FullBright", "Night vision in dark areas", "Render",
+            () -> AstraClient.setFullBright(!AstraClient.isFullBrightEnabled()), AstraClient::isFullBrightEnabled));
+        modules.add(new ModuleInfo("Player ESP", "Not implemented yet", "Render", () -> {}, () -> false));
+        modules.add(new ModuleInfo("FPS Counter", "HUD display planned", "HUD", () -> {}, () -> false));
+        modules.add(new ModuleInfo("Coordinates", "HUD display planned", "HUD", () -> {}, () -> false));
+        modules.add(new ModuleInfo("Sprint", "Auto-sprint while moving forward", "Movement",
+            () -> AstraClient.setAutoSprint(!AstraClient.isAutoSprintEnabled()), AstraClient::isAutoSprintEnabled));
+        modules.add(new ModuleInfo("NoSlow", "Not implemented yet", "Movement", () -> {}, () -> false));
+        modules.add(new ModuleInfo("TriggerBot", "Not implemented", "Combat", () -> {}, () -> false));
     }
 
     @Override
     protected void init() {
-        super.init();
         clearChildren();
+        int panelW = Math.min(700, width - 20);
+        int panelH = Math.min(410, height - 20);
+        int left = (width - panelW) / 2;
+        int top = (height - panelH) / 2;
+        int sideW = Math.min(155, panelW / 3);
 
-        int panelWidth = Math.min(650, width - 24);
-        int panelHeight = Math.min(390, height - 24);
-
-        int left = (width - panelWidth) / 2;
-        int top = (height - panelHeight) / 2;
-
-        int sidebar = Math.min(145, panelWidth / 3);
-
-        String[] categories = {
-                "Combat", "Render", "Movement",
-                "Player", "World", "HUD", "Settings"
-        };
-
-        int categoryY = top + 80;
-
+        String[] categories = {"Combat", "Render", "Movement", "Player", "World", "HUD", "Settings"};
+        int cy = top + 72;
         for (String name : categories) {
-            final String selected = name;
-
             addDrawableChild(ButtonWidget.builder(
-                    Text.literal((category.equals(name) ? "◆  " : "   ") + name),
-                    button -> {
-                        category = selected;
-                        scroll = 0;
-                        clearAndInit();
-                    }
-            ).dimensions(
-                    left + 10,
-                    categoryY,
-                    sidebar - 20,
-                    25
-            ).build());
-
-            categoryY += 30;
+                Text.literal((category.equals(name) ? "◆  " : "   ") + name),
+                b -> { category = name; clearAndInit(); }
+            ).dimensions(left + 9, cy, sideW - 18, 25).build());
+            cy += 30;
         }
 
-        int contentX = left + sidebar + 14;
-        int contentWidth = panelWidth - sidebar - 28;
-
-        int y = top + 105;
-
-        for (ModuleButton module : modules) {
-            if (y > top + panelHeight - 48) break;
-
-            final ModuleButton selected = module;
-
+        int x = left + sideW + 18;
+        int w = panelW - sideW - 34;
+        int y = top + 78;
+        for (ModuleInfo module : modules) {
+            if (!module.category.equals(category)) continue;
+            final ModuleInfo selected = module;
+            boolean active = selected.enabled.getAsBoolean();
             addDrawableChild(ButtonWidget.builder(
-                    Text.literal(
-                            module.name + "     " +
-                            (module.enabled ? "ON" : "OFF")
-                    ),
-                    button -> {
-                        selected.enabled = !selected.enabled;
-                        clearAndInit();
-                    }
-            ).dimensions(
-                    contentX,
-                    y,
-                    contentWidth,
-                    28
-            ).build());
-
-            y += 42;
+                Text.literal((active ? "●  " : "○  ") + selected.name + "     " + (active ? "ON" : "OFF")),
+                b -> { selected.toggle.run(); clearAndInit(); }
+            ).dimensions(x, y, w, 29).build());
+            y += 55;
         }
 
-        addDrawableChild(ButtonWidget.builder(
-                Text.literal("CLOSE"),
-                button -> close()
-        ).dimensions(
-                left + panelWidth - 85,
-                top + panelHeight - 34,
-                72,
-                22
-        ).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("CLOSE"),
+            b -> close()).dimensions(left + panelW - 88, top + panelH - 32, 76, 22).build());
     }
 
     @Override
-    public void render(
-            DrawContext context,
-            int mouseX,
-            int mouseY,
-            float delta
-    ) {
-        renderBackground(context, mouseX, mouseY, delta);
+    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        renderBackground(ctx, mouseX, mouseY, delta);
+        int panelW = Math.min(700, width - 20);
+        int panelH = Math.min(410, height - 20);
+        int left = (width - panelW) / 2;
+        int top = (height - panelH) / 2;
+        int sideW = Math.min(155, panelW / 3);
 
-        int panelWidth = Math.min(650, width - 24);
-        int panelHeight = Math.min(390, height - 24);
+        ctx.fill(left - 2, top - 2, left + panelW + 2, top + panelH + 2, 0x664D36A8);
+        ctx.fill(left, top, left + panelW, top + panelH, BG);
+        ctx.fill(left, top, left + panelW, top + 3, PURPLE);
+        ctx.fill(left, top, left + sideW, top + panelH, SIDEBAR);
+        ctx.fill(left + sideW, top + 57, left + panelW, top + 58, 0xFF2A3142);
 
-        int left = (width - panelWidth) / 2;
-        int top = (height - panelHeight) / 2;
-
-        int sidebar = Math.min(145, panelWidth / 3);
-
-        context.fill(
-                left - 3, top - 3,
-                left + panelWidth + 3,
-                top + panelHeight + 3,
-                0x664B38A0
-        );
-
-        context.fill(
-                left, top,
-                left + panelWidth,
-                top + panelHeight,
-                BACKGROUND
-        );
-
-        context.fill(
-                left, top,
-                left + panelWidth,
-                top + 3,
-                PURPLE
-        );
-
-        context.fill(
-                left, top,
-                left + sidebar,
-                top + panelHeight,
-                PANEL
-        );
-
-        context.fill(
-                left + sidebar, top + 50,
-                left + panelWidth,
-                top + 51,
-                0xFF292E40
-        );
-
-        context.drawText(
-                textRenderer,
-                "ASTRA",
-                left + 16,
-                top + 18,
-                PURPLE,
-                true
-        );
-
-        context.drawText(
-                textRenderer,
-                "CLIENT  /  1.21.4",
-                left + 16,
-                top + 36,
-                MUTED,
-                false
-        );
-
-        context.drawText(
-                textRenderer,
-                category.toUpperCase(),
-                left + sidebar + 14,
-                top + 20,
-                WHITE,
-                true
-        );
-
-        context.drawText(
-                textRenderer,
-                "MODULE CONTROL CENTER",
-                left + sidebar + 14,
-                top + 36,
-                CYAN,
-                false
-        );
-
-        context.drawText(
-                textRenderer,
-                "ASTRA CLIENT  •  FABRIC",
-                left + 16,
-                top + panelHeight - 22,
-                MUTED,
-                false
-        );
-
-        super.render(context, mouseX, mouseY, delta);
+        ctx.drawText(textRenderer, "ASTRA", left + 16, top + 16, PURPLE, true);
+        ctx.drawText(textRenderer, "CLIENT  /  1.21.4", left + 16, top + 34, MUTED, false);
+        ctx.drawText(textRenderer, category.toUpperCase(), left + sideW + 18, top + 18, WHITE, true);
+        ctx.drawText(textRenderer, "MODULE CONTROL CENTER", left + sideW + 18, top + 36, CYAN, false);
+        ctx.drawText(textRenderer, "RIGHT SHIFT  •  FABRIC", left + 14, top + panelH - 20, MUTED, false);
+        super.render(ctx, mouseX, mouseY, delta);
     }
 
     @Override
