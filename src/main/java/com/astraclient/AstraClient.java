@@ -349,6 +349,9 @@ public final class AstraClient implements ClientModInitializer {
         guiScale = Math.max(75, Math.min(125, value));
     }
 
+    public static int autoEatHungerThreshold() { return autoEatHungerThreshold; }
+    public static void previewAutoEatHungerThreshold(int value) { autoEatHungerThreshold = Math.max(10, Math.min(19, value)); }
+
     public static int zoomFov() { return zoomFov; }
 
     public static void setZoomFov(int value) {
@@ -415,6 +418,7 @@ public final class AstraClient implements ClientModInitializer {
         guiScale = 100;
         hudOpacity = 84;
         zoomFov = 30;
+        autoEatHungerThreshold = 16;
         espRange = 64;
         combatRange = 4;
         targetPlayers = true;
@@ -494,6 +498,8 @@ public final class AstraClient implements ClientModInitializer {
                 Integer.parseInt(properties.getProperty("gui.scale", "100"))));
             zoomFov = Math.max(10, Math.min(60,
                 Integer.parseInt(properties.getProperty("zoom.fov", "30"))));
+            autoEatHungerThreshold = Math.max(10, Math.min(19,
+                Integer.parseInt(properties.getProperty("autoeat.hungerThreshold", "16"))));
             espRange = Math.max(16, Math.min(128,
                 Integer.parseInt(properties.getProperty("esp.range", "64"))));
             combatRange = Math.max(3, Math.min(6,
@@ -528,6 +534,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
+        properties.setProperty("autoeat.hungerThreshold", Integer.toString(autoEatHungerThreshold));
         properties.setProperty("esp.range", Integer.toString(espRange));
         properties.setProperty("combat.range", Integer.toString(combatRange));
         properties.setProperty("combat.targetPlayers", Boolean.toString(targetPlayers));
@@ -841,6 +848,7 @@ public final class AstraClient implements ClientModInitializer {
     private static int autoEatOriginalSlot = -1;
     private static int autoEatSelectedSlot = -1;
     private static boolean autoEatNoFoodNotified;
+    private static int autoEatHungerThreshold = 16;
     private static boolean autoWalkWasForcing;
     /**
      * Uses food from the hotbar when hunger is low. It stops when the player
@@ -850,7 +858,7 @@ public final class AstraClient implements ClientModInitializer {
         if (client.options == null) return;
         PlayerEntity player = client.player;
         boolean wantsFood = isEnabled("autoeat") && player != null && client.world != null
-            && client.currentScreen == null && player.getHungerManager().getFoodLevel() <= 16;
+            && client.currentScreen == null && player.getHungerManager().getFoodLevel() <= autoEatHungerThreshold;
 
         if (autoEatWasForcing && (!wantsFood || player == null
                 || player.getInventory().selectedSlot != autoEatSelectedSlot)) {
