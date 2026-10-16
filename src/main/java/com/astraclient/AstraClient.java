@@ -65,7 +65,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud"
+        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud"
     };
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
@@ -125,6 +125,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("inventoryhud", false);
         MODULES.put("healthhud", false);
         MODULES.put("hungerhud", false);
+        MODULES.put("blockreachhud", false);
+        MODULES.put("frametimehud", false);
         MODULES.put("fps", true);
         MODULES.put("coordinates", false);
         MODULES.put("direction", false);
@@ -262,6 +264,8 @@ public final class AstraClient implements ClientModInitializer {
             case "inventoryhud" -> "Inventory HUD";
             case "healthhud" -> "Health HUD";
             case "hungerhud" -> "Hunger HUD";
+            case "blockreachhud" -> "Block Reach HUD";
+            case "frametimehud" -> "Frame Time HUD";
             case "fps" -> "FPS Counter";
             case "coordinates" -> "Coordinates";
             case "direction" -> "Direction";
@@ -988,6 +992,17 @@ public final class AstraClient implements ClientModInitializer {
             float saturation = client.player.getHungerManager().getSaturationLevel();
             drawHudLine(client, context, "hungerhud", 8, screenHeight - 21, "HUNGER",
                 food + " / 20 · " + String.format(Locale.ROOT, "%.1f sat", saturation), accent);
+        }
+        if (isEnabled("blockreachhud")) {
+            String reach = client.crosshairTarget != null && client.crosshairTarget.getType() == HitResult.Type.BLOCK
+                ? String.format(Locale.ROOT, "%.2f blocks", client.player.getEyePos().distanceTo(client.crosshairTarget.getPos()))
+                : "No block targeted";
+            drawHudLine(client, context, "blockreachhud", 8, 491, "BLOCK REACH", reach, accent);
+        }
+        if (isEnabled("frametimehud")) {
+            int fps = client.getCurrentFps();
+            String frameTime = fps > 0 ? String.format(Locale.ROOT, "%.2f ms", 1000.0 / fps) : "--";
+            drawHudLine(client, context, "frametimehud", 8, 512, "FRAME TIME", frameTime, accent);
         }
         if (isEnabled("fps")) drawHudLine(client, context, "fps", 8, 8, "FPS",
             Integer.toString(client.getCurrentFps()), accent);
