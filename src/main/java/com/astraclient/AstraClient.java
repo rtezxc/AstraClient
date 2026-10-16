@@ -29,6 +29,7 @@ import java.util.UUID;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.SwordItem;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.Items;
@@ -114,6 +115,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("safewalk", false);
         MODULES.put("eagle", false);
         MODULES.put("inventorymove", false);
+        MODULES.put("autoeat", false);
         MODULES.put("killaura", false);
         MODULES.put("triggerbot", false);
         MODULES.put("autotool", false);
@@ -253,6 +255,7 @@ public final class AstraClient implements ClientModInitializer {
             case "safewalk" -> "Safe Walk";
             case "eagle" -> "Eagle";
             case "inventorymove" -> "Inventory Move";
+            case "autoeat" -> "Auto Eat";
             case "killaura" -> "Kill Aura";
             case "triggerbot" -> "Critical TriggerBot";
             case "autotool" -> "Auto Tool";
@@ -591,6 +594,7 @@ public final class AstraClient implements ClientModInitializer {
 
             processModuleKeybinds(client);
             updateInventoryMove(client);
+            updateAutoEat(client);
             updateAutoWalk(client);
             updateCombatModules(client);
             updateAutoWeapon(client);
@@ -833,7 +837,56 @@ public final class AstraClient implements ClientModInitializer {
 
     /** Lets keyboard movement bindings remain active while the vanilla inventory is open. */
     /** Simple client-side flight: jump rises, sneak descends, neutral input holds altitude. */
+    private static boolean autoEatWasForcing;
+    private static int autoEatOriginalSlot = -1;
+    private static int autoEatSelectedSlot = -1;
     private static boolean autoWalkWasForcing;
+    /**
+     * Uses food from the hotbar when hunger is low. It stops when the player
+     * changes slots, opens a screen, or has enough food, and restores the old slot.
+     */
+    private static void updateAutoEat(MinecraftClient client) {
+        if (client.options == null) return;
+        PlayerEntity player = client.player;
+        boolean wantsFood = isEnabled("autoeat") && player != null && client.world != null
+            && client.currentScreen == null && player.getHungerManager().getFoodLevel() <= 16;
+
+        if (autoEatWasForcing && (!wantsFood || player == null
+                || player.getInventory().selectedSlot != autoEatSelectedSlot)) {
+            long window = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+            if (window != 0L) setPhysicalKey(client, client.options.useKey, window);
+            else client.options.useKey.setPressed(false);
+            if (player != null && autoEatOriginalSlot >= 0
+                    && player.getInventory().selectedSlot == autoEatSelectedSlot) {
+                player.getInventory().selectedSlot = autoEatOriginalSlot;
+            }
+            autoEatWasForcing = false;
+            autoEatOriginalSlot = -1;
+            autoEatSelectedSlot = -1;
+        }
+
+        if (!wantsFood || autoEatWasForcing || player == null) return;
+        int selected = player.getInventory().selectedSlot;
+        int foodSlot = -1;
+        for (int offset = 0; offset < 9; offset++) {
+            int slot = (selected + offset) % 9;
+            ItemStack stack = player.getInventory().getStack(slot);
+            if (!stack.isEmpty() && stack.contains(DataComponentTypes.FOOD)) {
+                foodSlot = slot;
+                break;
+            }
+        }
+        if (foodSlot < 0) {
+            notifyUser("Auto Eat: no food in hotbar");
+            return;
+        }
+        autoEatOriginalSlot = selected;
+        autoEatSelectedSlot = foodSlot;
+        player.getInventory().selectedSlot = foodSlot;
+        client.options.useKey.setPressed(true);
+        autoEatWasForcing = true;
+    }
+
     private static void updateAutoWalk(MinecraftClient client) {
         if (client.options == null) return;
         boolean enabled = isEnabled("autowalk") && client.player != null
