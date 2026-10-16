@@ -713,9 +713,9 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     /**
-     * Basic local combat automation. TriggerBot deliberately takes priority over
-     * Kill Aura: while it is enabled, it attacks only the entity under the
-     * crosshair and only when vanilla critical-hit conditions are satisfied.
+     * Client-side combat helpers. TriggerBot attacks only a valid entity under
+     * the crosshair; KillAura searches a short forward cone. Both respect vanilla
+     * melee distance, the normal attack cooldown, visibility, and target filters.
      */
     private static void updateCombatModules(MinecraftClient client) {
         if (client.player == null || client.world == null || client.interactionManager == null
@@ -724,7 +724,7 @@ public final class AstraClient implements ClientModInitializer {
         // Stay inside ordinary vanilla melee distance. A larger configured search
         // range must not make the client send impossible long-range attacks that
         // multiplayer servers will reject.
-        final double attackRange = Math.min(3.0D, Math.max(3.0D, combatRange));
+        final double attackRange = 3.0D;
 
         // TriggerBot is deliberately crosshair-only, but it must not require a
         // critical hit: that old condition made it appear completely broken
