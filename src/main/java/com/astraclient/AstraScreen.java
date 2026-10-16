@@ -97,7 +97,17 @@ public final class AstraScreen extends Screen {
     }
 
     public AstraScreen() {
+        this("Render");
+    }
+
+    public AstraScreen(String initialCategory) {
         super(Text.literal("Astra Client"));
+        for (String item : CATEGORIES) {
+            if (item.equals(initialCategory)) {
+                category = item;
+                break;
+            }
+        }
     }
 
     private int panelWidth() {
