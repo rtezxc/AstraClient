@@ -17,7 +17,9 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.util.math.Box;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -501,11 +503,14 @@ public final class AstraClient implements ClientModInitializer {
         candidates.addAll(client.world.getPlayers());
 
         Box nearby = client.player.getBoundingBox().expand(64.0);
-        if (mobEsp) {
+        // When a visual module is disabled, continue fetching nearby entities briefly so
+        // their original glow flags can be restored cleanly.
+        boolean restoringTrackedEntities = !ORIGINAL_ENTITY_GLOW.isEmpty();
+        if (mobEsp || restoringTrackedEntities) {
             candidates.addAll(client.world.getEntitiesByClass(LivingEntity.class, nearby,
                 entity -> entity.isAlive() && !(entity instanceof PlayerEntity)));
         }
-        if (itemEsp) {
+        if (itemEsp || restoringTrackedEntities) {
             candidates.addAll(client.world.getEntitiesByClass(ItemEntity.class, nearby,
                 entity -> !entity.isRemoved()));
         }
