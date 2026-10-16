@@ -21,6 +21,7 @@ public final class AstraModuleSettingsScreen extends Screen {
     private boolean draggingZoomSlider;
     private boolean draggingEspSlider;
     private boolean draggingCombatSlider;
+    private boolean draggingAutoEatSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
                                      String description, boolean implemented) {
@@ -106,6 +107,20 @@ public final class AstraModuleSettingsScreen extends Screen {
             ctx.drawText(textRenderer, "16", sliderX, sliderY + 13, MUTED, false);
             String maxRange = "128 blocks";
             ctx.drawText(textRenderer, maxRange, sliderX + sliderW - textRenderer.getWidth(maxRange),
+                sliderY + 13, MUTED, false);
+        } else if (moduleId.equals("autoeat")) {
+            ctx.drawText(textRenderer, "EAT WHEN FOOD LEVEL IS AT OR BELOW", x + 20, nextY + 3, WHITE, true);
+            String threshold = Integer.toString(AstraClient.autoEatHungerThreshold()) + " / 20";
+            ctx.drawText(textRenderer, threshold, x + panelW - 20 - textRenderer.getWidth(threshold),
+                nextY + 3, accent(), true);
+            int sliderX = x + 20, sliderY = nextY + 27, sliderW = panelW - 40;
+            ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
+            int fill = (AstraClient.autoEatHungerThreshold() - 10) * sliderW / 9;
+            ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
+            ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
+            ctx.drawText(textRenderer, "10 / 20", sliderX, sliderY + 13, MUTED, false);
+            String maxHunger = "19 / 20";
+            ctx.drawText(textRenderer, maxHunger, sliderX + sliderW - textRenderer.getWidth(maxHunger),
                 sliderY + 13, MUTED, false);
         } else if (moduleId.equals("killaura")) {
             ctx.drawText(textRenderer, "MAXIMUM TARGET DISTANCE", x + 20, nextY + 3, WHITE, true);
@@ -227,6 +242,12 @@ public final class AstraModuleSettingsScreen extends Screen {
                 updateEspRangeFromMouse(mouseX, x + 20, pw - 40);
                 return true;
             }
+        } else if (moduleId.equals("autoeat")) {
+            if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
+                draggingAutoEatSlider = true;
+                updateAutoEatThresholdFromMouse(mouseX, x + 20, pw - 40);
+                return true;
+            }
         } else if (moduleId.equals("killaura")) {
             int half = (pw - 44) / 2;
             if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
@@ -276,6 +297,11 @@ public final class AstraModuleSettingsScreen extends Screen {
         return mx >= x && mx <= x + w && my >= y && my <= y + h;
     }
 
+    private void updateAutoEatThresholdFromMouse(double mouseX, int sliderX, int sliderW) {
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
+        AstraClient.previewAutoEatHungerThreshold(10 + (int) Math.round(progress * 9.0));
+    }
+
     private void updateEspRangeFromMouse(double mouseX, int sliderX, int sliderW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - sliderX) / Math.max(1.0, sliderW)));
         AstraClient.previewEspRange(16 + (int) Math.round(progress * 112.0));
@@ -294,12 +320,13 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (button == 0 && (draggingZoomSlider || draggingEspSlider || draggingCombatSlider)) {
+        if (button == 0 && (draggingZoomSlider || draggingEspSlider || draggingCombatSlider || draggingAutoEatSlider)) {
             int pw = Math.min(600, width - 24);
             int x = (width - pw) / 2;
             int sliderX = x + 20;
             if (draggingZoomSlider) updateZoomFromMouse(mouseX, sliderX, pw - 40);
             else if (draggingEspSlider) updateEspRangeFromMouse(mouseX, sliderX, pw - 40);
+            else if (draggingAutoEatSlider) updateAutoEatThresholdFromMouse(mouseX, sliderX, pw - 40);
             else updateCombatRangeFromMouse(mouseX, sliderX, pw - 40);
             return true;
         }
@@ -308,10 +335,11 @@ public final class AstraModuleSettingsScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (draggingZoomSlider || draggingEspSlider || draggingCombatSlider) AstraClient.saveConfig();
+        if (draggingZoomSlider || draggingEspSlider || draggingCombatSlider || draggingAutoEatSlider) AstraClient.saveConfig();
         draggingZoomSlider = false;
         draggingEspSlider = false;
         draggingCombatSlider = false;
+        draggingAutoEatSlider = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
