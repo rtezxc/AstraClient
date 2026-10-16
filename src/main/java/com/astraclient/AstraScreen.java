@@ -698,6 +698,7 @@ public final class AstraScreen extends Screen {
         if (module.implemented) {
             actions.add("toggle");
             actions.add("bind");
+            actions.add("resetbind");
         }
         if (module.id.equals("killaura")) {
             actions.add("players");
@@ -730,6 +731,7 @@ public final class AstraScreen extends Screen {
             case "settings" -> "Open settings...";
             case "toggle" -> module != null && AstraClient.isEnabled(module.id) ? "Disable module" : "Enable module";
             case "bind" -> "Change keybind...";
+            case "resetbind" -> "Clear keybind";
             case "players" -> "Target players: " + (AstraClient.targetPlayers() ? "ON" : "OFF");
             case "hostile" -> "Target hostile: " + (AstraClient.targetHostile() ? "ON" : "OFF");
             case "passive" -> "Target passive: " + (AstraClient.targetPassive() ? "ON" : "OFF");
@@ -769,6 +771,14 @@ public final class AstraScreen extends Screen {
                 rowY + 6, hover ? WHITE : 0xFFD5D9E5, false);
             rowY += 21;
         }
+    }
+
+    private boolean isHudModule(String id) {
+        if (id == null) return false;
+        for (String candidate : AstraClient.hudWidgetIds()) {
+            if (candidate.equals(id)) return true;
+        }
+        return false;
     }
 
     private boolean handleContextMenuClick(double mouseX, double mouseY) {
