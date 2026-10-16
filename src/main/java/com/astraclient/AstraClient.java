@@ -73,6 +73,7 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean appliedNightVision;
     private static boolean hadNightVisionBeforeEnable;
     private static int zoomFov = 30;
+    private static int espRange = 64;
     private static int originalFov = 70;
     private static boolean zoomOverrideActive;
 
@@ -277,6 +278,18 @@ public final class AstraClient implements ClientModInitializer {
         zoomFov = Math.max(10, Math.min(60, value));
     }
 
+    public static int espRange() { return espRange; }
+
+    public static void setEspRange(int value) {
+        espRange = Math.max(16, Math.min(128, value));
+        notifyUser("ESP range: " + espRange + " blocks");
+        saveConfig();
+    }
+
+    public static void previewEspRange(int value) {
+        espRange = Math.max(16, Math.min(128, value));
+    }
+
     public static int hudOpacity() {
         return hudOpacity;
     }
@@ -304,6 +317,7 @@ public final class AstraClient implements ClientModInitializer {
         guiScale = 100;
         hudOpacity = 84;
         zoomFov = 30;
+        espRange = 64;
         notifyUser("Settings reset to defaults");
         saveConfig();
     }
@@ -325,6 +339,8 @@ public final class AstraClient implements ClientModInitializer {
                 Integer.parseInt(properties.getProperty("gui.scale", "100"))));
             zoomFov = Math.max(10, Math.min(60,
                 Integer.parseInt(properties.getProperty("zoom.fov", "30"))));
+            espRange = Math.max(16, Math.min(128,
+                Integer.parseInt(properties.getProperty("esp.range", "64"))));
             for (String id : MODULE_KEYBINDS.keySet()) {
                 MODULE_KEYBINDS.put(id, Integer.parseInt(
                     properties.getProperty("keybind." + id, Integer.toString(GLFW.GLFW_KEY_UNKNOWN))));
@@ -352,6 +368,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
+        properties.setProperty("esp.range", Integer.toString(espRange));
         for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
             properties.setProperty("keybind." + entry.getKey(), Integer.toString(entry.getValue()));
         }
@@ -502,7 +519,7 @@ public final class AstraClient implements ClientModInitializer {
         List<Entity> candidates = new ArrayList<>();
         candidates.addAll(client.world.getPlayers());
 
-        Box nearby = client.player.getBoundingBox().expand(64.0);
+        Box nearby = client.player.getBoundingBox().expand(espRange);
         // When a visual module is disabled, continue fetching nearby entities briefly so
         // their original glow flags can be restored cleanly.
         boolean restoringTrackedEntities = !ORIGINAL_ENTITY_GLOW.isEmpty();
@@ -519,7 +536,7 @@ public final class AstraClient implements ClientModInitializer {
         for (Entity entity : candidates) {
             if (entity == client.player || entity.isRemoved()) continue;
             boolean desired = entity instanceof PlayerEntity
-                ? playerEsp && client.player.squaredDistanceTo(entity) <= 96.0 * 96.0
+                ? playerEsp && client.player.squaredDistanceTo(entity) <= (double) espRange * espRange
                 : (entity instanceof LivingEntity && mobEsp)
                     || (entity instanceof ItemEntity && itemEsp);
             UUID uuid = entity.getUuid();
