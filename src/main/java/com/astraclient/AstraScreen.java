@@ -53,6 +53,8 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("potioncounter", "Potion Counter", "Count potions in your inventory", "Inventory", true),
         new ModuleInfo("durabilityhud", "Durability HUD", "Show the lowest durability item in your inventory", "HUD", true),
         new ModuleInfo("inventoryhud", "Inventory HUD", "Show the held item's name and stack count", "HUD", true),
+        new ModuleInfo("healthhud", "Health HUD", "Show current and maximum health", "HUD", true),
+        new ModuleInfo("hungerhud", "Hunger HUD", "Show food level and saturation", "HUD", true),
         new ModuleInfo("biome", "Biome Display", "Show the current biome name", "HUD", true),
         new ModuleInfo("fps", "FPS Counter", "Show live frame rate", "HUD", true),
         new ModuleInfo("coordinates", "Coordinates", "Show XYZ coordinates", "HUD", true),
