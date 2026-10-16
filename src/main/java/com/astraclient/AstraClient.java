@@ -67,7 +67,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist"
+        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark"
     };
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
@@ -149,6 +149,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("goldencounter", false);
         MODULES.put("sessionstats", false);
         MODULES.put("arraylist", false);
+        MODULES.put("watermark", true);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -286,6 +287,7 @@ public final class AstraClient implements ClientModInitializer {
             case "goldencounter" -> "Golden Apple Counter";
             case "sessionstats" -> "Session Stats";
             case "arraylist" -> "Active Modules";
+            case "watermark" -> "Watermark";
             default -> id;
         };
     }
@@ -513,6 +515,8 @@ public final class AstraClient implements ClientModInitializer {
                 properties.getProperty("theme.accentTheme",
                     Boolean.parseBoolean(properties.getProperty("theme.alternateAccent", "false")) ? "1" : "0")
             )));
+            guiKeybindCode = Integer.parseInt(properties.getProperty("gui.keybind", Integer.toString(GLFW.GLFW_KEY_RIGHT_SHIFT)));
+            if (guiKeybindCode < GLFW.GLFW_KEY_SPACE || guiKeybindCode > GLFW.GLFW_KEY_LAST) guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
             guiScale = Math.max(75, Math.min(125,
                 Integer.parseInt(properties.getProperty("gui.scale", "100"))));
             zoomFov = Math.max(10, Math.min(60,
@@ -1294,6 +1298,20 @@ public final class AstraClient implements ClientModInitializer {
             String session = String.format(Locale.ROOT, "%02d:%02d:%02d",
                 elapsed / 3600, (elapsed / 60) % 60, elapsed % 60);
             drawHudLine(client, context, "sessionstats", 8, 449, "SESSION", session, accent);
+        }
+
+        if (isEnabled("watermark")) {
+            int wx = hudX("watermark", 8);
+            int wy = hudY("watermark", 160);
+            String brand = "ASTRA";
+            String subtitle = "CLIENT";
+            int brandWidth = client.textRenderer.getWidth(brand);
+            int panelWidth = brandWidth + client.textRenderer.getWidth(subtitle) + 30;
+            context.fill(wx, wy, wx + panelWidth, wy + 24, 0xE90B101A);
+            context.fill(wx, wy, wx + 3, wy + 24, accent);
+            context.fill(wx + panelWidth - 2, wy, wx + panelWidth, wy + 24, 0xFF4AD9F5);
+            context.drawText(client.textRenderer, brand, wx + 9, wy + 4, 0xFFF2F5FC, true);
+            context.drawText(client.textRenderer, subtitle, wx + 12 + brandWidth, wy + 7, 0xFF4AD9F5, false);
         }
 
         if (isEnabled("arraylist")) {
