@@ -42,6 +42,7 @@ import org.lwjgl.glfw.GLFW;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -418,6 +419,54 @@ public final class AstraClient implements ClientModInitializer {
         targetPassive = false;
         notifyUser("Settings reset to defaults");
         saveConfig();
+    }
+
+    /** Writes a portable copy of the current settings next to the live config file. */
+    public static void exportConfigBackup() {
+        saveConfig();
+        Path backup = CONFIG_PATH.resolveSibling("astraclient-backup.properties");
+        try {
+            Files.copy(CONFIG_PATH, backup, StandardCopyOption.REPLACE_EXISTING);
+            notifyUser("Config exported: astraclient-backup.properties");
+        } catch (Exception exception) {
+            System.err.println("[Astra Client] Config export failed: " + exception.getMessage());
+            notifyUser("Config export failed");
+        }
+    }
+
+    /** Imports the last exported backup, resetting first so absent old fields use defaults. */
+    public static void importConfigBackup() {
+        Path backup = CONFIG_PATH.resolveSibling("astraclient-backup.properties");
+        if (!Files.isRegularFile(backup)) {
+            notifyUser("No config backup found");
+            return;
+        }
+        try {
+            Files.copy(backup, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
+            MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
+            MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
+            KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
+            HUD_X.clear();
+            HUD_Y.clear();
+            accentTheme = 0;
+            clickSounds = true;
+            autoSprintGroundOnly = true;
+            autoSprintDisableInMenus = true;
+            guiScale = 100;
+            hudOpacity = 84;
+            zoomFov = 30;
+            espRange = 64;
+            combatRange = 4;
+            targetPlayers = true;
+            targetHostile = true;
+            targetPassive = false;
+            loadConfig();
+            saveConfig();
+            notifyUser("Config backup imported");
+        } catch (Exception exception) {
+            System.err.println("[Astra Client] Config import failed: " + exception.getMessage());
+            notifyUser("Config import failed");
+        }
     }
 
     private static void loadConfig() {
