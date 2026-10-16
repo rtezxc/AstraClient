@@ -1262,7 +1262,7 @@ public final class AstraClient implements ClientModInitializer {
                 if (effectY + 18 > screenHeight - 20) break;
                 String name = effect.getEffectType().value().getName().getString();
                 String duration = effect.getDuration() < 0 ? "∞" : formatDuration(effect.getDuration());
-                drawHudLineAt(client, context, hudX("potionhud", 8), effectY, "EFFECT",
+                drawHudLineAt(client, context, hudX("potionhud", 150), effectY, "EFFECT",
                     name + " " + duration, accent);
                 effectY += 21;
             }
@@ -1274,7 +1274,7 @@ public final class AstraClient implements ClientModInitializer {
             String healthText = entity instanceof LivingEntity living
                 ? String.format(Locale.ROOT, "%.1f / %.1f HP", Math.max(0.0F, living.getHealth()), living.getMaxHealth())
                 : "ENTITY";
-            int x = hudX("targethud", 8);
+            int x = hudX("targethud", 150);
             int y = hudY("targethud", screenHeight - 43);
             int panelWidth = Math.min(context.getScaledWindowWidth() - x - 8,
                 Math.max(142, Math.max(client.textRenderer.getWidth(targetName),
