@@ -21,6 +21,7 @@ import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.RaycastContext;
 import java.util.HashMap;
 import java.util.ArrayDeque;
@@ -132,6 +133,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("playeresp", false);
         MODULES.put("mobesp", false);
         MODULES.put("itemesp", false);
+        MODULES.put("tracers", false);
         MODULES.put("zoom", false);
         MODULES.put("autosprint", false);
         MODULES.put("sprint", false);
@@ -281,6 +283,7 @@ public final class AstraClient implements ClientModInitializer {
         return switch (id) {
             case "fullbright" -> "FullBright";
             case "customcrosshair" -> "Custom Crosshair";
+            case "tracers" -> "Tracers";
             case "autosprint" -> "Auto Sprint";
             case "sprint" -> "Sprint";
             case "fly" -> "Fly";
@@ -726,6 +729,7 @@ public final class AstraClient implements ClientModInitializer {
             updateChatHudEditor(client);
             updateDamageTracker(client);
             updateBlockFinder(client);
+            updateTracers(client);
             boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
                 && GLFW.glfwGetKey(guiWindow, guiKeybindCode) == GLFW.GLFW_PRESS;
             if (guiDown && !guiKeyWasDown) {
@@ -1016,6 +1020,9 @@ public final class AstraClient implements ClientModInitializer {
     private static BlockPos nearestFoundBlock;
     private static double nearestFoundDistance = Double.POSITIVE_INFINITY;
     private static Object blockFinderWorld;
+    private static final List<LivingEntity> cachedTracerTargets = new ArrayList<>();
+    private static long lastTracerScanAt;
+    private static Object tracerWorld;
     private static boolean autoWalkWasForcing;
     /**
      * Uses food from the hotbar when hunger is low. It stops when the player
@@ -1251,6 +1258,8 @@ public final class AstraClient implements ClientModInitializer {
         int accent = accentColor();
         int screenWidth = context.getScaledWindowWidth();
         int screenHeight = context.getScaledWindowHeight();
+
+        if (isEnabled("tracers")) renderTracers(client, context, screenWidth, screenHeight, accent);
 
         // A subtle pulsing warning stays out of the way until health is critical.
         if (isEnabled("lowhealthalert") && client.player.getHealth() > 0.0F
@@ -1614,6 +1623,78 @@ public final class AstraClient implements ClientModInitializer {
         }
 
         renderChatHudEditingOverlay(client, context);
+    }
+
+    private static void updateTracers(MinecraftClient client) {
+        if (!isEnabled("tracers") || client.player == null || client.world == null) {
+            cachedTracerTargets.clear();
+            tracerWorld = null;
+            lastTracerScanAt = 0L;
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (tracerWorld != client.world) {
+            tracerWorld = client.world;
+            lastTracerScanAt = 0L;
+            cachedTracerTargets.clear();
+        }
+        if (now - lastTracerScanAt < 250L) return;
+        lastTracerScanAt = now;
+        List<LivingEntity> found = client.world.getEntitiesByClass(
+            LivingEntity.class, client.player.getBoundingBox().expand(espRange),
+            entity -> entity != client.player && entity.isAlive()
+                && client.player.distanceTo(entity) <= espRange
+        );
+        found.sort((left, right) ->
+            Double.compare(client.player.distanceTo(left), client.player.distanceTo(right)));
+        cachedTracerTargets.clear();
+        cachedTracerTargets.addAll(found.subList(0, Math.min(8, found.size())));
+    }
+
+    private static void renderTracers(MinecraftClient client, DrawContext context,
+                                      int screenWidth, int screenHeight, int accent) {
+        if (client.player == null || cachedTracerTargets.isEmpty()) return;
+        int originX = screenWidth / 2;
+        int originY = screenHeight - 3;
+        for (LivingEntity target : cachedTracerTargets) {
+            if (target == null || !target.isAlive() || target.getWorld() != client.world) continue;
+            double dx = target.getX() - client.player.getX();
+            double dz = target.getZ() - client.player.getZ();
+            double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+            if (horizontalDistance < 0.01) continue;
+            double targetYaw = Math.toDegrees(Math.atan2(-dx, dz));
+            double yawDifference = wrapDegrees(targetYaw - client.player.getYaw());
+            if (Math.abs(yawDifference) > 88.0) continue;
+            double targetPitch = -Math.toDegrees(Math.atan2(
+                target.getEyeY() - client.player.getEyeY(), horizontalDistance));
+            double pitchDifference = targetPitch - client.player.getPitch();
+            int tx = originX + (int) Math.round(yawDifference / 88.0 * (screenWidth / 2.0 - 10));
+            int ty = screenHeight / 2 + (int) Math.round(pitchDifference / 60.0 * (screenHeight / 2.0 - 10));
+            tx = clampInt(tx, 3, Math.max(3, screenWidth - 3));
+            ty = clampInt(ty, 3, Math.max(3, screenHeight - 3));
+            int color = target instanceof PlayerEntity ? 0xFF54E8FF : accent;
+            drawHudTracerLine(context, originX, originY, tx, ty, color);
+            context.fill(tx - 2, ty - 2, tx + 3, ty + 3, color);
+        }
+    }
+
+    private static double wrapDegrees(double degrees) {
+        while (degrees <= -180.0) degrees += 360.0;
+        while (degrees > 180.0) degrees -= 360.0;
+        return degrees;
+    }
+
+    private static void drawHudTracerLine(DrawContext context, int x1, int y1, int x2, int y2, int color) {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double length = Math.sqrt(dx * dx + dy * dy);
+        if (length < 1.0) return;
+        context.getMatrices().push();
+        context.getMatrices().translate(x1, y1, 0.0);
+        context.getMatrices().multiply(RotationAxis.POSITIVE_Z.rotationDegrees(
+            (float) Math.toDegrees(Math.atan2(dy, dx))));
+        context.fill(0, -1, (int) Math.ceil(length), 1, color);
+        context.getMatrices().pop();
     }
 
     private static void updateBlockFinder(MinecraftClient client) {

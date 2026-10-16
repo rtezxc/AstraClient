@@ -97,8 +97,10 @@ public final class AstraModuleSettingsScreen extends Screen {
             String less = "60°";
             ctx.drawText(textRenderer, less, sliderX + sliderW - textRenderer.getWidth(less),
                 sliderY + 13, MUTED, false);
-        } else if (moduleId.equals("playeresp") || moduleId.equals("mobesp") || moduleId.equals("itemesp")) {
-            ctx.drawText(textRenderer, "MAXIMUM OUTLINE DISTANCE", x + 20, nextY + 3, WHITE, true);
+        } else if (moduleId.equals("playeresp") || moduleId.equals("mobesp")
+            || moduleId.equals("itemesp") || moduleId.equals("tracers")) {
+            String distanceTitle = moduleId.equals("tracers") ? "MAXIMUM TRACER DISTANCE" : "MAXIMUM OUTLINE DISTANCE";
+            ctx.drawText(textRenderer, distanceTitle, x + 20, nextY + 3, WHITE, true);
             String rangeLabel = AstraClient.espRange() + " blocks";
             ctx.drawText(textRenderer, rangeLabel, x + panelW - 20 - textRenderer.getWidth(rangeLabel),
                 nextY + 3, accent(), true);
@@ -285,7 +287,8 @@ public final class AstraModuleSettingsScreen extends Screen {
                 updateZoomFromMouse(mouseX, x + 20, pw - 40);
                 return true;
             }
-        } else if (moduleId.equals("playeresp") || moduleId.equals("mobesp") || moduleId.equals("itemesp")) {
+        } else if (moduleId.equals("playeresp") || moduleId.equals("mobesp")
+            || moduleId.equals("itemesp") || moduleId.equals("tracers")) {
             if (inside(mouseX, mouseY, x + 20, nextY + 20, pw - 40, 27)) {
                 draggingEspSlider = true;
                 updateEspRangeFromMouse(mouseX, x + 20, pw - 40);

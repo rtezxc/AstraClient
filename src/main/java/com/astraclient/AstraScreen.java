@@ -31,6 +31,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("playeresp", "Player ESP", "Local glowing outline around other players", "Render", true),
         new ModuleInfo("mobesp", "Mob ESP", "Local glowing outlines around nearby mobs", "Render", true),
         new ModuleInfo("itemesp", "Item ESP", "Local glowing outlines around dropped items", "Render", true),
+        new ModuleInfo("tracers", "Tracers", "Draw screen-space lines toward nearby loaded entities", "Render", true),
         new ModuleInfo("xray", "X-Ray", "Highlight selected blocks", "Render", false),
         new ModuleInfo("nametags", "Nametags", "Enhanced entity labels", "Render", false),
         new ModuleInfo("zoom", "Zoom", "Adjustable camera FOV zoom", "Render", true),
@@ -719,7 +720,8 @@ public final class AstraScreen extends Screen {
             actions.add("players");
             actions.add("hostile");
             actions.add("passive");
-        } else if (module.id.equals("playeresp") || module.id.equals("mobesp") || module.id.equals("itemesp")) {
+        } else if (module.id.equals("playeresp") || module.id.equals("mobesp")
+            || module.id.equals("itemesp") || module.id.equals("tracers")) {
             actions.add("range");
         } else if (module.id.equals("autosprint")) {
             actions.add("ground");
@@ -763,7 +765,9 @@ public final class AstraScreen extends Screen {
             case "players" -> "Target players: " + (AstraClient.targetPlayers() ? "ON" : "OFF");
             case "hostile" -> "Target hostile: " + (AstraClient.targetHostile() ? "ON" : "OFF");
             case "passive" -> "Target passive: " + (AstraClient.targetPassive() ? "ON" : "OFF");
-            case "range" -> "Cycle outline range (" + AstraClient.espRange() + ")";
+            case "range" -> module != null && module.id.equals("tracers")
+                ? "Cycle tracer range (" + AstraClient.espRange() + ")"
+                : "Cycle outline range (" + AstraClient.espRange() + ")";
             case "ground" -> "Ground only: " + (AstraClient.autoSprintGroundOnly() ? "ON" : "OFF");
             case "menus" -> "Pause in menus: " + (AstraClient.autoSprintDisableInMenus() ? "ON" : "OFF");
             case "zoom" -> "Cycle zoom FOV (" + AstraClient.zoomFov() + "°)";
