@@ -808,7 +808,7 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null) return;
         String[] args = rawMessage.trim().split("\\s+");
         if (args.length == 1) {
-            client.player.sendMessage(Text.literal("§b[Astra] §fConfigs: §e.configs add <name>§7, §e.configs remove <name>§7, §e.configs use <name>§7, §e.configs list"), false);
+            client.player.sendMessage(Text.literal("§b[Astra] §fConfig commands: §e.configs add/remove/use/copy/rename/info <name> §7| §e.configs list §7| §e.configs export/import"), false);
             return;
         }
         String action = args[1].toLowerCase(Locale.ROOT);
@@ -816,11 +816,13 @@ public final class AstraClient implements ClientModInitializer {
             List<String> names = namedConfigNames();
             client.player.sendMessage(Text.literal(names.isEmpty()
                 ? "§b[Astra] §7No saved configs yet. Use §e.configs add <name>§7."
-                : "§b[Astra] §fSaved configs: §a" + String.join("§7, §a", names)), false);
+                : "§b[Astra] §fSaved configs (" + names.size() + "): §a" + String.join("§7, §a", names)), false);
             return;
         }
+        if (action.equals("export")) { exportConfigBackup(); client.player.sendMessage(Text.literal("§b[Astra] §aCurrent config exported to astraclient-backup.properties"), false); return; }
+        if (action.equals("import")) { importConfigBackup(); return; }
         if (args.length < 3) {
-            client.player.sendMessage(Text.literal("§b[Astra] §cUsage: .configs add/remove/use <name>"), false);
+            client.player.sendMessage(Text.literal("§b[Astra] §cUsage: .configs add/remove/use/copy/rename/info <name>"), false);
             return;
         }
         String name = args[2];
@@ -829,6 +831,48 @@ public final class AstraClient implements ClientModInitializer {
             return;
         }
         Path path = namedConfigPath(name);
+        if (action.equals("info")) {
+            if (!Files.isRegularFile(path)) {
+                client.player.sendMessage(Text.literal("§b[Astra] §cNo config named " + name), false);
+                return;
+            }
+            try {
+                Properties info = new Properties();
+                try (InputStream input = Files.newInputStream(path)) { info.load(input); }
+                long size = Files.size(path);
+                client.player.sendMessage(Text.literal("§b[Astra] §fConfig §e" + name + " §7| " + info.size()
+                    + " settings/properties | " + size + " bytes"), false);
+            } catch (Exception exception) {
+                client.player.sendMessage(Text.literal("§b[Astra] §cCould not read config info."), false);
+            }
+            return;
+        }
+        if (action.equals("copy") || action.equals("rename")) {
+            if (args.length < 4 || !isValidConfigName(args[3])) {
+                client.player.sendMessage(Text.literal("§b[Astra] §cUsage: .configs " + action + " <old> <new>"), false);
+                return;
+            }
+            String destinationName = args[3];
+            Path destination = namedConfigPath(destinationName);
+            if (!Files.isRegularFile(path)) {
+                client.player.sendMessage(Text.literal("§b[Astra] §cNo config named " + name), false);
+                return;
+            }
+            if (Files.exists(destination)) {
+                client.player.sendMessage(Text.literal("§b[Astra] §cConfig " + destinationName + " already exists. Remove it first."), false);
+                return;
+            }
+            try {
+                Files.createDirectories(NAMED_CONFIGS_DIR);
+                Files.copy(path, destination);
+                if (action.equals("rename")) Files.delete(path);
+                client.player.sendMessage(Text.literal("§b[Astra] §a" + (action.equals("copy") ? "Copied" : "Renamed")
+                    + " §f" + name + " §ato §f" + destinationName), false);
+            } catch (Exception exception) {
+                client.player.sendMessage(Text.literal("§b[Astra] §cConfig " + action + " failed. Check the game log."), false);
+            }
+            return;
+        }
         switch (action) {
             case "add" -> {
                 try {
@@ -894,6 +938,53 @@ public final class AstraClient implements ClientModInitializer {
                 }
             }
             default -> client.player.sendMessage(Text.literal("§b[Astra] §cUnknown action. Use .configs for help."), false);
+        }
+    }
+
+    public static void handleAstraChatCommand(String rawMessage) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        String[] args = rawMessage.trim().split("\\s+");
+        if (args.length == 1 || args[1].equalsIgnoreCase("help")) {
+            client.player.sendMessage(Text.literal("§b[Astra] §fCommands: §e.astra modules §7, §e.astra toggle <module-id> §7, §e.astra profile <performance|pvp|exploration> §7, §e.astra hud §7, §e.configs"), false);
+            return;
+        }
+        switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "modules" -> {
+                List<String> enabled = new ArrayList<>();
+                for (Map.Entry<String, Boolean> entry : MODULES.entrySet()) {
+                    if (Boolean.TRUE.equals(entry.getValue())) enabled.add(entry.getKey());
+                }
+                client.player.sendMessage(Text.literal("§b[Astra] §fEnabled modules (" + enabled.size() + "): §a"
+                    + (enabled.isEmpty() ? "none" : String.join("§7, §a", enabled)), false);
+            }
+            case "toggle" -> {
+                if (args.length < 3 || !MODULES.containsKey(args[2].toLowerCase(Locale.ROOT))) {
+                    client.player.sendMessage(Text.literal("§b[Astra] §cUsage: .astra toggle <module-id>. Use .astra modules to see enabled IDs."), false);
+                    return;
+                }
+                String id = args[2].toLowerCase(Locale.ROOT);
+                toggle(id);
+                client.player.sendMessage(Text.literal("§b[Astra] §f" + id + " is now " + (isEnabled(id) ? "§aON" : "§cOFF")), false);
+            }
+            case "profile" -> {
+                if (args.length < 3) {
+                    client.player.sendMessage(Text.literal("§b[Astra] §cUsage: .astra profile <performance|pvp|exploration>"), false);
+                    return;
+                }
+                String profile = args[2].toLowerCase(Locale.ROOT);
+                if (!Set.of("performance", "pvp", "exploration").contains(profile)) {
+                    client.player.sendMessage(Text.literal("§b[Astra] §cUnknown profile. Choose performance, pvp, or exploration."), false);
+                    return;
+                }
+                applyQuickProfile(profile);
+                client.player.sendMessage(Text.literal("§b[Astra] §aApplied profile §f" + profile), false);
+            }
+            case "hud" -> {
+                client.setScreen(new AstraHudEditorScreen());
+                client.player.sendMessage(Text.literal("§b[Astra] §aOpened HUD editor"), false);
+            }
+            default -> client.player.sendMessage(Text.literal("§b[Astra] §cUnknown command. Use .astra help"), false);
         }
     }
 
@@ -1112,9 +1203,14 @@ public final class AstraClient implements ClientModInitializer {
 
         // Intercept only Astra's local dot-command; never send it to a multiplayer server.
         ClientSendMessageEvents.ALLOW_CHAT.register(message -> {
-            if (message != null && (message.equalsIgnoreCase(".configs")
-                || message.toLowerCase(Locale.ROOT).startsWith(".configs "))) {
-                handleConfigsChatCommand(message);
+            if (message == null) return true;
+            String trimmed = message.trim();
+            if (trimmed.equalsIgnoreCase(".configs") || trimmed.toLowerCase(Locale.ROOT).startsWith(".configs ")) {
+                handleConfigsChatCommand(trimmed);
+                return false;
+            }
+            if (trimmed.equalsIgnoreCase(".astra") || trimmed.toLowerCase(Locale.ROOT).startsWith(".astra ")) {
+                handleAstraChatCommand(trimmed);
                 return false;
             }
             return true;
