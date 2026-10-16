@@ -100,6 +100,8 @@ public final class AstraScreen extends Screen {
     private boolean draggingScale;
     private boolean draggingOpacity;
     private String captureKeybindId;
+    private String contextMenuModuleId;
+    private int contextMenuX, contextMenuY;
     private int dragOffsetX, dragOffsetY, resizeStartX, resizeStartScale;
     private int windowOffsetX, windowOffsetY;
     private final long openedAt = System.currentTimeMillis();
@@ -371,6 +373,8 @@ public final class AstraScreen extends Screen {
             }
         }
 
+        renderModuleContextMenu(ctx, mouseX, mouseY);
+
         // Resize grip in the lower-right corner.
         int gx = left + panelW - 13;
         int gy = top + panelH - 13;
@@ -490,7 +494,12 @@ public final class AstraScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0 && button != 1) return super.mouseClicked(mouseX, mouseY, button);
         AstraClient.playClickSound();
-        if (button == 1) return beginModuleKeybindCapture(mouseX, mouseY);
+        if (contextMenuModuleId != null) {
+            if (button == 0 && handleContextMenuClick(mouseX, mouseY)) return true;
+            contextMenuModuleId = null;
+            if (button == 0) return true;
+        }
+        if (button == 1) return openModuleContextMenu(mouseX, mouseY);
 
         int panelW = panelWidth(), panelH = panelHeight();
         int left = panelLeft(panelW), top = panelTop(panelH);
@@ -642,6 +651,172 @@ public final class AstraScreen extends Screen {
     private void updateOpacityFromMouse(double mouseX, int x, int trackW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - x) / Math.max(1.0, trackW)));
         AstraClient.previewHudOpacity(35 + (int) Math.round(progress * 65.0));
+    }
+
+    private boolean openModuleContextMenu(double mouseX, double mouseY) {
+        if (category.equals("Settings")) {
+            contextMenuModuleId = null;
+            return true;
+        }
+        int panelW = panelWidth(), panelH = panelHeight();
+        int left = panelLeft(panelW), top = panelTop(panelH);
+        int sideW = sidebarWidth(panelW);
+        int contentX = left + sideW + 18;
+        int contentW = panelW - sideW - 34;
+        int listTop = top + 105, listBottom = top + panelH - 43;
+        if (!inside(mouseX, mouseY, contentX, listTop, contentW, Math.max(1, listBottom - listTop))) {
+            contextMenuModuleId = null;
+            return true;
+        }
+        List<ModuleInfo> visible = getVisibleModules();
+        int cardW = Math.max(70, (contentW - 10) / 2);
+        int stride = 76, cardH = 65;
+        int viewportH = Math.max(1, listBottom - listTop);
+        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
+        for (int i = 0; i < visible.size(); i++) {
+            ModuleInfo module = visible.get(i);
+            int x = contentX + (i % 2) * (cardW + 10);
+            int y = listTop + (i / 2) * stride - scrollOffset;
+            if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
+                contextMenuModuleId = module.id;
+                contextMenuX = (int) mouseX;
+                contextMenuY = (int) mouseY;
+                searchFocused = false;
+                return true;
+            }
+        }
+        contextMenuModuleId = null;
+        return true;
+    }
+
+    private List<String> contextMenuActions() {
+        List<String> actions = new ArrayList<>();
+        ModuleInfo module = findModule(contextMenuModuleId);
+        if (module == null) return actions;
+        actions.add("settings");
+        if (module.implemented) {
+            actions.add("toggle");
+            actions.add("bind");
+        }
+        if (module.id.equals("killaura")) {
+            actions.add("players");
+            actions.add("hostile");
+            actions.add("passive");
+        } else if (module.id.equals("playeresp") || module.id.equals("mobesp") || module.id.equals("itemesp")) {
+            actions.add("range");
+        } else if (module.id.equals("autosprint")) {
+            actions.add("ground");
+            actions.add("menus");
+        } else if (module.id.equals("zoom")) {
+            actions.add("zoom");
+        } else if (module.id.equals("autoeat")) {
+            actions.add("hunger");
+        } else if (isHudModule(module.id)) {
+            actions.add("hud");
+        }
+        return actions;
+    }
+
+    private ModuleInfo findModule(String id) {
+        if (id == null) return null;
+        for (ModuleInfo module : MODULES) if (module.id.equals(id)) return module;
+        return null;
+    }
+
+    private String contextActionLabel(String action) {
+        ModuleInfo module = findModule(contextMenuModuleId);
+        return switch (action) {
+            case "settings" -> "Open settings...";
+            case "toggle" -> module != null && AstraClient.isEnabled(module.id) ? "Disable module" : "Enable module";
+            case "bind" -> "Change keybind...";
+            case "players" -> "Target players: " + (AstraClient.targetPlayers() ? "ON" : "OFF");
+            case "hostile" -> "Target hostile: " + (AstraClient.targetHostile() ? "ON" : "OFF");
+            case "passive" -> "Target passive: " + (AstraClient.targetPassive() ? "ON" : "OFF");
+            case "range" -> "Cycle outline range (" + AstraClient.espRange() + ")";
+            case "ground" -> "Ground only: " + (AstraClient.autoSprintGroundOnly() ? "ON" : "OFF");
+            case "menus" -> "Pause in menus: " + (AstraClient.autoSprintDisableInMenus() ? "ON" : "OFF");
+            case "zoom" -> "Cycle zoom FOV (" + AstraClient.zoomFov() + "°)";
+            case "hunger" -> "Food threshold: " + AstraClient.autoEatHungerThreshold();
+            case "hud" -> "Open HUD editor...";
+            default -> action;
+        };
+    }
+
+    private void renderModuleContextMenu(DrawContext ctx, int mouseX, int mouseY) {
+        ModuleInfo module = findModule(contextMenuModuleId);
+        if (module == null) return;
+        List<String> actions = contextMenuActions();
+        int menuW = Math.min(202, Math.max(174, width - 12));
+        int menuH = 28 + actions.size() * 21 + 5;
+        int menuX = Math.max(6, Math.min(width - menuW - 6, contextMenuX));
+        int menuY = Math.max(6, Math.min(height - menuH - 6, contextMenuY));
+        int accent = AstraClient.accentColor();
+        ctx.fill(menuX - 2, menuY - 2, menuX + menuW + 2, menuY + menuH + 2, 0xB92C2341);
+        ctx.fill(menuX, menuY, menuX + menuW, menuY + menuH, 0xFF0D111B);
+        ctx.fill(menuX, menuY, menuX + menuW, menuY + 2, accent);
+        ctx.drawText(textRenderer, truncateToWidth(module.name.toUpperCase(Locale.ROOT), menuW - 18),
+            menuX + 9, menuY + 9, WHITE, true);
+        int rowY = menuY + 27;
+        for (String action : actions) {
+            boolean hover = mouseX >= menuX + 4 && mouseX <= menuX + menuW - 4
+                && mouseY >= rowY && mouseY < rowY + 21;
+            if (hover) ctx.fill(menuX + 4, rowY, menuX + menuW - 4, rowY + 20, 0xFF28223A);
+            ctx.fill(menuX + 7, rowY + 7, menuX + 9, rowY + 13, action.equals("toggle")
+                && module.implemented && AstraClient.isEnabled(module.id) ? 0xFF69E6B8 : accent);
+            String label = contextActionLabel(action);
+            ctx.drawText(textRenderer, truncateToWidth(label, menuW - 26), menuX + 14,
+                rowY + 6, hover ? WHITE : 0xFFD5D9E5, false);
+            rowY += 21;
+        }
+    }
+
+    private boolean handleContextMenuClick(double mouseX, double mouseY) {
+        ModuleInfo module = findModule(contextMenuModuleId);
+        if (module == null) return false;
+        List<String> actions = contextMenuActions();
+        int menuW = Math.min(202, Math.max(174, width - 12));
+        int menuH = 28 + actions.size() * 21 + 5;
+        int menuX = Math.max(6, Math.min(width - menuW - 6, contextMenuX));
+        int menuY = Math.max(6, Math.min(height - menuH - 6, contextMenuY));
+        if (!inside(mouseX, mouseY, menuX, menuY, menuW, menuH)) return false;
+        int index = (int) ((mouseY - (menuY + 27)) / 21);
+        if (index < 0 || index >= actions.size()) {
+            contextMenuModuleId = null;
+            return true;
+        }
+        String action = actions.get(index);
+        switch (action) {
+            case "settings" -> {
+                contextMenuModuleId = null;
+                client.setScreen(new AstraModuleSettingsScreen(this, module.id, module.name, module.description, module.implemented));
+            }
+            case "toggle" -> AstraClient.toggle(module.id);
+            case "bind" -> {
+                captureKeybindId = module.id;
+                AstraClient.notifyUser("Press a key to bind " + module.name + " (Esc clears)");
+            }
+            case "players" -> AstraClient.toggleCombatTarget("players");
+            case "hostile" -> AstraClient.toggleCombatTarget("hostile");
+            case "passive" -> AstraClient.toggleCombatTarget("passive");
+            case "range" -> AstraClient.setEspRange(AstraClient.espRange() >= 112 ? 16 : AstraClient.espRange() + 16);
+            case "ground" -> AstraClient.toggleAutoSprintGroundOnly();
+            case "menus" -> AstraClient.toggleAutoSprintDisableInMenus();
+            case "zoom" -> AstraClient.setZoomFov(AstraClient.zoomFov() >= 50 ? 10 : AstraClient.zoomFov() + 10);
+            case "hunger" -> {
+                AstraClient.previewAutoEatHungerThreshold(AstraClient.autoEatHungerThreshold() >= 19
+                    ? 10 : AstraClient.autoEatHungerThreshold() + 1);
+                AstraClient.saveConfig();
+                AstraClient.notifyUser("Auto Eat threshold: " + AstraClient.autoEatHungerThreshold());
+            }
+            case "hud" -> {
+                contextMenuModuleId = null;
+                client.setScreen(new AstraHudEditorScreen(this));
+            }
+            default -> { }
+        }
+        if (!action.equals("settings") && !action.equals("hud")) contextMenuModuleId = null;
+        return true;
     }
 
     private boolean beginModuleKeybindCapture(double mouseX, double mouseY) {
