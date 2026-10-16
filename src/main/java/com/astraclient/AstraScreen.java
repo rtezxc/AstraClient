@@ -148,10 +148,9 @@ public final class AstraScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Do not call Screen.renderBackground(): in Minecraft 1.21.4 it applies the
-        // menu blur shader, which makes the entire Astra interface look blurry.
-        // Dim the world with a simple translucent overlay instead, keeping the GUI crisp.
-        ctx.fill(0, 0, width, height, 0x66000000);
+        // Fully opaque canvas: never expose Minecraft's blurred world behind Astra.
+        // This also avoids translucent compositing on mobile OpenGL renderers.
+        ctx.fill(0, 0, width, height, 0xFF080B12);
         int panelW = panelWidth();
         int panelH = panelHeight();
         int left = panelLeft(panelW);
@@ -164,9 +163,6 @@ public final class AstraScreen extends Screen {
         int listBottom = top + panelH - 43;
         int viewportH = Math.max(1, listBottom - listTop);
 
-        int fadeAlpha = Math.max(0, Math.min(72,
-            Math.round((1.0f - Math.min(1.0f, (System.currentTimeMillis() - openedAt) / 180.0f)) * 72)));
-        if (fadeAlpha > 0) ctx.fill(0, 0, width, height, fadeAlpha << 24);
 
         // Shell, glow rails and title bar
         ctx.fill(left - 1, top - 1, left + panelW + 1, top + panelH + 1, 0xFF32284A);
