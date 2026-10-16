@@ -309,7 +309,8 @@ public final class AstraScreen extends Screen {
         int gy = top + panelH - 13;
         ctx.fill(gx + 3, gy + 7, gx + 10, gy + 10, accent);
         ctx.fill(gx + 6, gy + 3, gx + 10, gy + 6, accent);
-        super.render(ctx, mouseX, mouseY, delta);
+        // All Astra controls are drawn manually. Avoid Screen.render here because
+        // Minecraft 1.21.4 can render its default blurred background from that path.
     }
 
     private String iconFor(String name) {
