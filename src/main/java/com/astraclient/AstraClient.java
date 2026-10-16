@@ -60,7 +60,7 @@ public final class AstraClient implements ClientModInitializer {
         "potionhud", "targethud", "sessionstats", "keystrokes"
     };
     private static KeyBinding openGuiKey;
-    private static boolean alternateAccent;
+    private static int accentTheme;
     private static boolean clickSounds = true;
     private static boolean autoSprintGroundOnly = true;
     private static boolean autoSprintDisableInMenus = true;
@@ -224,7 +224,16 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static boolean isAlternateAccent() {
-        return alternateAccent;
+        return accentTheme == 1;
+    }
+
+    public static String accentName() {
+        return switch (accentTheme) {
+            case 1 -> "CYAN";
+            case 2 -> "AMBER";
+            case 3 -> "MAGENTA";
+            default -> "VIOLET";
+        };
     }
 
     public static boolean areClickSoundsEnabled() {
@@ -245,12 +254,18 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static void toggleAccent() {
-        alternateAccent = !alternateAccent;
+        accentTheme = (accentTheme + 1) % 4;
+        notifyUser("Theme: " + accentName());
         saveConfig();
     }
 
     public static int accentColor() {
-        return alternateAccent ? 0xFF54E8FF : 0xFFAA70FF;
+        return switch (accentTheme) {
+            case 1 -> 0xFF54E8FF;
+            case 2 -> 0xFFFFC66E;
+            case 3 -> 0xFFFF6FAE;
+            default -> 0xFFAA70FF;
+        };
     }
 
     public static int guiScale() {
@@ -310,7 +325,7 @@ public final class AstraClient implements ClientModInitializer {
         KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
         HUD_X.clear();
         HUD_Y.clear();
-        alternateAccent = false;
+        accentTheme = 0;
         clickSounds = true;
         autoSprintGroundOnly = true;
         autoSprintDisableInMenus = true;
@@ -361,7 +376,7 @@ public final class AstraClient implements ClientModInitializer {
         for (Map.Entry<String, Boolean> entry : MODULES.entrySet()) {
             properties.setProperty("module." + entry.getKey(), Boolean.toString(entry.getValue()));
         }
-        properties.setProperty("theme.alternateAccent", Boolean.toString(alternateAccent));
+        properties.setProperty("theme.accentTheme", Integer.toString(accentTheme));
         properties.setProperty("ui.clickSounds", Boolean.toString(clickSounds));
         properties.setProperty("autosprint.groundOnly", Boolean.toString(autoSprintGroundOnly));
         properties.setProperty("autosprint.disableInMenus", Boolean.toString(autoSprintDisableInMenus));
