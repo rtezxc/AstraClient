@@ -389,6 +389,10 @@ public final class AstraClient implements ClientModInitializer {
         hudOpacity = 84;
         zoomFov = 30;
         espRange = 64;
+        combatRange = 4;
+        targetPlayers = true;
+        targetHostile = true;
+        targetPassive = false;
         notifyUser("Settings reset to defaults");
         saveConfig();
     }
