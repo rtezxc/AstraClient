@@ -95,6 +95,8 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean useMouseWasDown;
     private static int autoToolOriginalSlot = -1;
     private static int autoToolSelectedSlot = -1;
+    private static PlayerEntity flyPlayer;
+    private static boolean flyWasActive;
     private static final Deque<Long> CLICK_TIMESTAMPS = new ArrayDeque<>();
 
     static {
@@ -106,6 +108,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("zoom", false);
         MODULES.put("autosprint", false);
         MODULES.put("sprint", false);
+        MODULES.put("fly", false);
         MODULES.put("safewalk", false);
         MODULES.put("eagle", false);
         MODULES.put("inventorymove", false);
@@ -239,6 +242,7 @@ public final class AstraClient implements ClientModInitializer {
             case "customcrosshair" -> "Custom Crosshair";
             case "autosprint" -> "Auto Sprint";
             case "sprint" -> "Sprint";
+            case "fly" -> "Fly";
             case "safewalk" -> "Safe Walk";
             case "eagle" -> "Eagle";
             case "inventorymove" -> "Inventory Move";
@@ -531,6 +535,7 @@ public final class AstraClient implements ClientModInitializer {
             updateCombatModules(client);
             updateAutoWeapon(client);
             updateAutoTool(client);
+            updateFly(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -767,6 +772,39 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     /** Lets keyboard movement bindings remain active while the vanilla inventory is open. */
+    /** Simple client-side flight: jump rises, sneak descends, neutral input holds altitude. */
+    private static void updateFly(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (player == null) {
+            if (flyPlayer != null && flyWasActive) flyPlayer.setNoGravity(false);
+            flyPlayer = null;
+            flyWasActive = false;
+            return;
+        }
+
+        boolean enabled = isEnabled("fly") && client.world != null;
+        if (flyPlayer != null && flyPlayer != player && flyWasActive) {
+            flyPlayer.setNoGravity(false);
+        }
+        flyPlayer = player;
+
+        if (!enabled) {
+            if (flyWasActive) {
+                player.setNoGravity(false);
+                flyWasActive = false;
+            }
+            return;
+        }
+
+        player.setNoGravity(true);
+        flyWasActive = true;
+        double vertical = 0.0D;
+        if (client.options.jumpKey.isPressed()) vertical = 0.42D;
+        else if (client.options.sneakKey.isPressed()) vertical = -0.42D;
+        var velocity = player.getVelocity();
+        player.setVelocity(velocity.x, vertical, velocity.z);
+    }
+
     private static void updateInventoryMove(MinecraftClient client) {
         if (client.player == null || !isEnabled("inventorymove")
             || !(client.currentScreen instanceof InventoryScreen)) return;
