@@ -50,6 +50,7 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean alternateAccent;
     private static boolean clickSounds = true;
     private static int guiScale = 100;
+    private static int hudOpacity = 84;
     private static long sessionStartedAt = System.currentTimeMillis();
     private static String notification = "Astra Client loaded";
     private static long notificationUntil = System.currentTimeMillis() + 2400L;
@@ -234,6 +235,20 @@ public final class AstraClient implements ClientModInitializer {
         guiScale = Math.max(75, Math.min(125, value));
     }
 
+    public static int hudOpacity() {
+        return hudOpacity;
+    }
+
+    public static void setHudOpacity(int value) {
+        hudOpacity = Math.max(35, Math.min(100, value));
+        saveConfig();
+    }
+
+    public static int previewHudOpacity(int value) {
+        hudOpacity = Math.max(35, Math.min(100, value));
+        return hudOpacity;
+    }
+
     public static void resetModuleDefaults() {
         MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
         MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
@@ -243,6 +258,7 @@ public final class AstraClient implements ClientModInitializer {
         alternateAccent = false;
         clickSounds = true;
         guiScale = 100;
+        hudOpacity = 84;
         notifyUser("Settings reset to defaults");
         saveConfig();
     }
@@ -285,6 +301,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("theme.alternateAccent", Boolean.toString(alternateAccent));
         properties.setProperty("ui.clickSounds", Boolean.toString(clickSounds));
         properties.setProperty("gui.scale", Integer.toString(guiScale));
+        properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
             properties.setProperty("keybind." + entry.getKey(), Integer.toString(entry.getValue()));
         }
@@ -463,7 +480,7 @@ public final class AstraClient implements ClientModInitializer {
             String label = "ASTRA  •  " + notification;
             int width = Math.min(context.getScaledWindowWidth() - 16, client.textRenderer.getWidth(label) + 28);
             int nx = context.getScaledWindowWidth() - width - 8;
-            context.fill(nx, 8, nx + width, 30, 0xE80C111D);
+            context.fill(nx, 8, nx + width, 30, (Math.round(230.0f * hudOpacity / 100.0f) << 24) | 0x000C111D);
             context.fill(nx, 8, nx + 3, 30, accent);
             context.drawText(client.textRenderer, label, nx + 10, 15, 0xFFF4F5FC, false);
         }
@@ -527,7 +544,8 @@ public final class AstraClient implements ClientModInitializer {
             text = text.substring(0, text.length() - 4) + "...";
         }
         int width = Math.min(maxWidth, client.textRenderer.getWidth(text) + 16);
-        context.fill(x, y, x + width, y + 18, 0xD9101420);
+        int hudAlpha = Math.round(255.0f * hudOpacity / 100.0f);
+        context.fill(x, y, x + width, y + 18, (hudAlpha << 24) | 0x00101420);
         context.fill(x, y, x + 2, y + 18, accent);
         context.drawText(client.textRenderer, text, x + 8, y + 5, 0xFFF3F5FF, false);
     }
@@ -538,7 +556,7 @@ public final class AstraClient implements ClientModInitializer {
     ) {
         int width = label.length() > 1 ? 46 : 20;
         context.fill(x, y, x + width, y + 19,
-            binding.isPressed() ? accent : 0xD9101420);
+            binding.isPressed() ? accent : ((Math.round(255.0f * hudOpacity / 100.0f) << 24) | 0x00101420));
         context.fill(x, y, x + width, y + 1,
             binding.isPressed() ? 0xFFFFFFFF : 0xFF353D50);
         int textWidth = client.textRenderer.getWidth(label);
