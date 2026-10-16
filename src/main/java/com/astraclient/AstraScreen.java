@@ -11,7 +11,7 @@ import java.util.Locale;
 
 /** Responsive, searchable Astra module browser. Unimplemented modules are visible but locked. */
 public final class AstraScreen extends Screen {
-    private static final int BG = 0xF20A0D16;
+    private static final int BG = 0xFF0A0D16;
     private static final int SIDEBAR = 0xFF101520;
     private static final int PANEL = 0xFF171D2A;
     private static final int PANEL_HOVER = 0xFF252D3F;
@@ -41,7 +41,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("safewalk", "Safe Walk", "Uses sneak protection near block edges", "Movement", true),
         new ModuleInfo("eagle", "Eagle", "Automatically sneaks when standing over a ledge", "Movement", true),
         new ModuleInfo("inventorymove", "Inventory Move", "Move with inventory open", "Movement", true),
-        new ModuleInfo("fly", "Fly", "Custom flight movement", "Movement", false),
+        new ModuleInfo("fly", "Fly", "Client-side flight: jump to rise, sneak to descend", "Movement", true),
         new ModuleInfo("aimassist", "Aim Assist", "Aim assistance", "Combat", false),
         new ModuleInfo("triggerbot", "Critical TriggerBot", "Attacks the crosshair target only during a valid critical hit", "Combat", true),
         new ModuleInfo("killaura", "Kill Aura", "Automatically attacks nearby living targets in front of you", "Combat", true),
@@ -169,7 +169,7 @@ public final class AstraScreen extends Screen {
         if (fadeAlpha > 0) ctx.fill(0, 0, width, height, fadeAlpha << 24);
 
         // Shell, glow rails and title bar
-        ctx.fill(left - 3, top - 3, left + panelW + 3, top + panelH + 3, 0x664E37AA);
+        ctx.fill(left - 1, top - 1, left + panelW + 1, top + panelH + 1, 0xFF32284A);
         ctx.fill(left, top, left + panelW, top + panelH, BG);
         ctx.fill(left, top, left + panelW, top + 3, accent);
         ctx.fill(left, top + 3, left + 1, top + panelH, 0xFF32284A);
