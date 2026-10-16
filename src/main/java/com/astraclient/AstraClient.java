@@ -65,7 +65,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud"
+        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud"
     };
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
@@ -122,6 +122,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("potioncounter", false);
         MODULES.put("durabilityhud", false);
         MODULES.put("inventoryhud", false);
+        MODULES.put("healthhud", false);
+        MODULES.put("hungerhud", false);
         MODULES.put("fps", true);
         MODULES.put("coordinates", false);
         MODULES.put("direction", false);
@@ -256,6 +258,8 @@ public final class AstraClient implements ClientModInitializer {
             case "potioncounter" -> "Potion Counter";
             case "durabilityhud" -> "Durability HUD";
             case "inventoryhud" -> "Inventory HUD";
+            case "healthhud" -> "Health HUD";
+            case "hungerhud" -> "Hunger HUD";
             case "fps" -> "FPS Counter";
             case "coordinates" -> "Coordinates";
             case "direction" -> "Direction";
@@ -955,6 +959,18 @@ public final class AstraClient implements ClientModInitializer {
             context.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFFFFFFFF);
         }
 
+        if (isEnabled("healthhud")) {
+            float health = Math.max(0.0F, client.player.getHealth());
+            float maxHealth = Math.max(1.0F, client.player.getMaxHealth());
+            drawHudLine(client, context, "healthhud", 8, 449, "HEALTH",
+                String.format(Locale.ROOT, "%.1f / %.1f HP", health, maxHealth), accent);
+        }
+        if (isEnabled("hungerhud")) {
+            int food = client.player.getHungerManager().getFoodLevel();
+            float saturation = client.player.getHungerManager().getSaturationLevel();
+            drawHudLine(client, context, "hungerhud", 8, 470, "HUNGER",
+                food + " / 20 · " + String.format(Locale.ROOT, "%.1f sat", saturation), accent);
+        }
         if (isEnabled("fps")) drawHudLine(client, context, "fps", 8, 8, "FPS",
             Integer.toString(client.getCurrentFps()), accent);
         if (isEnabled("coordinates")) {
