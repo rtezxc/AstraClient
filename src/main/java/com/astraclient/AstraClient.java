@@ -383,91 +383,78 @@ public final class AstraClient implements ClientModInitializer {
     private static void renderHud(MinecraftClient client, DrawContext context) {
         if (client.player == null || client.world == null) return;
 
-        int x = 8;
-        int y = 8;
         int accent = accentColor();
         int screenHeight = context.getScaledWindowHeight();
 
-        if (isEnabled("fps")) {
-            y = drawHudLine(client, context, x, y, "FPS",
-                Integer.toString(client.getCurrentFps()), accent);
-        }
+        if (isEnabled("fps")) drawHudLine(client, context, "fps", 8, 8, "FPS",
+            Integer.toString(client.getCurrentFps()), accent);
         if (isEnabled("coordinates")) {
             var pos = client.player.getBlockPos();
-            y = drawHudLine(client, context, x, y, "XYZ",
+            drawHudLine(client, context, "coordinates", 8, 29, "XYZ",
                 pos.getX() + "  " + pos.getY() + "  " + pos.getZ(), accent);
         }
-        if (isEnabled("direction")) {
-            y = drawHudLine(client, context, x, y, "FACING",
-                client.player.getHorizontalFacing().asString().toUpperCase(Locale.ROOT), accent);
-        }
+        if (isEnabled("direction")) drawHudLine(client, context, "direction", 8, 50, "FACING",
+            client.player.getHorizontalFacing().asString().toUpperCase(Locale.ROOT), accent);
         if (isEnabled("ping") && client.getNetworkHandler() != null) {
             var entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
-            if (entry != null) y = drawHudLine(client, context, x, y, "PING",
+            if (entry != null) drawHudLine(client, context, "ping", 8, 71, "PING",
                 entry.getLatency() + " ms", accent);
         }
         if (isEnabled("memory")) {
             Runtime runtime = Runtime.getRuntime();
             long usedMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024L * 1024L);
             long maxMb = runtime.maxMemory() / (1024L * 1024L);
-            y = drawHudLine(client, context, x, y, "RAM", usedMb + " / " + maxMb + " MB", accent);
+            drawHudLine(client, context, "memory", 8, 92, "RAM", usedMb + " / " + maxMb + " MB", accent);
         }
         if (isEnabled("speedometer")) {
             var velocity = client.player.getVelocity();
-            double blocksPerSecond = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z) * 20.0;
-            y = drawHudLine(client, context, x, y, "SPEED",
-                String.format(Locale.ROOT, "%.2f b/s", blocksPerSecond), accent);
+            double bps = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z) * 20.0;
+            drawHudLine(client, context, "speedometer", 8, 113, "SPEED",
+                String.format(Locale.ROOT, "%.2f b/s", bps), accent);
         }
-        if (isEnabled("clock")) {
-            y = drawHudLine(client, context, x, y, "LOCAL TIME",
-                LocalTime.now().format(CLOCK_FORMAT), accent);
-        }
-        if (isEnabled("totemcounter")) {
-            y = drawHudLine(client, context, x, y, "TOTEMS",
-                Integer.toString(countItem(client, Items.TOTEM_OF_UNDYING)), accent);
-        }
-        if (isEnabled("pearlcounter")) {
-            y = drawHudLine(client, context, x, y, "PEARLS",
-                Integer.toString(countItem(client, Items.ENDER_PEARL)), accent);
-        }
+        if (isEnabled("clock")) drawHudLine(client, context, "clock", 8, 134, "LOCAL TIME",
+            LocalTime.now().format(CLOCK_FORMAT), accent);
+        if (isEnabled("totemcounter")) drawHudLine(client, context, "totemcounter", 8, 155, "TOTEMS",
+            Integer.toString(countItem(client, Items.TOTEM_OF_UNDYING)), accent);
+        if (isEnabled("pearlcounter")) drawHudLine(client, context, "pearlcounter", 8, 176, "PEARLS",
+            Integer.toString(countItem(client, Items.ENDER_PEARL)), accent);
         if (isEnabled("arrowcounter")) {
             int arrows = countItem(client, Items.ARROW) + countItem(client, Items.SPECTRAL_ARROW)
                 + countItem(client, Items.TIPPED_ARROW);
-            y = drawHudLine(client, context, x, y, "ARROWS", Integer.toString(arrows), accent);
+            drawHudLine(client, context, "arrowcounter", 8, 197, "ARROWS", Integer.toString(arrows), accent);
         }
         if (isEnabled("goldencounter")) {
             int apples = countItem(client, Items.GOLDEN_APPLE)
                 + countItem(client, Items.ENCHANTED_GOLDEN_APPLE);
-            y = drawHudLine(client, context, x, y, "GOLDEN APPLES", Integer.toString(apples), accent);
+            drawHudLine(client, context, "goldencounter", 8, 218, "GOLDEN APPLES", Integer.toString(apples), accent);
         }
         if (isEnabled("armorhud")) {
-            String armor = armorSummary(client);
-            y = drawHudLine(client, context, x, y, "ARMOR", armor, accent);
+            drawHudLine(client, context, "armorhud", 8, 239, "ARMOR", armorSummary(client), accent);
         }
         if (isEnabled("potionhud")) {
+            int effectY = hudY("potionhud", 260);
             for (StatusEffectInstance effect : client.player.getStatusEffects()) {
-                if (y + 18 > screenHeight - (isEnabled("keystrokes") ? 100 : 20)) break;
+                if (effectY + 18 > screenHeight - 20) break;
                 String name = effect.getEffectType().value().getName().getString();
                 String duration = effect.getDuration() < 0 ? "∞" : formatDuration(effect.getDuration());
-                y = drawHudLine(client, context, x, y, "EFFECT", name + " " + duration, accent);
+                drawHudLineAt(client, context, hudX("potionhud", 8), effectY, "EFFECT",
+                    name + " " + duration, accent);
+                effectY += 21;
             }
         }
         if (isEnabled("targethud") && client.crosshairTarget instanceof EntityHitResult hit) {
             Entity entity = hit.getEntity();
             String targetInfo = entity.getName().getString() + "  "
                 + String.format(Locale.ROOT, "%.1f m", client.player.distanceTo(entity));
-            if (y + 18 < screenHeight - (isEnabled("keystrokes") ? 100 : 20)) {
-                y = drawHudLine(client, context, x, y, "TARGET", targetInfo, accent);
-            }
+            drawHudLine(client, context, "targethud", 8, screenHeight - 26, "TARGET", targetInfo, accent);
         }
         if (isEnabled("sessionstats")) {
             long elapsed = Math.max(0L, (System.currentTimeMillis() - sessionStartedAt) / 1000L);
             String session = String.format(Locale.ROOT, "%02d:%02d:%02d",
                 elapsed / 3600, (elapsed / 60) % 60, elapsed % 60);
-            if (y + 18 < screenHeight - (isEnabled("keystrokes") ? 100 : 20)) {
-                y = drawHudLine(client, context, x, y, "SESSION", session, accent);
-            }
+            drawHudLine(client, context, "sessionstats", 8, 302, "SESSION", session, accent);
         }
+
         if (System.currentTimeMillis() < notificationUntil && !notification.isEmpty()) {
             String label = "ASTRA  •  " + notification;
             int width = Math.min(context.getScaledWindowWidth() - 16, client.textRenderer.getWidth(label) + 28);
@@ -478,8 +465,9 @@ public final class AstraClient implements ClientModInitializer {
         }
 
         if (isEnabled("keystrokes")) {
-            int keyX = 8;
-            int keyY = screenHeight - 79;
+            int keyX = hudX("keystrokes", 8);
+            int savedY = hudY("keystrokes", -79);
+            int keyY = savedY < 0 ? screenHeight + savedY : savedY;
             drawKey(context, client, client.options.forwardKey, keyX + 22, keyY, "W", accent);
             drawKey(context, client, client.options.leftKey, keyX, keyY + 22, "A", accent);
             drawKey(context, client, client.options.backKey, keyX + 22, keyY + 22, "S", accent);
@@ -517,21 +505,27 @@ public final class AstraClient implements ClientModInitializer {
         return String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
     }
 
-    private static int drawHudLine(
-        MinecraftClient client, DrawContext context, int x, int y,
-        String label, String value, int accent
-    ) {
-        String content = label + "  " + value;
+    private static void drawHudLine(MinecraftClient client, DrawContext context, String id,
+                                     int defaultX, int defaultY, String label, String value, int accent) {
+        int x = hudX(id, defaultX);
+        int y = hudY(id, defaultY);
+        if (y < 0) y = context.getScaledWindowHeight() + y;
+        drawHudLineAt(client, context, x, y, label, value, accent);
+    }
+
+    private static void drawHudLineAt(MinecraftClient client, DrawContext context, int x, int y,
+                                      String label, String value, int accent) {
+        x = Math.max(0, Math.min(context.getScaledWindowWidth() - 50, x));
+        y = Math.max(0, Math.min(context.getScaledWindowHeight() - 20, y));
+        String text = label + "  " + value;
         int maxWidth = Math.max(80, Math.min(340, context.getScaledWindowWidth() - x - 8));
-        String shown = content;
-        while (client.textRenderer.getWidth(shown) > maxWidth - 18 && shown.length() > 5) {
-            shown = shown.substring(0, shown.length() - 4) + "...";
+        while (client.textRenderer.getWidth(text) > maxWidth - 18 && text.length() > 5) {
+            text = text.substring(0, text.length() - 4) + "...";
         }
-        int width = Math.min(maxWidth, client.textRenderer.getWidth(shown) + 16);
+        int width = Math.min(maxWidth, client.textRenderer.getWidth(text) + 16);
         context.fill(x, y, x + width, y + 18, 0xD9101420);
         context.fill(x, y, x + 2, y + 18, accent);
-        context.drawText(client.textRenderer, shown, x + 8, y + 5, 0xFFF3F5FF, false);
-        return y + 21;
+        context.drawText(client.textRenderer, text, x + 8, y + 5, 0xFFF3F5FF, false);
     }
 
     private static void drawKey(
