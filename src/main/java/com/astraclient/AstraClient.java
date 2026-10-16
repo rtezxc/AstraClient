@@ -721,31 +721,43 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null || client.world == null || client.interactionManager == null
             || client.currentScreen != null || client.player.isSpectator()) return;
 
-        if (isEnabled("triggerbot")) {
-            if (client.crosshairTarget instanceof EntityHitResult hit
-                && hit.getEntity() instanceof LivingEntity target
-                && isValidCombatTarget(target, client.player)
-                && client.player.distanceTo(target) <= combatRange
-                && isCriticalHitReady(client.player)) {
-                attackTarget(client, target);
-            }
-            return;
+        // Stay inside ordinary vanilla melee distance. A larger configured search
+        // range must not make the client send impossible long-range attacks that
+        // multiplayer servers will reject.
+        final double attackRange = Math.min(3.0D, Math.max(3.0D, combatRange));
+
+        // TriggerBot is deliberately crosshair-only, but it must not require a
+        // critical hit: that old condition made it appear completely broken
+        // whenever the player was standing on the ground.
+        if (isEnabled("triggerbot")
+            && client.crosshairTarget instanceof EntityHitResult hit
+            && hit.getEntity() instanceof LivingEntity target
+            && isValidCombatTarget(target, client.player)
+            && client.player.distanceTo(target) <= attackRange
+            && client.player.canSee(target)) {
+            if (attackTarget(client, target)) return;
         }
 
+        // If both modules are enabled and TriggerBot has no valid crosshair
+        // target (or the attack cooldown is not ready), KillAura can still run.
         if (!isEnabled("killaura")) return;
+
         LivingEntity bestTarget = null;
-        double bestDistance = combatRange;
+        double bestDistance = attackRange;
         var look = client.player.getRotationVec(1.0F);
         var eye = client.player.getEyePos();
 
         for (LivingEntity candidate : client.world.getEntitiesByClass(
-            LivingEntity.class, client.player.getBoundingBox().expand(combatRange),
+            LivingEntity.class, client.player.getBoundingBox().expand(attackRange),
             entity -> isValidCombatTarget(entity, client.player))) {
             double distance = client.player.distanceTo(candidate);
-            if (distance > bestDistance) continue;
+            if (distance > bestDistance || !client.player.canSee(candidate)) continue;
+
+            // Prefer targets actually in front of the player, while allowing a
+            // generous cone so ordinary mouse movement doesn't make the aura miss.
             var direction = candidate.getBoundingBox().getCenter().subtract(eye).normalize();
-            // Avoid attacking entities behind the player; a broad cone keeps this usable.
-            if (look.dotProduct(direction) < 0.15D) continue;
+            if (look.dotProduct(direction) < 0.20D) continue;
+
             bestTarget = candidate;
             bestDistance = distance;
         }
@@ -846,11 +858,15 @@ public final class AstraClient implements ClientModInitializer {
             && !player.hasStatusEffect(StatusEffects.BLINDNESS);
     }
 
-    private static void attackTarget(MinecraftClient client, LivingEntity target) {
+    private static boolean attackTarget(MinecraftClient client, LivingEntity target) {
         if (client.player == null || client.interactionManager == null
-            || client.player.getAttackCooldownProgress(0.0F) < 0.9F) return;
+            || client.currentScreen != null || target == null || !target.isAlive()
+            || client.player.isSpectator()
+            || client.player.distanceTo(target) > 3.0D
+            || client.player.getAttackCooldownProgress(0.0F) < 0.9F) return false;
         client.interactionManager.attackEntity(client.player, target);
         client.player.swingHand(Hand.MAIN_HAND);
+        return true;
     }
 
     /** Lets keyboard movement bindings remain active while the vanilla inventory is open. */
