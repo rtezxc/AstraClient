@@ -91,6 +91,8 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean guiKeyWasDown;
     private static long guiKeybindIgnoreUntil;
     private static int accentTheme;
+    private static boolean customAccentEnabled;
+    private static int customAccentColor = 0xFFAA70FF;
     private static boolean clickSounds = true;
     private static boolean autoSprintGroundOnly = true;
     private static boolean autoSprintDisableInMenus = true;
@@ -357,6 +359,7 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static String accentName() {
+        if (customAccentEnabled) return "CUSTOM";
         return switch (accentTheme) {
             case 1 -> "CYAN";
             case 2 -> "AMBER";
@@ -383,12 +386,37 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static void toggleAccent() {
+        customAccentEnabled = false;
         accentTheme = (accentTheme + 1) % 4;
         notifyUser("Theme: " + accentName());
         saveConfig();
     }
 
+    public static boolean isCustomAccentEnabled() { return customAccentEnabled; }
+    public static int customAccentColor() { return customAccentColor; }
+    public static int customAccentRed() { return (customAccentColor >> 16) & 0xFF; }
+    public static int customAccentGreen() { return (customAccentColor >> 8) & 0xFF; }
+    public static int customAccentBlue() { return customAccentColor & 0xFF; }
+
+    public static void previewCustomAccentColor(int color) {
+        customAccentColor = 0xFF000000 | (color & 0x00FFFFFF);
+        customAccentEnabled = true;
+    }
+
+    public static void setCustomAccentColor(int color) {
+        previewCustomAccentColor(color);
+        notifyUser("Custom accent: #" + String.format(Locale.ROOT, "%06X", customAccentColor & 0x00FFFFFF));
+        saveConfig();
+    }
+
+    public static void usePresetAccent() {
+        customAccentEnabled = false;
+        notifyUser("Theme: " + accentName());
+        saveConfig();
+    }
+
     public static int accentColor() {
+        if (customAccentEnabled) return customAccentColor;
         return switch (accentTheme) {
             case 1 -> 0xFF54E8FF;
             case 2 -> 0xFFFFC66E;
@@ -724,6 +752,14 @@ public final class AstraClient implements ClientModInitializer {
                 properties.getProperty("theme.accentTheme",
                     Boolean.parseBoolean(properties.getProperty("theme.alternateAccent", "false")) ? "1" : "0")
             )));
+            customAccentEnabled = Boolean.parseBoolean(properties.getProperty("theme.customEnabled", "false"));
+            String savedCustomAccent = properties.getProperty("theme.customColor", "AA70FF").trim().replace("#", "");
+            try {
+                customAccentColor = 0xFF000000 | (Integer.parseInt(savedCustomAccent, 16) & 0x00FFFFFF);
+            } catch (NumberFormatException ignored) {
+                customAccentColor = 0xFFAA70FF;
+                customAccentEnabled = false;
+            }
             guiKeybindCode = Integer.parseInt(properties.getProperty("gui.keybind", Integer.toString(GLFW.GLFW_KEY_RIGHT_SHIFT)));
             if (guiKeybindCode < GLFW.GLFW_KEY_SPACE || guiKeybindCode > GLFW.GLFW_KEY_LAST) guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
             hudEditKeybindCode = Integer.parseInt(properties.getProperty("hud.editorKey", Integer.toString(GLFW.GLFW_KEY_F6)));
@@ -785,6 +821,8 @@ public final class AstraClient implements ClientModInitializer {
             properties.setProperty("module." + entry.getKey(), Boolean.toString(entry.getValue()));
         }
         properties.setProperty("theme.accentTheme", Integer.toString(accentTheme));
+        properties.setProperty("theme.customEnabled", Boolean.toString(customAccentEnabled));
+        properties.setProperty("theme.customColor", String.format(Locale.ROOT, "%06X", customAccentColor & 0x00FFFFFF));
         properties.setProperty("ui.clickSounds", Boolean.toString(clickSounds));
         properties.setProperty("autosprint.groundOnly", Boolean.toString(autoSprintGroundOnly));
         properties.setProperty("autosprint.disableInMenus", Boolean.toString(autoSprintDisableInMenus));

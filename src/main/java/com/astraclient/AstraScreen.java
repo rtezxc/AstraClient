@@ -738,6 +738,7 @@ public final class AstraScreen extends Screen {
         actions.add("accent");
         actions.add("sounds");
         actions.add("backgrounds");
+        actions.add("themeeditor");
         if (module.implemented) {
             actions.add("toggle");
             actions.add("bind");
@@ -802,6 +803,7 @@ public final class AstraScreen extends Screen {
             case "accent" -> "Accent theme: " + AstraClient.accentName();
             case "sounds" -> "UI click sounds: " + (AstraClient.areClickSoundsEnabled() ? "ON" : "OFF");
             case "backgrounds" -> "HUD backgrounds: " + (AstraClient.areHudBackgroundsEnabled() ? "ON" : "OFF");
+            case "themeeditor" -> "Open custom RGB theme editor...";
             case "hudopacity" -> "HUD opacity: " + AstraClient.hudOpacity() + "%";
             case "toggle" -> module != null && AstraClient.isEnabled(module.id) ? "Disable module" : "Enable module";
             case "bind" -> "Change keybind...";
@@ -893,6 +895,10 @@ public final class AstraScreen extends Screen {
             case "accent" -> AstraClient.toggleAccent();
             case "sounds" -> AstraClient.toggleClickSounds();
             case "backgrounds" -> AstraClient.toggleHudBackgrounds();
+            case "themeeditor" -> {
+                contextMenuModuleId = null;
+                client.setScreen(new AstraThemeEditorScreen(this));
+            }
             case "hudopacity" -> AstraClient.setHudOpacity(AstraClient.hudOpacity() >= 95 ? 50 : AstraClient.hudOpacity() + 15);
             case "resetbind" -> AstraClient.setModuleKeybind(module.id, GLFW.GLFW_KEY_UNKNOWN);
             case "crosshairSize" -> AstraClient.setCrosshairSize(AstraClient.crosshairSize() >= 20 ? 3 : AstraClient.crosshairSize() + 2);
