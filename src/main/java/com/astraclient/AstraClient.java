@@ -27,6 +27,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import org.lwjgl.glfw.GLFW;
@@ -57,7 +58,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes"
+        "potionhud", "targethud", "sessionstats", "keystrokes", "biome"
     };
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
@@ -78,6 +79,7 @@ public final class AstraClient implements ClientModInitializer {
     private static int espRange = 64;
     private static int originalFov = 70;
     private static boolean zoomOverrideActive;
+    private static boolean forcedSafeWalkSneak;
 
     static {
         MODULES.put("fullbright", false);
@@ -86,6 +88,10 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("itemesp", false);
         MODULES.put("zoom", false);
         MODULES.put("autosprint", false);
+        MODULES.put("sprint", false);
+        MODULES.put("safewalk", false);
+        MODULES.put("autotool", false);
+        MODULES.put("biome", false);
         MODULES.put("fps", true);
         MODULES.put("coordinates", false);
         MODULES.put("direction", false);
@@ -204,6 +210,10 @@ public final class AstraClient implements ClientModInitializer {
         return switch (id) {
             case "fullbright" -> "FullBright";
             case "autosprint" -> "Auto Sprint";
+            case "sprint" -> "Sprint";
+            case "safewalk" -> "Safe Walk";
+            case "autotool" -> "Auto Tool";
+            case "biome" -> "Biome Display";
             case "fps" -> "FPS Counter";
             case "coordinates" -> "Coordinates";
             case "direction" -> "Direction";
@@ -464,13 +474,47 @@ public final class AstraClient implements ClientModInitializer {
             }
             fullBrightWasEnabled = fullBrightEnabled;
 
-            if (isEnabled("autosprint")
-                && client.player.forwardSpeed > 0.0F
-                && !client.player.isSneaking()
+            boolean movingForward = client.player.forwardSpeed > 0.0F;
+            boolean sprintAllowed = movingForward && !client.player.isSneaking()
                 && !client.player.horizontalCollision
                 && (!autoSprintGroundOnly || client.player.isOnGround())
-                && (!autoSprintDisableInMenus || client.currentScreen == null)) {
+                && (!autoSprintDisableInMenus || client.currentScreen == null);
+            if ((isEnabled("autosprint") || isEnabled("sprint")) && sprintAllowed) {
                 client.player.setSprinting(true);
+            }
+
+            // Safe Walk: use vanilla sneak-edge protection only while the player is
+            // moving over a ledge. Never override the user's own sneak input.
+            boolean userSneaking = client.options.sneakKey.isPressed();
+            boolean nearEdge = isEnabled("safewalk") && client.player.isOnGround()
+                && !userSneaking && (Math.abs(client.player.forwardSpeed) > 0.01F
+                    || Math.abs(client.player.sidewaysSpeed) > 0.01F)
+                && client.world.isSpaceEmpty(client.player, client.player.getBoundingBox()
+                    .offset(client.player.getVelocity().x, -0.6D, client.player.getVelocity().z));
+            if (nearEdge) {
+                client.player.setSneaking(true);
+                forcedSafeWalkSneak = true;
+            } else if (forcedSafeWalkSneak) {
+                if (!userSneaking) client.player.setSneaking(false);
+                forcedSafeWalkSneak = false;
+            }
+
+            // Auto Tool: while mining a block, select the hotbar tool with the
+            // highest vanilla mining-speed multiplier for that block.
+            if (isEnabled("autotool") && client.options.attackKey.isPressed()
+                && client.crosshairTarget instanceof BlockHitResult blockHit) {
+                var state = client.world.getBlockState(blockHit.getBlockPos());
+                int bestSlot = client.player.getInventory().selectedSlot;
+                float bestSpeed = client.player.getInventory().getStack(bestSlot).getMiningSpeedMultiplier(state);
+                for (int slot = 0; slot < 9; slot++) {
+                    ItemStack stack = client.player.getInventory().getStack(slot);
+                    float speed = stack.getMiningSpeedMultiplier(state);
+                    if (speed > bestSpeed) {
+                        bestSpeed = speed;
+                        bestSlot = slot;
+                    }
+                }
+                client.player.getInventory().selectedSlot = bestSlot;
             }
 
             // Refresh only the effect Astra itself needs. If the player already had
@@ -631,6 +675,12 @@ public final class AstraClient implements ClientModInitializer {
         }
         if (isEnabled("clock")) drawHudLine(client, context, "clock", 8, 134, "LOCAL TIME",
             LocalTime.now().format(CLOCK_FORMAT), accent);
+        if (isEnabled("biome")) {
+            String biomeName = client.world.getBiome(client.player.getBlockPos()).getKey()
+                .map(key -> key.getValue().getPath().replace('_', ' ').toUpperCase(Locale.ROOT))
+                .orElse("UNKNOWN");
+            drawHudLine(client, context, "biome", 8, 155, "BIOME", biomeName, accent);
+        }
         if (isEnabled("totemcounter")) drawHudLine(client, context, "totemcounter", 8, 155, "TOTEMS",
             Integer.toString(countItem(client, Items.TOTEM_OF_UNDYING)), accent);
         if (isEnabled("pearlcounter")) drawHudLine(client, context, "pearlcounter", 8, 176, "PEARLS",
