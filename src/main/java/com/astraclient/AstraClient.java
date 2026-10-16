@@ -95,6 +95,7 @@ public final class AstraClient implements ClientModInitializer {
 
     static {
         MODULES.put("fullbright", false);
+        MODULES.put("customcrosshair", false);
         MODULES.put("playeresp", false);
         MODULES.put("mobesp", false);
         MODULES.put("itemesp", false);
@@ -230,6 +231,7 @@ public final class AstraClient implements ClientModInitializer {
     private static String readableName(String id) {
         return switch (id) {
             case "fullbright" -> "FullBright";
+            case "customcrosshair" -> "Custom Crosshair";
             case "autosprint" -> "Auto Sprint";
             case "sprint" -> "Sprint";
             case "safewalk" -> "Safe Walk";
@@ -818,6 +820,18 @@ public final class AstraClient implements ClientModInitializer {
 
         int accent = accentColor();
         int screenHeight = context.getScaledWindowHeight();
+
+        // Minimal custom crosshair overlay; work is done only while the module is enabled.
+        if (isEnabled("customcrosshair")) {
+            int cx = context.getScaledWindowWidth() / 2;
+            int cy = screenHeight / 2;
+            int color = accent;
+            context.fill(cx - 1, cy - 7, cx + 1, cy - 3, color);
+            context.fill(cx - 1, cy + 3, cx + 1, cy + 7, color);
+            context.fill(cx - 7, cy - 1, cx - 3, cy + 1, color);
+            context.fill(cx + 3, cy - 1, cx + 7, cy + 1, color);
+            context.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFFFFFFFF);
+        }
 
         if (isEnabled("fps")) drawHudLine(client, context, "fps", 8, 8, "FPS",
             Integer.toString(client.getCurrentFps()), accent);
