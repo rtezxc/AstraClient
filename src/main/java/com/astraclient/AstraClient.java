@@ -67,7 +67,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud"
+        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist"
     };
     private record GlowState(Entity entity, boolean wasGlowing) { }
 
@@ -148,6 +148,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("arrowcounter", false);
         MODULES.put("goldencounter", false);
         MODULES.put("sessionstats", false);
+        MODULES.put("arraylist", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -284,6 +285,7 @@ public final class AstraClient implements ClientModInitializer {
             case "arrowcounter" -> "Arrow Counter";
             case "goldencounter" -> "Golden Apple Counter";
             case "sessionstats" -> "Session Stats";
+            case "arraylist" -> "Active Modules";
             default -> id;
         };
     }
@@ -1292,6 +1294,32 @@ public final class AstraClient implements ClientModInitializer {
             String session = String.format(Locale.ROOT, "%02d:%02d:%02d",
                 elapsed / 3600, (elapsed / 60) % 60, elapsed % 60);
             drawHudLine(client, context, "sessionstats", 8, 449, "SESSION", session, accent);
+        }
+
+        if (isEnabled("arraylist")) {
+            List<String> activeNames = new ArrayList<>();
+            for (Map.Entry<String, Boolean> entry : MODULES.entrySet()) {
+                String id = entry.getKey();
+                if (!entry.getValue() || id.equals("arraylist") || List.of(HUD_WIDGET_IDS).contains(id)) continue;
+                activeNames.add(readableName(id));
+            }
+            activeNames.sort((left, right) -> {
+                int widthOrder = Integer.compare(client.textRenderer.getWidth(right), client.textRenderer.getWidth(left));
+                return widthOrder != 0 ? widthOrder : left.compareToIgnoreCase(right);
+            });
+            int listX = hudX("arraylist", 150);
+            int listY = hudY("arraylist", 8);
+            for (int i = 0; i < activeNames.size(); i++) {
+                String name = activeNames.get(i);
+                int rowWidth = client.textRenderer.getWidth(name) + 14;
+                int rowY = listY + i * 14;
+                int rowRight = listX + rowWidth;
+                int rowColor = (i % 2 == 0) ? 0xD9121825 : 0xD91C2030;
+                context.fill(listX, rowY, rowRight, rowY + 13, rowColor);
+                context.fill(listX, rowY, listX + 2, rowY + 13, accent);
+                context.fill(rowRight - 2, rowY, rowRight, rowY + 13, 0xFF4AD9F5);
+                context.drawText(client.textRenderer, name, listX + 7, rowY + 3, 0xFFF2F5FC, false);
+            }
         }
 
         if (System.currentTimeMillis() < notificationUntil && !notification.isEmpty()) {
