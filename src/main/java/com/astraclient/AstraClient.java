@@ -783,6 +783,9 @@ public final class AstraClient implements ClientModInitializer {
             Entity entity = hit.getEntity();
             String targetInfo = entity.getName().getString() + "  "
                 + String.format(Locale.ROOT, "%.1f m", client.player.distanceTo(entity));
+            if (entity instanceof LivingEntity living) {
+                targetInfo += String.format(Locale.ROOT, "  ♥ %.1f/%.1f", living.getHealth(), living.getMaxHealth());
+            }
             drawHudLine(client, context, "targethud", 8, screenHeight - 26, "TARGET", targetInfo, accent);
         }
         if (isEnabled("sessionstats")) {
