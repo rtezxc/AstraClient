@@ -980,13 +980,13 @@ public final class AstraClient implements ClientModInitializer {
         if (isEnabled("healthhud")) {
             float health = Math.max(0.0F, client.player.getHealth());
             float maxHealth = Math.max(1.0F, client.player.getMaxHealth());
-            drawHudLine(client, context, "healthhud", 8, 449, "HEALTH",
+            drawHudLine(client, context, "healthhud", 8, screenHeight - 42, "HEALTH",
                 String.format(Locale.ROOT, "%.1f / %.1f HP", health, maxHealth), accent);
         }
         if (isEnabled("hungerhud")) {
             int food = client.player.getHungerManager().getFoodLevel();
             float saturation = client.player.getHungerManager().getSaturationLevel();
-            drawHudLine(client, context, "hungerhud", 8, 470, "HUNGER",
+            drawHudLine(client, context, "hungerhud", 8, screenHeight - 21, "HUNGER",
                 food + " / 20 · " + String.format(Locale.ROOT, "%.1f sat", saturation), accent);
         }
         if (isEnabled("fps")) drawHudLine(client, context, "fps", 8, 8, "FPS",
@@ -1054,7 +1054,7 @@ public final class AstraClient implements ClientModInitializer {
             drawHudLine(client, context, "goldencounter", 8, 281, "GOLDEN APPLES", Integer.toString(apples), accent);
         }
         if (isEnabled("armorhud")) {
-            drawHudLine(client, context, "armorhud", 8, 281, "ARMOR", armorSummary(client), accent);
+            drawHudLine(client, context, "armorhud", 8, 302, "ARMOR", armorSummary(client), accent);
         }
         if (isEnabled("durabilityhud")) {
             ItemStack weakest = ItemStack.EMPTY;
