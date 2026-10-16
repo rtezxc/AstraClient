@@ -527,7 +527,7 @@ public final class AstraClient implements ClientModInitializer {
                 && moving && client.world.isSpaceEmpty(client.player, client.player.getBoundingBox()
                     .offset(client.player.getVelocity().x, -0.6D, client.player.getVelocity().z)))
                 || (isEnabled("eagle") && client.player.isOnGround() && moving
-                    && client.world.isSpaceEmpty(client.player, client.player.getBoundingBox().offset(0.0D, -0.1D, 0.0D));
+                    && client.world.isSpaceEmpty(client.player, client.player.getBoundingBox().offset(0.0D, -0.1D, 0.0D)));
 
             if (nearEdge) {
                 client.player.setSneaking(true);
