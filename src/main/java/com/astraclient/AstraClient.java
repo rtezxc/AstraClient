@@ -93,6 +93,8 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean forcedSafeWalkSneak;
     private static boolean attackMouseWasDown;
     private static boolean useMouseWasDown;
+    private static int autoToolOriginalSlot = -1;
+    private static int autoToolSelectedSlot = -1;
     private static final Deque<Long> CLICK_TIMESTAMPS = new ArrayDeque<>();
 
     static {
@@ -528,6 +530,7 @@ public final class AstraClient implements ClientModInitializer {
             updateInventoryMove(client);
             updateCombatModules(client);
             updateAutoWeapon(client);
+            updateAutoTool(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -661,6 +664,58 @@ public final class AstraClient implements ClientModInitializer {
         }
 
         if (bestTarget != null) attackTarget(client, bestTarget);
+    }
+
+    /**
+     * Selects the fastest hotbar item while the player is actively mining a targeted block.
+     * Restores the previous slot when mining stops, unless the player changed slots manually.
+     */
+    private static void updateAutoTool(MinecraftClient client) {
+        if (client.player == null || client.world == null || client.currentScreen != null
+            || !isEnabled("autotool") || !client.options.attackKey.isPressed()
+            || !(client.crosshairTarget instanceof BlockHitResult hit)
+            || hit.getType() != HitResult.Type.BLOCK) {
+            restoreAutoToolSlot(client);
+            return;
+        }
+
+        var state = client.world.getBlockState(hit.getBlockPos());
+        if (state.isAir()) {
+            restoreAutoToolSlot(client);
+            return;
+        }
+
+        int bestSlot = client.player.getInventory().selectedSlot;
+        float bestSpeed = client.player.getInventory().getStack(bestSlot).getMiningSpeedMultiplier(state);
+        for (int slot = 0; slot < 9; slot++) {
+            ItemStack stack = client.player.getInventory().getStack(slot);
+            if (stack.isEmpty()) continue;
+            float speed = stack.getMiningSpeedMultiplier(state);
+            if (stack.isSuitableFor(state)) speed += 1000.0F;
+            ItemStack current = client.player.getInventory().getStack(bestSlot);
+            float currentSpeed = current.getMiningSpeedMultiplier(state)
+                + (current.isSuitableFor(state) ? 1000.0F : 0.0F);
+            if (speed > currentSpeed) {
+                bestSlot = slot;
+                bestSpeed = speed;
+            }
+        }
+
+        if (autoToolOriginalSlot < 0) autoToolOriginalSlot = client.player.getInventory().selectedSlot;
+        if (bestSlot != client.player.getInventory().selectedSlot) {
+            client.player.getInventory().selectedSlot = bestSlot;
+            autoToolSelectedSlot = bestSlot;
+        }
+    }
+
+    private static void restoreAutoToolSlot(MinecraftClient client) {
+        if (autoToolOriginalSlot < 0) return;
+        if (client.player != null && autoToolSelectedSlot >= 0
+            && client.player.getInventory().selectedSlot == autoToolSelectedSlot) {
+            client.player.getInventory().selectedSlot = Math.max(0, Math.min(8, autoToolOriginalSlot));
+        }
+        autoToolOriginalSlot = -1;
+        autoToolSelectedSlot = -1;
     }
 
     /**
