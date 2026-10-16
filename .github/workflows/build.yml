@@ -11,9 +11,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Set up Java 21
@@ -21,14 +20,28 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Build mod
-        run: gradle build --no-daemon
+      - name: Build mod from clean state
+        run: gradle clean build --no-daemon
 
-      - name: Upload JAR
+      - name: Verify mod JAR contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
+          test -n "$JAR"
+          echo "Built artifact: $JAR"
+          ls -lh "$JAR"
+          jar tf "$JAR" | tee /tmp/jar-contents.txt
+          grep -q '^fabric.mod.json$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraClient.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraScreen.class$' /tmp/jar-contents.txt
+
+      - name: Upload verified mod JAR
         uses: actions/upload-artifact@v4
         with:
           name: AstraClient-1.21.4-JAR
