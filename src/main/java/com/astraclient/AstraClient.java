@@ -870,7 +870,7 @@ public final class AstraClient implements ClientModInitializer {
                 if (client.currentScreen == null) {
                     client.setScreen(new AstraScreen());
                 } else if (client.currentScreen instanceof AstraScreen) {
-                    client.setScreen(null);
+                    ((AstraScreen) client.currentScreen).requestAnimatedClose();
                 }
             }
             guiKeyWasDown = guiDown;

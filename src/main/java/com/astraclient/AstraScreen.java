@@ -112,6 +112,8 @@ public final class AstraScreen extends Screen {
     private int dragOffsetX, dragOffsetY, resizeStartX, resizeStartScale;
     private int windowOffsetX, windowOffsetY;
     private final long openedAt = System.currentTimeMillis();
+    private long closingAt;
+    private boolean closing;
 
     private static final class ModuleInfo {
         final String id;
@@ -174,7 +176,9 @@ public final class AstraScreen extends Screen {
         // Fully opaque canvas: never expose Minecraft's blurred world behind Astra.
         // This also avoids translucent compositing on mobile OpenGL renderers.
         long now = System.currentTimeMillis();
-        float progress = Math.min(1.0f, Math.max(0.0f, (now - openedAt) / 260.0f));
+        float progress = closing
+            ? Math.max(0.0f, 1.0f - (now - closingAt) / 220.0f)
+            : Math.min(1.0f, Math.max(0.0f, (now - openedAt) / 260.0f));
         float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0);
         int shade = Math.round(8 + 3 * eased);
         ctx.fill(0, 0, width, height, 0xFF000000 | (shade << 16) | (shade << 8) | (shade + 4));
@@ -387,8 +391,27 @@ public final class AstraScreen extends Screen {
         int gy = top + panelH - 13;
         ctx.fill(gx + 3, gy + 7, gx + 10, gy + 10, accent);
         ctx.fill(gx + 6, gy + 3, gx + 10, gy + 6, accent);
+        // Reverse the opening motion for a short, smooth close transition.
+        if (closing && now - closingAt >= 220L) {
+            if (client != null && client.currentScreen == this) client.setScreen(null);
+            return;
+        }
         // All Astra controls are drawn manually. Avoid Screen.render here because
         // Minecraft 1.21.4 can render its default blurred background from that path.
+    }
+
+    public void requestAnimatedClose() {
+        if (!closing) {
+            closing = true;
+            closingAt = System.currentTimeMillis();
+            searchFocused = false;
+            contextMenuModuleId = null;
+        }
+    }
+
+    @Override
+    public void close() {
+        requestAnimatedClose();
     }
 
     private String iconFor(String name) {
@@ -499,6 +522,7 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (closing) return true;
         if (button != 0 && button != 1) return super.mouseClicked(mouseX, mouseY, button);
         AstraClient.playClickSound();
         if (contextMenuModuleId != null) {
@@ -1031,6 +1055,7 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (closing) return true;
         if (capturingGuiKey) {
             AstraClient.setGuiKeybindCode(keyCode == GLFW.GLFW_KEY_ESCAPE
                 ? GLFW.GLFW_KEY_RIGHT_SHIFT : keyCode);
