@@ -67,7 +67,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final String[] HUD_WIDGET_IDS = {
         "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock",
         "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud",
-        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph"
+        "potionhud", "targethud", "sessionstats", "keystrokes", "biome", "cps", "worldinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud", "hungerhud", "blockreachhud", "frametimehud", "arraylist", "watermark", "fpsgraph", "compasshud"
     };
     private static final Set<String> HUD_WIDGET_ID_SET = Set.of(HUD_WIDGET_IDS);
     private record GlowState(Entity entity, boolean wasGlowing) { }
@@ -157,6 +157,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("watermark", true);
         MODULES.put("fpsgraph", false);
         MODULES.put("lowhealthalert", false);
+        MODULES.put("compasshud", false);
+        MODULES.put("effectalert", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -297,6 +299,8 @@ public final class AstraClient implements ClientModInitializer {
             case "watermark" -> "Watermark";
             case "fpsgraph" -> "FPS Graph";
             case "lowhealthalert" -> "Low Health Alert";
+            case "compasshud" -> "Compass HUD";
+            case "effectalert" -> "Effect Expiry Alert";
             default -> id;
         };
     }
@@ -1158,6 +1162,35 @@ public final class AstraClient implements ClientModInitializer {
             context.fill(cx - 7, cy - 1, cx - 3, cy + 1, color);
             context.fill(cx + 3, cy - 1, cx + 7, cy + 1, color);
             context.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFFFFFFFF);
+        }
+
+        if (isEnabled("compasshud")) {
+            int compassX = Math.max(4, Math.min(screenWidth - 176, hudX("compasshud", screenWidth / 2 - 84)));
+            int compassY = Math.max(4, Math.min(screenHeight - 28, hudY("compasshud", 178)));
+            int yaw = Math.floorMod((int) Math.round(client.player.getYaw()), 360);
+            String heading = client.player.getHorizontalFacing().asString().toUpperCase(Locale.ROOT);
+            context.fill(compassX, compassY, compassX + 172, compassY + 25, 0xD90A0D16);
+            context.fill(compassX, compassY, compassX + 172, compassY + 2, accent);
+            context.drawTextWithShadow(client.textRenderer, "COMPASS", compassX + 6, compassY + 6, 0xFF8996AD);
+            context.drawTextWithShadow(client.textRenderer, heading + "  " + yaw + "°", compassX + 78, compassY + 6, 0xFFFFFFFF);
+            String strip = "W     NW     N     NE     E";
+            context.drawTextWithShadow(client.textRenderer, strip, compassX + 6, compassY + 15, 0xFF69E6B8);
+        }
+
+        if (isEnabled("effectalert")) {
+            int alertY = 38;
+            for (StatusEffectInstance effect : client.player.getStatusEffects()) {
+                int ticks = effect.getDuration();
+                if (ticks < 0 || ticks > 200) continue;
+                String effectName = effect.getEffectType().value().getName().getString();
+                String alert = effectName + " expires in " + formatDuration(ticks);
+                int alertX = (screenWidth - client.textRenderer.getWidth(alert)) / 2;
+                int alertColor = ticks <= 60 ? 0xFFFF657A : 0xFFFFC266;
+                context.fill(alertX - 5, alertY - 2, alertX + client.textRenderer.getWidth(alert) + 5, alertY + 12, 0xB80A0D16);
+                context.drawTextWithShadow(client.textRenderer, alert, alertX, alertY, alertColor);
+                alertY += 16;
+                if (alertY > 110) break;
+            }
         }
 
         if (isEnabled("healthhud")) {

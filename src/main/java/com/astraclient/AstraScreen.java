@@ -79,6 +79,8 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("watermark", "Astra Watermark", "Show a movable Astra Client brand plate", "HUD", true),
         new ModuleInfo("fpsgraph", "FPS Graph", "Plot recent frame-rate samples over the last six seconds", "HUD", true),
         new ModuleInfo("lowhealthalert", "Low Health Alert", "Pulse a warning border when health drops to three hearts or less", "Player", true),
+        new ModuleInfo("compasshud", "Compass HUD", "Show cardinal direction and heading in a movable compass strip", "HUD", true),
+        new ModuleInfo("effectalert", "Effect Expiry Alert", "Warn when active potion effects have ten seconds or less remaining", "HUD", true),
         new ModuleInfo("noweather", "No Weather", "Hide weather effects", "World", false),
         new ModuleInfo("autotool", "Auto Tool", "Select the fastest hotbar tool for the targeted block", "World", true),
         new ModuleInfo("autoweapon", "Auto Weapon", "Selects a sword or axe while aiming at a living target", "Combat", true),
