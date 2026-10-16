@@ -642,7 +642,7 @@ public final class AstraClient implements ClientModInitializer {
 
         for (LivingEntity candidate : client.world.getEntitiesByClass(
             LivingEntity.class, client.player.getBoundingBox().expand(combatRange),
-            entity -> entity instanceof LivingEntity living && isValidCombatTarget(living, client.player))) {
+            entity -> isValidCombatTarget(entity, client.player))) {
             double distance = client.player.distanceTo(candidate);
             if (distance > bestDistance) continue;
             var direction = candidate.getBoundingBox().getCenter().subtract(eye).normalize();
