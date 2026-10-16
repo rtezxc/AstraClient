@@ -121,6 +121,11 @@ public final class AstraClient implements ClientModInitializer {
     public static int hudY(String id, int fallback) { return HUD_Y.getOrDefault(id, fallback); }
 
     public static void setHudPosition(String id, int x, int y) {
+        previewHudPosition(id, x, y);
+        saveConfig();
+    }
+
+    public static void previewHudPosition(String id, int x, int y) {
         boolean known = false;
         for (String candidate : HUD_WIDGET_IDS) {
             if (candidate.equals(id)) { known = true; break; }
@@ -128,7 +133,6 @@ public final class AstraClient implements ClientModInitializer {
         if (!known) return;
         HUD_X.put(id, Math.max(0, x));
         HUD_Y.put(id, Math.max(0, y));
-        saveConfig();
     }
 
     public static void resetHudPositions() {
