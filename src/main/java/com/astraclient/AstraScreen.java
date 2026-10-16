@@ -463,6 +463,13 @@ public final class AstraScreen extends Screen {
 
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 96 - settingsScrollOffset, contentW,
             "Accent theme", AstraClient.accentName(), accent);
+        int rgbButtonX = contentX + contentW - 53;
+        int rgbButtonY = top + 101 - settingsScrollOffset;
+        boolean rgbButtonHover = mouseX >= rgbButtonX && mouseX <= rgbButtonX + 43
+            && mouseY >= rgbButtonY && mouseY <= rgbButtonY + 24;
+        ctx.fill(rgbButtonX, rgbButtonY, rgbButtonX + 43, rgbButtonY + 24, rgbButtonHover ? PANEL_HOVER : PANEL);
+        ctx.fill(rgbButtonX, rgbButtonY, rgbButtonX + 2, rgbButtonY + 24, 0xFF54E8FF);
+        ctx.drawCenteredTextWithShadow(textRenderer, "RGB", rgbButtonX + 23, rgbButtonY + 8, WHITE);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 132 - settingsScrollOffset, contentW,
             "Interface click sound", AstraClient.areClickSoundsEnabled() ? "ON" : "MUTED", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 168 - settingsScrollOffset, contentW,
@@ -516,7 +523,8 @@ public final class AstraScreen extends Screen {
         ctx.fill(x, y, x + w, y + 34, hover ? PANEL_HOVER : PANEL);
         ctx.fill(x, y, x + 2, y + 34, accent);
         ctx.drawText(textRenderer, label, x + 12, y + 9, WHITE, true);
-        ctx.drawText(textRenderer, action, x + w - textRenderer.getWidth(action) - 12,
+        int actionRightPadding = label.equals("Accent theme") ? 68 : 12;
+        ctx.drawText(textRenderer, action, x + w - textRenderer.getWidth(action) - actionRightPadding,
             y + 9, accent, true);
     }
 
@@ -596,7 +604,11 @@ public final class AstraScreen extends Screen {
 
         if (category.equals("Settings")) {
             if (inside(mouseX, mouseY, contentX, top + 96 - settingsScrollOffset, contentW, 31)) {
-                AstraClient.toggleAccent();
+                if (mouseX >= contentX + contentW - 56) {
+                    client.setScreen(new AstraThemeEditorScreen(this));
+                } else {
+                    AstraClient.toggleAccent();
+                }
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 132 - settingsScrollOffset, contentW, 31)) {
