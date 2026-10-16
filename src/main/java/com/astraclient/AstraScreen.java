@@ -41,7 +41,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("safewalk", "Safe Walk", "Uses sneak protection near block edges", "Movement", true),
         new ModuleInfo("eagle", "Eagle", "Automatically sneaks when standing over a ledge", "Movement", true),
         new ModuleInfo("inventorymove", "Inventory Move", "Move with inventory open", "Movement", true),
-        new ModuleInfo("autoeat", "Auto Eat", "Automatically eats hotbar food when hunger is 16 or lower", "Inventory", true),
+        new ModuleInfo("autoeat", "Auto Eat", "Automatically eats hotbar food at the configured hunger threshold", "Inventory", true),
         new ModuleInfo("fly", "Fly", "Client-side flight: jump to rise, sneak to descend", "Movement", true),
         new ModuleInfo("autowalk", "Auto Walk", "Automatically holds forward while in the world", "Movement", true),
         new ModuleInfo("aimassist", "Aim Assist", "Aim assistance", "Combat", false),
@@ -203,7 +203,7 @@ public final class AstraScreen extends Screen {
             searchX + 8, searchY + 8, searchText.isEmpty() ? MUTED : WHITE, false);
         ctx.drawText(textRenderer, category.toUpperCase(Locale.ROOT),
             contentX, top + 17, WHITE, true);
-        ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.2.0  •  "
+        ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.1.0  •  "
             + net.minecraft.client.MinecraftClient.getInstance().getCurrentFps() + " FPS",
             contentX, top + 36, accent, false);
         if (category.equals("HUD")) {
