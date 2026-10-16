@@ -656,12 +656,15 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     private static void setPhysicalKey(MinecraftClient client, KeyBinding binding, long window) {
-        int code = binding.getBoundKey().getCode();
-        if (binding.getBoundKey().getCategory() == InputUtil.Type.KEYSYM) {
-            binding.setPressed(InputUtil.isKeyPressed(window, code));
-        } else {
-            binding.setPressed(false);
+        // Yarn 1.21.4 exposes the key through matchesKey rather than getBoundKey().
+        // Find the key assigned to this binding, then query its physical state.
+        for (int code = GLFW.GLFW_KEY_SPACE; code <= GLFW.GLFW_KEY_LAST; code++) {
+            if (binding.matchesKey(code, 0)) {
+                binding.setPressed(InputUtil.isKeyPressed(window, code));
+                return;
+            }
         }
+        binding.setPressed(false);
     }
 
     private static void updateZoom(MinecraftClient client) {
