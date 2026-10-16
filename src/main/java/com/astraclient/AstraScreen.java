@@ -176,8 +176,15 @@ public final class AstraScreen extends Screen {
             searchX + 8, searchY + 8, searchText.isEmpty() ? MUTED : WHITE, false);
         ctx.drawText(textRenderer, category.toUpperCase(Locale.ROOT),
             contentX, top + 17, WHITE, true);
-        ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.0.0",
+        ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.2.0",
             contentX, top + 36, accent, false);
+        if (category.equals("HUD")) {
+            int ex = left + panelW - 121, ey = top + 66;
+            boolean hover = mouseX >= ex && mouseX <= ex + 108 && mouseY >= ey && mouseY <= ey + 24;
+            ctx.fill(ex, ey, ex + 108, ey + 24, hover ? PANEL_HOVER : PANEL);
+            ctx.fill(ex, ey, ex + 3, ey + 24, accent);
+            ctx.drawCenteredTextWithShadow(textRenderer, "EDIT HUD", ex + 54, ey + 8, WHITE);
+        }
 
         // Sidebar navigation
         ctx.fill(left, top + 58, left + sideW, top + panelH, SIDEBAR);
@@ -415,6 +422,12 @@ public final class AstraScreen extends Screen {
                 return true;
             }
             categoryY += step;
+        }
+
+        if (category.equals("HUD")
+            && inside(mouseX, mouseY, left + panelW - 121, top + 66, 108, 24)) {
+            client.setScreen(new AstraHudEditorScreen());
+            return true;
         }
 
         if (category.equals("Settings")) {
