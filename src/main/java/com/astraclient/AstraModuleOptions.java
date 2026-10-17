@@ -24,7 +24,7 @@ public final class AstraModuleOptions {
     private static final List<String> ATTACK_MODES = List.of("Normal", "Critical Hits Only", "Mixed");
     private static final List<String> ROTATION_MODES = List.of("None", "Assist", "Visible");
     private static final List<String> TARGET_PRIORITIES = List.of("Closest", "Lowest Health", "Lowest Armor");
-    private static final List<String> RENDER_MODES = List.of("Outline", "Filled", "Both");
+    private static final List<String> RENDER_MODES = List.of("Outline", "Bright Outline", "Soft Outline");
     private static final List<String> MOVEMENT_MODES = List.of("Default", "Gentle", "Aggressive");
     private static final List<String> UTILITY_MODES = List.of("Conservative", "Balanced", "Fast");
     private static final List<String> MULTI_TARGETS = List.of("Players", "Hostile Mobs", "Passive Mobs", "Items");
@@ -167,6 +167,12 @@ public final class AstraModuleOptions {
 
     public static double numberValue(String moduleId, String optionId, double fallback) {
         try { return Double.parseDouble(value(moduleId, optionId, Double.toString(fallback))); }
+        catch (NumberFormatException ignored) { return fallback; }
+    }
+
+    public static int colorValue(String moduleId, String optionId, int fallback) {
+        String hex = value(moduleId, optionId, String.format(Locale.ROOT, "%06X", fallback & 0x00FFFFFF)).trim().replace("#", "");
+        try { return 0xFF000000 | (Integer.parseInt(hex, 16) & 0x00FFFFFF); }
         catch (NumberFormatException ignored) { return fallback; }
     }
 
