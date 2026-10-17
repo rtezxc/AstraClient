@@ -1302,13 +1302,34 @@ public final class AstraClient implements ClientModInitializer {
         for (Map.Entry<String, Integer> entry : HUD_Y.entrySet()) {
             properties.setProperty("hud." + entry.getKey() + ".y", Integer.toString(entry.getValue()));
         }
+        Path temporaryFile = null;
         try {
-            Files.createDirectories(CONFIG_PATH.getParent());
-            try (OutputStream output = Files.newOutputStream(CONFIG_PATH)) {
+            Path configDirectory = CONFIG_PATH.getParent();
+            Files.createDirectories(configDirectory);
+            // Write a complete snapshot beside the destination, then swap it into place.
+            // A crash or storage interruption during serialization will not truncate the last good config.
+            temporaryFile = Files.createTempFile(configDirectory, "astraclient-", ".tmp");
+            try (OutputStream output = Files.newOutputStream(temporaryFile)) {
                 properties.store(output, "Astra Client settings");
+                output.flush();
+            }
+            try {
+                Files.move(temporaryFile, CONFIG_PATH,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                Files.move(temporaryFile, CONFIG_PATH,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (Exception exception) {
             System.err.println("[Astra Client] Could not save config: " + exception.getMessage());
+        } finally {
+            if (temporaryFile != null) {
+                try { Files.deleteIfExists(temporaryFile); }
+                catch (Exception cleanupException) {
+                    System.err.println("[Astra Client] Could not clean temporary config: " + cleanupException.getMessage());
+                }
+            }
         }
     }
 
