@@ -1621,11 +1621,15 @@ public final class AstraClient implements ClientModInitializer {
     public static boolean autoSprintDisableInMenus() { return autoSprintDisableInMenus; }
     public static void toggleAutoSprintGroundOnly() {
         autoSprintGroundOnly = !autoSprintGroundOnly;
+        AstraModuleOptions.syncBooleanValue("autosprint", "only_on_ground", autoSprintGroundOnly);
+        AstraModuleOptions.syncBooleanValue("sprint", "only_on_ground", autoSprintGroundOnly);
         notifyUser("Auto Sprint ground-only: " + autoSprintGroundOnly);
         saveConfig();
     }
     public static void toggleAutoSprintDisableInMenus() {
         autoSprintDisableInMenus = !autoSprintDisableInMenus;
+        AstraModuleOptions.syncBooleanValue("autosprint", "pause_in_menus", autoSprintDisableInMenus);
+        AstraModuleOptions.syncBooleanValue("sprint", "pause_in_menus", autoSprintDisableInMenus);
         notifyUser("Auto Sprint pauses in menus: " + autoSprintDisableInMenus);
         saveConfig();
     }
