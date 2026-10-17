@@ -2965,7 +2965,7 @@ if (isEnabled("blockfinder")) {
         var playerPos = client.player.getLerpedPos(context.tickCounter().getTickDelta(true));
         var cameraPos = context.camera().getPos();
         double time = (System.currentTimeMillis() % 120000L) / 120000.0D * Math.PI * 2.0D;
-        int accent = accentColor();
+        int accent = moduleColor("orbitcubes", accentColor());
         float red = ((accent >> 16) & 255) / 255.0F;
         float green = ((accent >> 8) & 255) / 255.0F;
         float blue = (accent & 255) / 255.0F;
@@ -2974,8 +2974,10 @@ if (isEnabled("blockfinder")) {
 
         // Four lightweight glass-like wire cubes orbit the player. Their tint reads
         // the live theme color, so preset and custom accent changes apply immediately.
-        for (int i = 0; i < 4; i++) {
-            double angle = time * 1.7D + i * (Math.PI / 2.0D);
+        int cubeCount = (int)Math.round(AstraModuleOptions.numberValue("orbitcubes", "effect_density", 4.0D));
+        cubeCount = Math.max(1, Math.min(8, cubeCount));
+        for (int i = 0; i < cubeCount; i++) {
+            double angle = time * 1.7D + i * (Math.PI * 2.0D / cubeCount);
             double radius = 1.15D + (i % 2) * 0.45D;
             double x = playerPos.x + Math.cos(angle) * radius;
             double z = playerPos.z + Math.sin(angle) * radius;
@@ -3000,11 +3002,15 @@ if (isEnabled("blockfinder")) {
         double backX = -Math.sin(Math.toRadians(player.getYaw())) * 0.28D;
         double backZ = Math.cos(Math.toRadians(player.getYaw())) * 0.28D;
         // Client-side particles only; this visual sends no gameplay packets.
-        client.world.addParticle(ParticleTypes.END_ROD,
-            player.getX() + backX + (Math.random() - 0.5D) * 0.16D,
-            player.getY() + 0.12D + Math.random() * 0.22D,
-            player.getZ() + backZ + (Math.random() - 0.5D) * 0.16D,
-            0.0D, 0.015D, 0.0D);
+        int density = (int)Math.round(AstraModuleOptions.numberValue("playertrail", "effect_density", 2.0D));
+        density = Math.max(1, Math.min(8, density));
+        for (int i = 0; i < density; i++) {
+            client.world.addParticle(ParticleTypes.END_ROD,
+                player.getX() + backX + (Math.random() - 0.5D) * 0.16D,
+                player.getY() + 0.12D + Math.random() * 0.22D,
+                player.getZ() + backZ + (Math.random() - 0.5D) * 0.16D,
+                0.0D, 0.015D, 0.0D);
+        }
     }
 
     private static void updateOrbitSparks(MinecraftClient client) {
@@ -3012,8 +3018,10 @@ if (isEnabled("blockfinder")) {
                 || client.player.age % 2 != 0) return;
         var player = client.player;
         double time = player.age * 0.18D;
-        for (int i = 0; i < 2; i++) {
-            double angle = time + i * Math.PI;
+        int density = (int)Math.round(AstraModuleOptions.numberValue("orbitsparks", "effect_density", 2.0D));
+        density = Math.max(1, Math.min(8, density));
+        for (int i = 0; i < density; i++) {
+            double angle = time + i * (Math.PI * 2.0D / density);
             double radius = 0.82D + i * 0.12D;
             double x = player.getX() + Math.cos(angle) * radius;
             double z = player.getZ() + Math.sin(angle) * radius;
@@ -3030,10 +3038,11 @@ if (isEnabled("blockfinder")) {
 
         boolean showXray = isEnabled("xray") && !XRAY_ORE_POSITIONS.isEmpty();
         boolean showHitboxes = isEnabled("hitboxes");
-        boolean showTargetBox = isEnabled("targetbox") && lastCombatTarget != null
+        boolean showTargetFeedback = AstraModuleOptions.boolValue("killaura", "show_target", true);
+        boolean showTargetBox = isEnabled("targetbox") && showTargetFeedback && lastCombatTarget != null
             && lastCombatTarget.isAlive() && !lastCombatTarget.isRemoved()
             && lastCombatTarget.getWorld() == client.world;
-        boolean showTargetHalo = isEnabled("targethalo") && lastCombatTarget != null
+        boolean showTargetHalo = isEnabled("targethalo") && showTargetFeedback && lastCombatTarget != null
             && lastCombatTarget.isAlive() && !lastCombatTarget.isRemoved()
             && lastCombatTarget.getWorld() == client.world;
         boolean showBlockHighlight = isEnabled("blockhighlight")
@@ -3079,10 +3088,12 @@ if (isEnabled("blockfinder")) {
         // Cached ore outlines use the normal world depth buffer: they highlight loaded ore blocks
         // without changing block visibility, world state, or chunk rendering.
         if (showXray) {
-            double xrayRangeSq = 12.0D * 12.0D;
+            double xrayRange = Math.min(16.0D, Math.max(4.0D,
+            AstraModuleOptions.numberValue("xray", "render_range", 12.0D)));
+        double xrayRangeSq = xrayRange * xrayRange;
             for (BlockPos orePos : XRAY_ORE_POSITIONS) {
                 if (client.player.squaredDistanceTo(orePos.toCenterPos()) > xrayRangeSq) continue;
-                int ore = oreColor(orePos, client);
+                int ore = moduleColor("xray", oreColor(orePos, client));
                 float oreRed = ((ore >> 16) & 255) / 255.0F;
                 float oreGreen = ((ore >> 8) & 255) / 255.0F;
                 float oreBlue = (ore & 255) / 255.0F;
@@ -3228,10 +3239,12 @@ if (isEnabled("blockfinder")) {
 
         BlockPos center = client.player.getBlockPos();
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (int x = center.getX() - 10; x <= center.getX() + 10; x++) {
+        int scanRange = (int)Math.round(Math.min(16.0D, Math.max(4.0D,
+            AstraModuleOptions.numberValue("xray", "render_range", 12.0D))));
+        for (int x = center.getX() - scanRange; x <= center.getX() + scanRange; x++) {
             for (int y = Math.max(client.world.getBottomY(), center.getY() - 8);
                  y <= Math.min(client.world.getTopYInclusive(), center.getY() + 8); y++) {
-                for (int z = center.getZ() - 10; z <= center.getZ() + 10; z++) {
+                for (int z = center.getZ() - scanRange; z <= center.getZ() + scanRange; z++) {
                     mutable.set(x, y, z);
                     var state = client.world.getBlockState(mutable);
                     if (state.isOf(Blocks.DIAMOND_ORE) || state.isOf(Blocks.DEEPSLATE_DIAMOND_ORE)
