@@ -32,8 +32,9 @@ public final class AstraThemeEditorScreen extends Screen {
         int color = currentColor();
         long now = System.currentTimeMillis();
         ctx.fill(0, 0, width, height, 0xFF080B12);
-        int panelW = Math.min(490, width - 20);
-        int panelH = Math.min(360, height - 18);
+        AstraUiEffects.renderAmbientBackdrop(ctx, width, height, now, AstraClient.accentColor());
+        int panelW = Math.max(1, Math.min(490, width - 20));
+        int panelH = Math.max(1, Math.min(360, height - 18));
         int x = (width - panelW) / 2;
         int y = (height - panelH) / 2;
         int accent = AstraClient.accentColor();
