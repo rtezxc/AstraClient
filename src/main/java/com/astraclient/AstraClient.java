@@ -694,19 +694,31 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static void resetModuleDefaults() {
-        MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
+        // Keep this list aligned with the startup defaults and loadConfigFile fallbacks.
+        // Reset must restore the complete configuration, not just the visible GUI controls.
+        MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("watermark"));
         MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
         KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
         HUD_X.clear();
         HUD_Y.clear();
+
         accentTheme = 0;
-        guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
-        guiKeyWasDown = false;
+        customAccentEnabled = false;
+        customAccentColor = 0xFFAA70FF;
+        timeChangerPreset = 6000L;
         clickSounds = true;
+        guiKeybindCode = GLFW.GLFW_KEY_RIGHT_SHIFT;
+        hudEditKeybindCode = GLFW.GLFW_KEY_F6;
+        guiKeyWasDown = false;
+        hudEditKeyWasDown = false;
+        guiKeybindIgnoreUntil = System.currentTimeMillis() + 400L;
+
         autoSprintGroundOnly = true;
         autoSprintDisableInMenus = true;
         guiScale = 100;
         hudOpacity = 84;
+        hudBackgrounds = true;
+
         zoomFov = 30;
         crosshairSize = 7;
         crosshairGap = 3;
@@ -715,13 +727,41 @@ public final class AstraClient implements ClientModInitializer {
         waypointSet = false;
         waypointX = waypointY = waypointZ = 0;
         BREADCRUMB_TRAIL.clear();
+        breadcrumbWorld = null;
+        lastBreadcrumbSampleAt = 0L;
+
         autoEatHungerThreshold = 16;
+        lowHealthThreshold = 6;
+        effectAlertThresholdSeconds = 10;
+        blockFinderTarget = "DIAMOND";
+        blockFinderRange = 24;
+        storageFinderRange = 16;
+        tracerPlayers = true;
+        tracerMobs = true;
         espRange = 64;
         combatRange = 4;
+        killAuraFov = 180;
+        killAuraCriticalOnly = false;
         targetPlayers = true;
         targetHostile = true;
         targetPassive = false;
-        notifyUser("Settings reset to defaults");
+
+        // Clear transient trackers so the next tick starts from a clean state.
+        CLICK_TIMESTAMPS.clear();
+        fpsHistoryIndex = 0;
+        lastFpsSampleAt = 0L;
+        lastCombatTarget = null;
+        damageTrackedPlayer = null;
+        lastObservedHealth = -1.0F;
+        recentDamageAmount = 0.0F;
+        damageAlertUntil = 0L;
+        autoToolOriginalSlot = -1;
+        autoToolSelectedSlot = -1;
+        forcedSafeWalkSneak = false;
+        flyPlayer = null;
+        flyWasActive = false;
+
+        notifyUser("All Astra settings reset to defaults");
         saveConfig();
     }
 
