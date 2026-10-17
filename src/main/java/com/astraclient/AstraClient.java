@@ -75,7 +75,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final Path CONFIG_PATH =
         FabricLoader.getInstance().getConfigDir().resolve("astraclient.properties");
     private static final DateTimeFormatter CLOCK_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
-    private static final int CONFIG_SCHEMA_VERSION = 2;
+    private static final int CONFIG_SCHEMA_VERSION = 3;
     private static boolean configNeedsMigration;
 
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
@@ -781,6 +781,7 @@ public final class AstraClient implements ClientModInitializer {
         // Reset must restore the complete configuration, not just the visible GUI controls.
         MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("watermark"));
         MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
+        AstraModuleOptions.reset();
         KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
         HUD_X.clear();
         HUD_Y.clear();
@@ -1476,6 +1477,7 @@ public final class AstraClient implements ClientModInitializer {
                 }
                 MODULE_KEYBINDS.put(id, normalizeKeyCode(parsedKey));
             }
+            AstraModuleOptions.load(properties);
             for (String id : HUD_WIDGET_IDS) {
                 String x = properties.getProperty("hud." + id + ".x");
                 String y = properties.getProperty("hud." + id + ".y");
@@ -1512,6 +1514,7 @@ public final class AstraClient implements ClientModInitializer {
     public static void saveConfig() {
         Properties properties = new Properties();
         properties.setProperty("config.version", Integer.toString(CONFIG_SCHEMA_VERSION));
+        AstraModuleOptions.save(properties);
         for (Map.Entry<String, Boolean> entry : MODULES.entrySet()) {
             properties.setProperty("module." + entry.getKey(), Boolean.toString(entry.getValue()));
         }
