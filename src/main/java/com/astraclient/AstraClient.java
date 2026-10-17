@@ -694,6 +694,18 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     public static void resetModuleDefaults() {
+        // Release temporary player/input changes before clearing the state needed to undo them.
+        // Otherwise resetting while Fly or Auto Tool is active could leave the player altered.
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client != null) {
+            restoreAutoToolSlot(client);
+            if (flyPlayer != null && flyWasActive) flyPlayer.setNoGravity(false);
+            if (forcedSafeWalkSneak && client.player != null && client.options != null
+                && !client.options.sneakKey.isPressed()) {
+                client.player.setSneaking(false);
+            }
+        }
+
         // Keep this list aligned with the startup defaults and loadConfigFile fallbacks.
         // Reset must restore the complete configuration, not just the visible GUI controls.
         MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("watermark"));
