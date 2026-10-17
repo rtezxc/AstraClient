@@ -1741,6 +1741,119 @@ public final class AstraClient implements ClientModInitializer {
         System.out.println("[Astra Client] Initialized for Minecraft 1.21.4");
     }
 
+    /** Gentle aim assistance only while the user is actively holding attack. */
+    private static void updateAimAssist(MinecraftClient client) {
+        if (!isEnabled("aimassist") || client.player == null || client.world == null
+            || client.currentScreen != null || client.player.isSpectator()
+            || client.getWindow() == null
+            || org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),
+                org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) != org.lwjgl.glfw.GLFW.GLFW_PRESS) return;
+
+        PlayerEntity player = client.player;
+        LivingEntity best = null;
+        double bestDistance = 4.0D;
+        for (LivingEntity candidate : client.world.getEntitiesByClass(
+            LivingEntity.class, player.getBoundingBox().expand(4.0D),
+            entity -> isValidCombatTarget(entity, player) && player.canSee(entity))) {
+            double distance = player.distanceTo(candidate);
+            if (distance > bestDistance || !hasClearLineOfSight(client, candidate)) continue;
+            var delta = candidate.getEyePos().subtract(player.getEyePos());
+            double desiredYaw = Math.toDegrees(Math.atan2(-delta.x, delta.z));
+            double yawDifference = wrapDegrees(desiredYaw - player.getYaw());
+            double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+            double desiredPitch = -Math.toDegrees(Math.atan2(delta.y, horizontal));
+            double pitchDifference = desiredPitch - player.getPitch();
+            if (Math.abs(yawDifference) > 24.0D || Math.abs(pitchDifference) > 20.0D) continue;
+            best = candidate;
+            bestDistance = distance;
+        }
+        if (best == null) return;
+
+        var delta = best.getEyePos().subtract(player.getEyePos());
+        double desiredYaw = Math.toDegrees(Math.atan2(-delta.x, delta.z));
+        double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+        double desiredPitch = -Math.toDegrees(Math.atan2(delta.y, horizontal));
+        float yawStep = (float) Math.max(-3.0D, Math.min(3.0D, wrapDegrees(desiredYaw - player.getYaw()) * 0.16D));
+        float pitchStep = (float) Math.max(-2.0D, Math.min(2.0D, (desiredPitch - player.getPitch()) * 0.16D));
+        player.setYaw(player.getYaw() + yawStep);
+        player.setPitch(Math.max(-90.0F, Math.min(90.0F, player.getPitch() + pitchStep)));
+    }
+
+    /** Keeps a totem in the offhand when one is available in the player's inventory. */
+    private static void updateAutoTotem(MinecraftClient client) {
+        if (!isEnabled("autototem") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.isSpectator() || client.player.age % 10 != 0
+            || client.player.getOffHandStack().isOf(Items.TOTEM_OF_UNDYING)) return;
+
+        for (int inventorySlot = 0; inventorySlot < 36; inventorySlot++) {
+            ItemStack stack = client.player.getInventory().getStack(inventorySlot);
+            if (!stack.isOf(Items.TOTEM_OF_UNDYING)) continue;
+            int handlerSlot = inventorySlot < 9 ? inventorySlot + 36 : inventorySlot;
+            client.interactionManager.clickSlot(client.player.currentScreenHandler.syncId,
+                handlerSlot, 40, SlotActionType.SWAP, client.player);
+            return;
+        }
+    }
+
+    /** Client-side movement helpers; they never change packet handling or anti-cheat behavior. */
+    private static void updateNoSlow(MinecraftClient client) {
+        if (!isEnabled("noslow") || client.player == null || client.world == null
+            || client.currentScreen != null || !client.player.isUsingItem()) return;
+        var player = client.player;
+        var velocity = player.getVelocity();
+        double horizontal = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+        if (horizontal < 0.01D || horizontal >= 0.30D) return;
+        double factor = Math.min(1.12D, 0.30D / horizontal);
+        player.setVelocity(velocity.x * factor, velocity.y, velocity.z * factor);
+    }
+
+    private static void updateSpeed(MinecraftClient client) {
+        if (!isEnabled("speed") || client.player == null || client.world == null
+            || client.currentScreen != null || client.player.isSneaking()) return;
+        var player = client.player;
+        if (Math.abs(player.forwardSpeed) < 0.01F && Math.abs(player.sidewaysSpeed) < 0.01F) return;
+        var velocity = player.getVelocity();
+        double horizontal = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+        if (horizontal < 0.01D || horizontal >= 0.36D) return;
+        double factor = Math.min(1.13D, 0.36D / horizontal);
+        player.setVelocity(velocity.x * factor, velocity.y, velocity.z * factor);
+    }
+
+    /** Places a held block beside existing support when the player is bridging over an edge. */
+    private static void updateScaffold(MinecraftClient client) {
+        if (!isEnabled("scaffold") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.isSpectator() || client.player.age % 4 != 0) return;
+        PlayerEntity player = client.player;
+        if (Math.abs(player.forwardSpeed) < 0.01F && Math.abs(player.sidewaysSpeed) < 0.01F) return;
+        ItemStack held = player.getMainHandStack();
+        if (held.isEmpty() || !(held.getItem() instanceof BlockItem)) return;
+
+        BlockPos target = BlockPos.ofFloored(player.getX(), player.getY() - 1.0D, player.getZ());
+        if (!client.world.getBlockState(target).isReplaceable()) return;
+        for (Direction direction : Direction.values()) {
+            if (direction == Direction.DOWN || direction == Direction.UP) continue;
+            BlockPos support = target.offset(direction);
+            if (!client.world.getBlockState(support).isSolidBlock(client.world, support)) continue;
+            Direction face = direction.getOpposite();
+            Vec3d hitPos = Vec3d.ofCenter(support).add(
+                face.getOffsetX() * 0.5D, face.getOffsetY() * 0.5D, face.getOffsetZ() * 0.5D);
+            client.interactionManager.interactBlock(player, Hand.MAIN_HAND,
+                new BlockHitResult(hitPos, face, support, false));
+            return;
+        }
+    }
+
+    /** A modest local reduction during the hurt animation; server corrections remain authoritative. */
+    private static void updateAntiKnockback(MinecraftClient client) {
+        if (!isEnabled("antiknockback") || client.player == null || client.world == null
+            || client.currentScreen != null || client.player.hurtTime <= 0
+            || client.player.age % 2 != 0) return;
+        var velocity = client.player.getVelocity();
+        client.player.setVelocity(velocity.x * 0.65D, velocity.y, velocity.z * 0.65D);
+    }
+
     /**
      * Client-side combat helpers. TriggerBot attacks only a valid entity under
      * the crosshair; KillAura searches a short forward cone. Both respect vanilla
@@ -2901,6 +3014,64 @@ if (isEnabled("blockfinder")) {
         HUD_RENDERED_BOUNDS.put("breadcrumbs", new HudBounds(x, y, boxW, boxH));
     }
 
+    /** Periodically caches nearby ore blocks so the X-Ray overlay has bounded per-frame work. */
+    private static void updateXrayOres(MinecraftClient client) {
+        if (!isEnabled("xray") || client.player == null || client.world == null) {
+            XRAY_ORE_POSITIONS.clear();
+            xrayWorld = null;
+            lastXrayScanAt = 0L;
+            return;
+        }
+        if (xrayWorld != client.world) {
+            xrayWorld = client.world;
+            XRAY_ORE_POSITIONS.clear();
+            lastXrayScanAt = 0L;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastXrayScanAt < 1800L) return;
+        lastXrayScanAt = now;
+        XRAY_ORE_POSITIONS.clear();
+
+        BlockPos center = client.player.getBlockPos();
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        for (int x = center.getX() - 10; x <= center.getX() + 10; x++) {
+            for (int y = Math.max(client.world.getBottomY(), center.getY() - 8);
+                 y <= Math.min(client.world.getTopYInclusive(), center.getY() + 8); y++) {
+                for (int z = center.getZ() - 10; z <= center.getZ() + 10; z++) {
+                    mutable.set(x, y, z);
+                    var state = client.world.getBlockState(mutable);
+                    if (state.isOf(Blocks.DIAMOND_ORE) || state.isOf(Blocks.DEEPSLATE_DIAMOND_ORE)
+                        || state.isOf(Blocks.EMERALD_ORE) || state.isOf(Blocks.DEEPSLATE_EMERALD_ORE)
+                        || state.isOf(Blocks.GOLD_ORE) || state.isOf(Blocks.DEEPSLATE_GOLD_ORE)
+                        || state.isOf(Blocks.IRON_ORE) || state.isOf(Blocks.DEEPSLATE_IRON_ORE)
+                        || state.isOf(Blocks.COPPER_ORE) || state.isOf(Blocks.DEEPSLATE_COPPER_ORE)
+                        || state.isOf(Blocks.COAL_ORE) || state.isOf(Blocks.DEEPSLATE_COAL_ORE)
+                        || state.isOf(Blocks.LAPIS_ORE) || state.isOf(Blocks.DEEPSLATE_LAPIS_ORE)
+                        || state.isOf(Blocks.REDSTONE_ORE) || state.isOf(Blocks.DEEPSLATE_REDSTONE_ORE)
+                        || state.isOf(Blocks.NETHER_GOLD_ORE) || state.isOf(Blocks.NETHER_QUARTZ_ORE)
+                        || state.isOf(Blocks.ANCIENT_DEBRIS)) {
+                        XRAY_ORE_POSITIONS.add(mutable.toImmutable());
+                        if (XRAY_ORE_POSITIONS.size() >= 350) return;
+                    }
+                }
+            }
+        }
+    }
+
+    private static int oreColor(BlockPos pos, MinecraftClient client) {
+        var state = client.world.getBlockState(pos);
+        if (state.isOf(Blocks.DIAMOND_ORE) || state.isOf(Blocks.DEEPSLATE_DIAMOND_ORE)) return 0xFF42E9F5;
+        if (state.isOf(Blocks.EMERALD_ORE) || state.isOf(Blocks.DEEPSLATE_EMERALD_ORE)) return 0xFF55F29A;
+        if (state.isOf(Blocks.ANCIENT_DEBRIS)) return 0xFFFF8A55;
+        if (state.isOf(Blocks.GOLD_ORE) || state.isOf(Blocks.DEEPSLATE_GOLD_ORE)
+            || state.isOf(Blocks.NETHER_GOLD_ORE)) return 0xFFFFD45E;
+        if (state.isOf(Blocks.IRON_ORE) || state.isOf(Blocks.DEEPSLATE_IRON_ORE)) return 0xFFD3D9E6;
+        if (state.isOf(Blocks.LAPIS_ORE) || state.isOf(Blocks.DEEPSLATE_LAPIS_ORE)) return 0xFF579CFF;
+        if (state.isOf(Blocks.REDSTONE_ORE) || state.isOf(Blocks.DEEPSLATE_REDSTONE_ORE)) return 0xFFFF5B65;
+        if (state.isOf(Blocks.COPPER_ORE) || state.isOf(Blocks.DEEPSLATE_COPPER_ORE)) return 0xFFE99A67;
+        return 0xFFB3A0FF;
+    }
+
     private static void updateTracers(MinecraftClient client) {
         if (!isEnabled("tracers") || client.player == null || client.world == null) {
             cachedTracerTargets.clear();
@@ -2926,6 +3097,40 @@ if (isEnabled("blockfinder")) {
             Double.compare(client.player.distanceTo(left), client.player.distanceTo(right)));
         cachedTracerTargets.clear();
         cachedTracerTargets.addAll(found.subList(0, Math.min(8, found.size())));
+    }
+
+    private static void renderNametags(MinecraftClient client, DrawContext context,
+                                        int screenWidth, int screenHeight, int accent) {
+        if (!isEnabled("nametags") || client.player == null || client.world == null) return;
+        PlayerEntity player = client.player;
+        double fov = client.options.getFov().getValue();
+        if (fov < 1.0D) fov = 70.0D;
+        for (Entity entity : client.world.getEntitiesByClass(Entity.class,
+            player.getBoundingBox().expand(48.0D),
+            candidate -> candidate != player && !candidate.isRemoved()
+                && (candidate instanceof PlayerEntity || candidate instanceof LivingEntity)
+                && player.distanceTo(candidate) <= 48.0D)) {
+            var delta = entity.getBoundingBox().getCenter().subtract(player.getEyePos());
+            double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+            if (horizontal < 0.1D) continue;
+            double targetYaw = Math.toDegrees(Math.atan2(-delta.x, delta.z));
+            double yawDifference = wrapDegrees(targetYaw - player.getYaw());
+            double targetPitch = -Math.toDegrees(Math.atan2(delta.y, horizontal));
+            double pitchDifference = targetPitch - player.getPitch();
+            if (Math.abs(yawDifference) > fov * 0.58D || Math.abs(pitchDifference) > 65.0D) continue;
+
+            int sx = screenWidth / 2 + (int) Math.round(yawDifference * screenWidth / fov);
+            int sy = screenHeight / 2 + (int) Math.round(pitchDifference * screenHeight / fov)
+                - Math.max(8, (int) (entity.getHeight() * 9.0D));
+            String label = entity.getDisplayName().getString();
+            String distance = String.format(Locale.ROOT, "%.1fm", player.distanceTo(entity));
+            String text = label + "  §7" + distance;
+            int tw = client.textRenderer.getWidth(text);
+            if (sx < 2 || sx + tw > screenWidth - 2 || sy < 2 || sy > screenHeight - 12) continue;
+            context.fill(sx - tw / 2 - 4, sy - 3, sx + tw / 2 + 4, sy + 11, 0xB80A0D16);
+            context.fill(sx - tw / 2 - 4, sy - 3, sx - tw / 2 - 2, sy + 11, accent);
+            context.drawCenteredTextWithShadow(client.textRenderer, Text.literal(text), sx, sy, 0xFFF4F6FF);
+        }
     }
 
     private static void renderTracers(MinecraftClient client, DrawContext context,
