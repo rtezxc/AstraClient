@@ -294,9 +294,13 @@ public final class AstraScreen extends Screen {
         ctx.drawText(textRenderer, "CLIENT  /  FABRIC 1.21.4", left + 50, top + 32, MUTED, false);
         // Small live-status badge gives the header a polished client-dashboard feel.
         int liveX = left + panelW - 78;
-        ctx.fill(liveX, top + 20, liveX + 35, top + 34, 0xFF172D2B);
-        ctx.fill(liveX + 5, top + 25, liveX + 9, top + 29, 0xFF69E6B8);
-        ctx.drawText(textRenderer, "LIVE", liveX + 13, top + 23, 0xFF69E6B8, true);
+        // Keep the status badge in the narrow top strip; the search field occupies the row below.
+        int liveY = top + 5;
+        int livePulse = 150 + (int) (70 * (0.5 + 0.5 * Math.sin(now / 230.0)));
+        ctx.fill(liveX, liveY, liveX + 35, liveY + 11, 0xFF172D2B);
+        ctx.fill(liveX + 5, liveY + 4, liveX + 9, liveY + 8,
+            (livePulse << 24) | 0x0069E6B8);
+        ctx.drawText(textRenderer, "LIVE", liveX + 13, liveY + 2, 0xFF69E6B8, true);
         ctx.fill(left + panelW - 31, top + 17, left + panelW - 11, top + 37, 0xFF242B3B);
         ctx.drawText(textRenderer, "×", left + panelW - 25, top + 22, WHITE, true);
 
