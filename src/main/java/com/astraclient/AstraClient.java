@@ -919,7 +919,7 @@ public final class AstraClient implements ClientModInitializer {
                     tracerMobs = true;
                 }
             }
-            case "killaura", "triggerbot", "criticals" -> {
+            case "killaura" -> {
                 combatRange = 4;
                 killAuraFov = 180;
                 killAuraCriticalOnly = false;
@@ -1497,6 +1497,7 @@ public final class AstraClient implements ClientModInitializer {
             notifyUser("No config backup found");
             return;
         }
+        Path importTemp = null;
         try {
             // Validate before replacing the active config, so a malformed backup cannot
             // destroy the user's current working settings.
@@ -1505,7 +1506,16 @@ public final class AstraClient implements ClientModInitializer {
                 validation.load(input);
             }
             validateConfigProperties(validation);
-            Files.copy(backup, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
+            Path configDirectory = CONFIG_PATH.toAbsolutePath().getParent();
+            if (configDirectory == null) throw new java.io.IOException("Config directory is unavailable");
+            importTemp = Files.createTempFile(configDirectory, "astraclient-import-", ".tmp");
+            Files.copy(backup, importTemp, StandardCopyOption.REPLACE_EXISTING);
+            try {
+                Files.move(importTemp, CONFIG_PATH, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                Files.move(importTemp, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
+            }
+            importTemp = null;
             MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
             MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
@@ -1533,6 +1543,13 @@ public final class AstraClient implements ClientModInitializer {
         } catch (Exception exception) {
             System.err.println("[Astra Client] Config import failed: " + exception.getMessage());
             notifyUser("Config import failed");
+        } finally {
+            if (importTemp != null) {
+                try { Files.deleteIfExists(importTemp); }
+                catch (Exception cleanupFailure) {
+                    System.err.println("[Astra Client] Could not remove temporary import file: " + cleanupFailure.getMessage());
+                }
+            }
         }
     }
 

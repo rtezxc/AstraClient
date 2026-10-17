@@ -107,6 +107,10 @@ jobs:
                   sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
           if "AstraModuleOptions.previewValue" not in options_screen:
               sys.exit("ERROR: slider/text preview controls are not wired")
+          if "searchCursor" not in screen or "GLFW_KEY_DELETE" not in screen or "GLFW_KEY_HOME" not in screen:
+              sys.exit("ERROR: module search does not provide cursor-aware text editing")
+          if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
+              sys.exit("ERROR: long advanced text settings do not keep the caret visible")
           if "AstraModuleOptions.resetModule(moduleId)" not in client:
               sys.exit("ERROR: per-module setting reset does not clear stored overrides")
           if 'AstraClient.resetModuleSettings(moduleId)' not in module_screen or '"RESET SETTINGS"' not in module_screen:
@@ -141,6 +145,10 @@ jobs:
               sys.exit("ERROR: config backup saver/import paths do not match")
           if "validateConfigProperties(validation)" not in import_backup:
               sys.exit("ERROR: config backups are not validated before import")
+          if "Files.createTempFile(configDirectory, \"astraclient-import-\"" not in import_backup:
+              sys.exit("ERROR: backup import does not stage the file before replacement")
+          if "StandardCopyOption.ATOMIC_MOVE" not in import_backup:
+              sys.exit("ERROR: backup import does not attempt an atomic replacement")
           if '"pvpmode.previous."' not in client:
               sys.exit("ERROR: PvP Mode previous module states are not persisted")
           if 'customMenuBackground = true;' not in client or 'reducedMotion = false;' not in client:
