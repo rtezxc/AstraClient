@@ -1177,10 +1177,34 @@ public final class AstraClient implements ClientModInitializer {
         }
     }
 
+    /**
+     * Loads settings from the primary file and falls back to the last known-good
+     * snapshot if the primary file was truncated or contains invalid values.
+     */
     private static void loadConfig() {
         if (!Files.isRegularFile(CONFIG_PATH)) return;
+        try {
+            loadConfigFile(CONFIG_PATH);
+        } catch (Exception primaryFailure) {
+            System.err.println("[Astra Client] Could not load config: " + primaryFailure.getMessage());
+            Path backupPath = CONFIG_PATH.resolveSibling("astraclient.properties.bak");
+            if (!Files.isRegularFile(backupPath)) {
+                System.err.println("[Astra Client] No valid config backup found; keeping defaults for unread settings.");
+                return;
+            }
+            try {
+                loadConfigFile(backupPath);
+                Files.copy(backupPath, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
+                System.err.println("[Astra Client] Recovered settings from the last known-good config backup.");
+            } catch (Exception backupFailure) {
+                System.err.println("[Astra Client] Config backup recovery failed: " + backupFailure.getMessage());
+            }
+        }
+    }
+
+    private static void loadConfigFile(Path sourcePath) throws Exception {
         Properties properties = new Properties();
-        try (InputStream input = Files.newInputStream(CONFIG_PATH)) {
+        try (InputStream input = Files.newInputStream(sourcePath)) {
             properties.load(input);
             clickSounds = Boolean.parseBoolean(properties.getProperty("ui.clickSounds", "true"));
             hudOpacity = Math.max(20, Math.min(100, Integer.parseInt(properties.getProperty("hud.opacity", "90"))));
@@ -1257,8 +1281,29 @@ public final class AstraClient implements ClientModInitializer {
                 if (x != null) HUD_X.put(id, Integer.parseInt(x));
                 if (y != null) HUD_Y.put(id, Integer.parseInt(y));
             }
+        }
+    }
+
+    private static void backupExistingConfig(Path configDirectory) {
+        if (!Files.isRegularFile(CONFIG_PATH)) return;
+        Path backupTemp = null;
+        try {
+            backupTemp = Files.createTempFile(configDirectory, "astraclient-backup-", ".tmp");
+            Files.copy(CONFIG_PATH, backupTemp, StandardCopyOption.REPLACE_EXISTING);
+            Path backupPath = CONFIG_PATH.resolveSibling("astraclient.properties.bak");
+            try {
+                Files.move(backupTemp, backupPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                Files.move(backupTemp, backupPath, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (Exception exception) {
-            System.err.println("[Astra Client] Could not load config: " + exception.getMessage());
+            // A backup failure must never prevent the primary settings from being saved.
+            System.err.println("[Astra Client] Could not refresh config backup: " + exception.getMessage());
+        } finally {
+            if (backupTemp != null) {
+                try { Files.deleteIfExists(backupTemp); }
+                catch (Exception ignored) { }
+            }
         }
     }
 
@@ -1323,6 +1368,9 @@ public final class AstraClient implements ClientModInitializer {
                 properties.store(output, "Astra Client settings");
                 output.flush();
             }
+            // Preserve the previous complete snapshot before replacing it.
+            // Backup errors are logged but never block a normal save.
+            backupExistingConfig(configDirectory);
             try {
                 Files.move(temporaryFile, CONFIG_PATH,
                     java.nio.file.StandardCopyOption.ATOMIC_MOVE,
