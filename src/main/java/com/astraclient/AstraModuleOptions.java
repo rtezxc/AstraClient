@@ -177,6 +177,12 @@ public final class AstraModuleOptions {
         AstraClient.saveConfig();
     }
 
+    /** Update a live preview while dragging or typing; the screen persists on commit. */
+    public static void previewValue(String moduleId, Option option, String rawValue) {
+        if (moduleId == null || option == null || rawValue == null) return;
+        VALUES.put(key(moduleId, option.id()), normalize(option, rawValue));
+    }
+
     public static String normalize(Option option, String raw) {
         try {
             return switch (option.type()) {
