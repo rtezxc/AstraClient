@@ -21,6 +21,7 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ShulkerBoxBlock;
+import net.minecraft.registry.Registries;
 import net.minecraft.item.BlockItem;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.Direction;
@@ -639,7 +640,9 @@ public final class AstraClient implements ClientModInitializer {
     public static int breadcrumbTrailLength() { return breadcrumbTrailLength; }
     public static void previewBreadcrumbTrailLength(int value) {
         breadcrumbTrailLength = Math.max(12, Math.min(120, value));
-        while (BREADCRUMB_TRAIL.size() > breadcrumbTrailLength) BREADCRUMB_TRAIL.remove(0);
+        int trailLength = (int)Math.round(Math.max(12.0D, Math.min(120.0D,
+            AstraModuleOptions.numberValue("breadcrumbs", "trail_length", breadcrumbTrailLength))));
+        while (BREADCRUMB_TRAIL.size() > trailLength) BREADCRUMB_TRAIL.remove(0);
     }
     public static void setBreadcrumbTrailLength(int value) {
         previewBreadcrumbTrailLength(value);
@@ -2492,7 +2495,7 @@ public final class AstraClient implements ClientModInitializer {
         if (isEnabled("reach")) renderReachInfo(client, context, screenWidth, accent);
         if (isEnabled("tracers")) renderTracers(client, context, screenWidth, screenHeight, accent);
         if (isEnabled("nametags")) renderNametags(client, context, screenWidth, screenHeight, accent);
-        if (isEnabled("breadcrumbs")) renderBreadcrumbs(client, context, screenWidth, screenHeight, accent);
+        if (isEnabled("breadcrumbs") && AstraModuleOptions.boolValue("breadcrumbs", "show_hud", true)) renderBreadcrumbs(client, context, screenWidth, screenHeight, accent);
 
         // A subtle pulsing warning stays out of the way until health is critical.
         if (isEnabled("lowhealthalert") && client.player.getHealth() > 0.0F
@@ -2645,7 +2648,7 @@ public final class AstraClient implements ClientModInitializer {
             int serverY = hudY("serverinfo", screenHeight - 122);
             drawHudLineAt(client, context, serverX, serverY, "SERVER", serverName + " · " + serverPing, accent);
         }
-                if (isEnabled("waypoint")) {
+                if (isEnabled("waypoint") && AstraModuleOptions.boolValue("waypoint", "show_hud", true)) {
             String value;
             if (!waypointSet) {
                 value = "Not set • open module settings";
@@ -2662,21 +2665,24 @@ public final class AstraClient implements ClientModInitializer {
                 value = waypointX + " " + waypointY + " " + waypointZ + " • "
                     + String.format(Locale.ROOT, "%.1f m", distance) + " • " + bearing;
             }
-            drawHudLine(client, context, "waypoint", 8, screenHeight - 80, "WAYPOINT", value, accent);
+            drawHudLine(client, context, "waypoint", 8, screenHeight - 80, "WAYPOINT", value, moduleColor("waypoint", accent));
         }
 
-        if (isEnabled("storagefinder")) {
+        if (isEnabled("storagefinder") && AstraModuleOptions.boolValue("storagefinder", "show_hud", true)) {
+            int storageRadius = (int)Math.round(AstraModuleOptions.numberValue("storagefinder", "scan_range", storageFinderRange));
             String value = nearestStorageBlock == null
-                ? "No storage within " + storageFinderRange + " blocks"
+                ? "No storage within " + storageRadius + " blocks"
                 : nearestStorageType + " " + nearestStorageBlock.getX() + " "
                     + nearestStorageBlock.getY() + " " + nearestStorageBlock.getZ()
                     + " • " + String.format(Locale.ROOT, "%.1f m", nearestStorageDistance);
             drawHudLine(client, context, "storagefinder", 8, screenHeight - 100, "STORAGE", value, accent);
         }
 
-if (isEnabled("blockfinder")) {
+if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "show_hud", true)) {
+            String targetLabel = AstraModuleOptions.value("blockfinder", "custom_value", blockFinderTarget);
+            int blockRadius = (int)Math.round(AstraModuleOptions.numberValue("blockfinder", "scan_range", blockFinderRange));
             String value = nearestFoundBlock == null
-                ? "No " + blockFinderTarget.toLowerCase(Locale.ROOT) + " within " + blockFinderRange + " blocks"
+                ? "No " + targetLabel.toLowerCase(Locale.ROOT) + " within " + blockRadius + " blocks"
                 : nearestFoundBlock.getX() + " " + nearestFoundBlock.getY() + " " + nearestFoundBlock.getZ()
                     + " · " + String.format(Locale.ROOT, "%.1f m", nearestFoundDistance);
             drawHudLine(client, context, "blockfinder", 150, screenHeight - 60, "BLOCK FINDER", value, accent);
@@ -2954,7 +2960,8 @@ if (isEnabled("blockfinder")) {
     private static void updateTimeChanger(MinecraftClient client) {
         if (client.world == null || !isEnabled("timechanger")) return;
         // ClientWorld is local to this client; this does not issue a server command.
-        client.world.setTime(client.world.getTime(), timeChangerPreset, false);
+        long configuredTime = Math.round(AstraModuleOptions.numberValue("timechanger", "time_of_day", timeChangerPreset));
+        client.world.setTime(client.world.getTime(), Math.max(0L, Math.min(24000L, configuredTime)), false);
     }
 
     private static void renderOrbitCubes(WorldRenderContext context) {
@@ -3176,7 +3183,8 @@ if (isEnabled("blockfinder")) {
 
     private static void renderBreadcrumbs(MinecraftClient client, DrawContext context,
                                           int screenWidth, int screenHeight, int accent) {
-        if (client.player == null || BREADCRUMB_TRAIL.isEmpty()) return;
+        if (client.player == null || BREADCRUMB_TRAIL.isEmpty()
+            || !AstraModuleOptions.boolValue("breadcrumbs", "show_hud", true)) return;
         int boxW = 112, boxH = 112;
         int x = clampInt(hudX("breadcrumbs", screenWidth - boxW - 12), 2, Math.max(2, screenWidth - boxW - 2));
         int y = clampInt(hudY("breadcrumbs", screenHeight / 2 - boxH / 2), 2, Math.max(2, screenHeight - boxH - 2));
@@ -3190,7 +3198,9 @@ if (isEnabled("blockfinder")) {
         double yaw = Math.toRadians(client.player.getYaw());
         double scale = 1.7D;
         int previousX = Integer.MIN_VALUE, previousY = Integer.MIN_VALUE;
-        int start = Math.max(0, BREADCRUMB_TRAIL.size() - breadcrumbTrailLength);
+        int trailLength = (int)Math.round(Math.max(12.0D, Math.min(120.0D,
+            AstraModuleOptions.numberValue("breadcrumbs", "trail_length", breadcrumbTrailLength))));
+        int start = Math.max(0, BREADCRUMB_TRAIL.size() - trailLength);
         for (int i = start; i < BREADCRUMB_TRAIL.size(); i++) {
             TrailPoint point = BREADCRUMB_TRAIL.get(i);
             double dx = point.x() - client.player.getX();
@@ -3431,7 +3441,8 @@ if (isEnabled("blockfinder")) {
         if (now - lastStorageScanAt < 2500L) return;
         lastStorageScanAt = now;
         BlockPos center = client.player.getBlockPos();
-        int radius = storageFinderRange;
+        int radius = (int)Math.round(Math.max(8.0D, Math.min(32.0D,
+            AstraModuleOptions.numberValue("storagefinder", "scan_range", storageFinderRange))));
         int bottom = Math.max(client.world.getBottomY(), center.getY() - 6);
         int top = Math.min(client.world.getTopYInclusive(), center.getY() + 6);
         BlockPos start = new BlockPos(center.getX() - radius, bottom, center.getZ() - radius);
@@ -3473,7 +3484,8 @@ if (isEnabled("blockfinder")) {
         if (now - lastBlockFinderScanAt < 1800L) return;
         lastBlockFinderScanAt = now;
         BlockPos center = client.player.getBlockPos();
-        int radius = blockFinderRange;
+        int radius = (int)Math.round(Math.max(8.0D, Math.min(48.0D,
+            AstraModuleOptions.numberValue("blockfinder", "scan_range", blockFinderRange))));
         int bottom = Math.max(client.world.getBottomY(), center.getY() - 8);
         int top = Math.min(client.world.getTopYInclusive(), center.getY() + 8);
         BlockPos start = new BlockPos(center.getX() - radius, bottom, center.getZ() - radius);
@@ -3493,7 +3505,12 @@ if (isEnabled("blockfinder")) {
     }
 
     private static boolean isBlockFinderTarget(Block block) {
-        return switch (blockFinderTarget) {
+        String configuredTarget = AstraModuleOptions.value("blockfinder", "custom_value", blockFinderTarget).trim();
+        if (configuredTarget.contains(":")) {
+            return Registries.BLOCK.getId(block).toString().equalsIgnoreCase(configuredTarget);
+        }
+        String targetName = configuredTarget.toUpperCase(Locale.ROOT);
+        return switch (targetName) {
             case "DIAMOND" -> block == Blocks.DIAMOND_ORE || block == Blocks.DEEPSLATE_DIAMOND_ORE;
             case "ANCIENT DEBRIS" -> block == Blocks.ANCIENT_DEBRIS;
             case "EMERALD" -> block == Blocks.EMERALD_ORE || block == Blocks.DEEPSLATE_EMERALD_ORE;
