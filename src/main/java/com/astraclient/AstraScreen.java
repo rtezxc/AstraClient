@@ -1,6 +1,7 @@
 package com.astraclient;
 
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
@@ -851,7 +852,7 @@ public final class AstraScreen extends Screen {
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 346 - settingsScrollOffset, contentW,
             "HUD backgrounds", AstraClient.areHudBackgroundsEnabled() ? "ON" : "OFF", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 382 - settingsScrollOffset, contentW,
-            "Reset module defaults", "RESET", accent);
+            "Reset all Astra settings", "RESET", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 418 - settingsScrollOffset, contentW,
             "Config manager (5 save slots)", "OPEN", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 454 - settingsScrollOffset, contentW,
@@ -1010,7 +1011,11 @@ public final class AstraScreen extends Screen {
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 382 - settingsScrollOffset, contentW, 34)) {
-                AstraClient.resetModuleDefaults();
+                client.setScreen(new ConfirmScreen(confirmed -> {
+                    if (confirmed) AstraClient.resetModuleDefaults();
+                    client.setScreen(this);
+                }, Text.literal("Reset all Astra settings?"),
+                    Text.literal("This resets modules, options, themes, favorites, keybinds and HUD positions.")));
                 return true;
             }
             if (inside(mouseX, mouseY, contentX, top + 418 - settingsScrollOffset, contentW, 34)) {

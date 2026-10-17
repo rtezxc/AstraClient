@@ -916,6 +916,7 @@ public final class AstraClient implements ClientModInitializer {
         // Keep this list aligned with the startup defaults and loadConfigFile fallbacks.
         // Reset must restore the complete configuration, not just the visible GUI controls.
         PVP_MODE_PREVIOUS_STATES.clear();
+        FAVORITE_MODULES.clear();
         MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("watermark"));
         MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
         AstraModuleOptions.reset();
@@ -945,6 +946,8 @@ public final class AstraClient implements ClientModInitializer {
         guiScale = 100;
         hudOpacity = 84;
         hudBackgrounds = true;
+        customMenuBackground = true;
+        reducedMotion = false;
 
         zoomFov = 30;
         crosshairSize = 7;

@@ -140,6 +140,10 @@ jobs:
               sys.exit("ERROR: config backups are not validated before import")
           if '"pvpmode.previous."' not in client:
               sys.exit("ERROR: PvP Mode previous module states are not persisted")
+          if 'customMenuBackground = true;' not in client or 'reducedMotion = false;' not in client:
+              sys.exit("ERROR: reset defaults does not restore all persisted motion/background preferences")
+          if 'new ConfirmScreen(' not in screen or '"Reset all Astra settings?"' not in screen:
+              sys.exit("ERROR: destructive settings reset is not protected by confirmation")
           if "PVP_MODE_PREVIOUS_STATES.clear()" not in client or "PVP_MODE_PREVIOUS_STATES.put(id, Boolean.parseBoolean(savedState))" not in client:
               sys.exit("ERROR: PvP Mode previous states are not restored from config")
           if '"ui.reducedMotion"' not in client or 'isReducedMotionEnabled()' not in client:
