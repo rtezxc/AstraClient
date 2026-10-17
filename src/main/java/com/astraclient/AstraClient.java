@@ -572,6 +572,7 @@ public final class AstraClient implements ClientModInitializer {
         return AstraModuleOptions.value("blockfinder", "custom_value", blockFinderTarget);
     }
     public static void cycleBlockFinderTarget() {
+        blockFinderTarget = blockFinderTarget();
         int current = 0;
         for (int i = 0; i < BLOCK_FINDER_TARGETS.length; i++) {
             if (BLOCK_FINDER_TARGETS[i].equals(blockFinderTarget)) { current = i; break; }
@@ -606,14 +607,14 @@ public final class AstraClient implements ClientModInitializer {
         return AstraModuleOptions.boolValue("tracers", "target_mobs", tracerMobs);
     }
     public static void toggleTracerPlayers() {
-        tracerPlayers = !tracerPlayers;
+        tracerPlayers = !AstraModuleOptions.boolValue("tracers", "target_players", tracerPlayers);
         AstraModuleOptions.syncValue("tracers", "target_players", Boolean.toString(tracerPlayers));
         cachedTracerTargets.clear();
         notifyUser("Player tracers " + (tracerPlayers ? "enabled" : "disabled"));
         saveConfig();
     }
     public static void toggleTracerMobs() {
-        tracerMobs = !tracerMobs;
+        tracerMobs = !AstraModuleOptions.boolValue("tracers", "target_mobs", tracerMobs);
         AstraModuleOptions.syncValue("tracers", "target_mobs", Boolean.toString(tracerMobs));
         cachedTracerTargets.clear();
         notifyUser("Mob tracers " + (tracerMobs ? "enabled" : "disabled"));
@@ -712,10 +713,10 @@ public final class AstraClient implements ClientModInitializer {
 
     public static int espRange() { return espRange; }
     public static int combatRange() { return combatRange; }
-    public static int killAuraFov() { return killAuraFov; }
-    public static boolean killAuraCriticalOnly() { return killAuraCriticalOnly; }
+    public static int killAuraFov() { return (int)Math.round(Math.max(60.0D, Math.min(180.0D, AstraModuleOptions.numberValue("killaura", "fov", killAuraFov))); }
+    public static boolean killAuraCriticalOnly() { return AstraModuleOptions.boolValue("killaura", "critical_hits", killAuraCriticalOnly); }
     public static void toggleKillAuraCriticalOnly() {
-        killAuraCriticalOnly = !killAuraCriticalOnly;
+        killAuraCriticalOnly = !AstraModuleOptions.boolValue("killaura", "critical_hits", killAuraCriticalOnly);
         AstraModuleOptions.syncValue("killaura", "critical_hits", Boolean.toString(killAuraCriticalOnly));
         notifyUser("Kill Aura critical-only: " + (killAuraCriticalOnly ? "ON" : "OFF"));
         saveConfig();
@@ -732,9 +733,9 @@ public final class AstraClient implements ClientModInitializer {
     public static void previewCombatRange(int value) { combatRange = Math.max(3, Math.min(6, value)); }
     public static void toggleCombatTarget(String kind) {
         switch (kind) {
-            case "players" -> targetPlayers = !targetPlayers;
-            case "hostile" -> targetHostile = !targetHostile;
-            case "passive" -> targetPassive = !targetPassive;
+            case "players" -> targetPlayers = !AstraModuleOptions.boolValue("killaura", "target_players", targetPlayers);
+            case "hostile" -> targetHostile = !AstraModuleOptions.boolValue("killaura", "target_hostile", targetHostile);
+            case "passive" -> targetPassive = !AstraModuleOptions.boolValue("killaura", "target_passive", targetPassive);
             default -> { return; }
         }
         AstraModuleOptions.syncValue("killaura", "target_players", Boolean.toString(targetPlayers));
@@ -1659,8 +1660,14 @@ public final class AstraClient implements ClientModInitializer {
     public static boolean isAutoSprintEnabled() { return isEnabled("autosprint"); }
     public static void setFullBright(boolean enabled) { setEnabled("fullbright", enabled); }
     public static void setAutoSprint(boolean enabled) { setEnabled("autosprint", enabled); }
-    public static boolean autoSprintGroundOnly() { return autoSprintGroundOnly; }
-    public static boolean autoSprintDisableInMenus() { return autoSprintDisableInMenus; }
+    public static boolean autoSprintGroundOnly() {
+        String id = isEnabled("sprint") && !isEnabled("autosprint") ? "sprint" : "autosprint";
+        return AstraModuleOptions.boolValue(id, "only_on_ground", autoSprintGroundOnly);
+    }
+    public static boolean autoSprintDisableInMenus() {
+        String id = isEnabled("sprint") && !isEnabled("autosprint") ? "sprint" : "autosprint";
+        return AstraModuleOptions.boolValue(id, "pause_in_menus", autoSprintDisableInMenus);
+    }
     public static void toggleAutoSprintGroundOnly() {
         autoSprintGroundOnly = !autoSprintGroundOnly;
         AstraModuleOptions.syncBooleanValue("autosprint", "only_on_ground", autoSprintGroundOnly);
