@@ -300,7 +300,7 @@ public final class AstraModuleSettingsScreen extends Screen {
             drawButton(ctx, x + 22 + buttonW, bottomY, buttonW, 28,
                 implemented ? (AstraClient.isEnabled(moduleId) ? "DISABLE" : "ENABLE") : "LOCKED",
                 mouseX, mouseY, a);
-            drawButton(ctx, x + 32 + buttonW * 2, bottomY, buttonW, 28, "RESET", mouseX, mouseY, a);
+            drawButton(ctx, x + 32 + buttonW * 2, bottomY, buttonW, 28, "RESET SETTINGS", mouseX, mouseY, a);
         }
         // Controls are drawn manually; do not invoke the vanilla screen render path,
         // which can re-apply Minecraft menu blur over Astra.
@@ -527,7 +527,7 @@ public final class AstraModuleSettingsScreen extends Screen {
                 return true;
             }
             if (inside(mouseX, mouseY, x + 32 + buttonW * 2, bottomY, buttonW, 28)) {
-                AstraClient.setModuleKeybind(moduleId, GLFW.GLFW_KEY_UNKNOWN);
+                AstraClient.resetModuleSettings(moduleId);
                 capturingKey = false;
                 return true;
             }

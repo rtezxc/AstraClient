@@ -107,6 +107,10 @@ jobs:
                   sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
           if "AstraModuleOptions.previewValue" not in options_screen:
               sys.exit("ERROR: slider/text preview controls are not wired")
+          if "AstraModuleOptions.resetModule(moduleId)" not in client:
+              sys.exit("ERROR: per-module setting reset does not clear stored overrides")
+          if 'AstraClient.resetModuleSettings(moduleId)' not in module_screen or '"RESET SETTINGS"' not in module_screen:
+              sys.exit("ERROR: module reset button label and action do not match")
 
           overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
           fire_mixin = (root / "mixin" / "AstraFireOverlayMixin.java").read_text(encoding="utf-8")

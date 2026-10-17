@@ -881,6 +881,72 @@ public final class AstraClient implements ClientModInitializer {
         return hudOpacity;
     }
 
+    /** Resets one module's saved overrides without changing its enabled state. */
+    public static void resetModuleSettings(String moduleId) {
+        if (moduleId == null || !MODULES.containsKey(moduleId)) return;
+        AstraModuleOptions.resetModule(moduleId);
+        MODULE_KEYBINDS.put(moduleId, GLFW.GLFW_KEY_UNKNOWN);
+        KEY_WAS_DOWN.put(moduleId, false);
+        HUD_X.remove(moduleId);
+        HUD_Y.remove(moduleId);
+
+        switch (moduleId) {
+            case "autosprint" -> {
+                autoSprintGroundOnly = true;
+                autoSprintDisableInMenus = true;
+            }
+            case "timechanger" -> timeChangerPreset = 6000L;
+            case "zoom" -> zoomFov = 30;
+            case "customcrosshair" -> {
+                crosshairSize = 7;
+                crosshairGap = 3;
+                crosshairThickness = 2;
+            }
+            case "breadcrumbs" -> {
+                breadcrumbTrailLength = 48;
+                BREADCRUMB_TRAIL.clear();
+                breadcrumbWorld = null;
+                lastBreadcrumbSampleAt = 0L;
+            }
+            case "waypoint" -> {
+                waypointSet = false;
+                waypointX = waypointY = waypointZ = 0;
+            }
+            case "playeresp", "mobesp", "itemesp", "tracers" -> {
+                espRange = 64;
+                if (moduleId.equals("tracers")) {
+                    tracerPlayers = true;
+                    tracerMobs = true;
+                }
+            }
+            case "killaura", "triggerbot", "criticals" -> {
+                combatRange = 4;
+                killAuraFov = 180;
+                killAuraCriticalOnly = false;
+                targetPlayers = true;
+                targetHostile = true;
+                targetPassive = false;
+            }
+            case "autoeat" -> autoEatHungerThreshold = 16;
+            case "lowhealthalert" -> lowHealthThreshold = 6;
+            case "effectalert" -> effectAlertThresholdSeconds = 10;
+            case "blockfinder" -> {
+                blockFinderTarget = "DIAMOND";
+                blockFinderRange = 24;
+            }
+            case "storagefinder" -> storageFinderRange = 16;
+            default -> { }
+        }
+
+        if (moduleId.equals("autotool")) restoreAutoToolSlot(MinecraftClient.getInstance());
+        if (moduleId.equals("fly") && flyPlayer != null && flyWasActive) {
+            flyPlayer.setNoGravity(false);
+            flyWasActive = false;
+        }
+        saveConfig();
+        notifyUser("Reset " + readableName(moduleId) + " settings and keybind");
+    }
+
     public static void resetModuleDefaults() {
         // Release temporary player/input changes before clearing the state needed to undo them.
         // Otherwise resetting while Fly or Auto Tool is active could leave the player altered.

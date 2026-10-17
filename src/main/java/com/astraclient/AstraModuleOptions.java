@@ -320,6 +320,13 @@ public final class AstraModuleOptions {
         VALUES.clear();
     }
 
+    /** Removes only one module's stored overrides; the definitions supply defaults again. */
+    public static void resetModule(String moduleId) {
+        if (moduleId == null || moduleId.isBlank()) return;
+        String prefix = moduleId + ".";
+        VALUES.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
     private static String key(String moduleId, String optionId) {
         return moduleId + "." + optionId;
     }
