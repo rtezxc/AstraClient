@@ -28,6 +28,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.util.math.Box;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.RaycastContext;
@@ -1349,6 +1350,7 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoEat(client);
             updateAutoWalk(client);
             updateCombatModules(client);
+            updateTargetEspParticles(client);
             updateAutoWeapon(client);
             updateAutoTool(client);
             updateFly(client);
@@ -1485,6 +1487,36 @@ public final class AstraClient implements ClientModInitializer {
 
         lastCombatTarget = bestTarget;
         if (bestTarget != null) attackTarget(client, bestTarget);
+    }
+
+    /**
+     * Target ESP particles: while Kill Aura is enabled, a small stream of
+     * theme-colored-independent spark particles marks the entity currently selected
+     * by the aura. This is client-side visual feedback only.
+     */
+    private static int targetEspParticleTick;
+
+    private static void updateTargetEspParticles(MinecraftClient client) {
+        if (client.player == null || client.world == null || client.currentScreen != null
+            || !isEnabled("killaura") || lastCombatTarget == null || !lastCombatTarget.isAlive()
+            || client.player.distanceTo(lastCombatTarget) > 3.0D) {
+            targetEspParticleTick = 0;
+            return;
+        }
+
+        // Throttle particle emission to keep the effect lightweight on lower-end devices.
+        if (++targetEspParticleTick % 3 != 0) return;
+        var box = lastCombatTarget.getBoundingBox();
+        double x = (box.minX + box.maxX) * 0.5D;
+        double z = (box.minZ + box.maxZ) * 0.5D;
+        double y = box.minY + 0.15D + Math.random() * Math.max(0.2D, box.getLengthY());
+        for (int i = 0; i < 3; i++) {
+            double angle = Math.random() * Math.PI * 2.0D;
+            double radius = 0.25D + Math.random() * 0.25D;
+            client.world.addParticle(ParticleTypes.END_ROD,
+                x + Math.cos(angle) * radius, y, z + Math.sin(angle) * radius,
+                0.0D, 0.025D, 0.0D);
+        }
     }
 
     /**
@@ -2314,7 +2346,7 @@ if (isEnabled("blockfinder")) {
     private static void updateTimeChanger(MinecraftClient client) {
         if (client.world == null || !isEnabled("timechanger")) return;
         // ClientWorld is local to this client; this does not issue a server command.
-        client.world.setTimeOfDay(timeChangerPreset);
+        client.world.setTime(client.world.getTime(), timeChangerPreset, false);
     }
 
     private static void renderOrbitCubes(WorldRenderContext context) {
@@ -2347,7 +2379,7 @@ if (isEnabled("blockfinder")) {
             matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float) (time * 100.0D + i * 31.0D)));
             matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees((float) (time * 73.0D + i * 19.0D)));
             WorldRenderer.drawBox(matrices, lines,
-                new Box(-size, -size, -size, size, size, size),
+                -size, -size, -size, size, size, size,
                 red, green, blue, 0.72F);
             matrices.pop();
         }
