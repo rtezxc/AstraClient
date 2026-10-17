@@ -118,6 +118,8 @@ public final class AstraScreen extends Screen {
 
     private String category = "Render";
     private String searchText = "";
+    private int searchCursor;
+    private int searchDisplayStart;
     private boolean searchFocused;
     private boolean capturingGuiKey;
     private boolean capturingHudEditKey;
@@ -329,9 +331,30 @@ public final class AstraScreen extends Screen {
             searchFocused ? 0xFF28213F : PANEL);
         ctx.fill(searchX, searchY + 24, searchX + searchW, searchY + 25,
             searchFocused ? accent : LINE);
-        String searchLabel = searchText.isEmpty() ? "Search modules..." : searchText;
-        ctx.drawText(textRenderer, truncateToWidth(searchLabel, searchW - (searchText.isEmpty() ? 15 : 31)),
-            searchX + 8, searchY + 8, searchText.isEmpty() ? MUTED : WHITE, false);
+        int searchTextWidth = Math.max(1, searchW - (searchText.isEmpty() ? 15 : 31));
+        String searchLabel;
+        if (searchText.isEmpty() && !searchFocused) {
+            searchDisplayStart = 0;
+            searchLabel = "Search modules...";
+        } else if (searchFocused) {
+            searchCursor = Math.max(0, Math.min(searchCursor, searchText.length()));
+            int start = 0;
+            while (start < searchCursor
+                && textRenderer.getWidth(searchText.substring(start, searchCursor)) > searchTextWidth - 10) start++;
+            int end = searchCursor;
+            String visible = searchText.substring(start, searchCursor) + "|";
+            while (end < searchText.length()
+                && textRenderer.getWidth(visible + searchText.charAt(end)) <= searchTextWidth) {
+                visible += searchText.charAt(end++);
+            }
+            searchDisplayStart = start;
+            searchLabel = visible;
+        } else {
+            searchDisplayStart = 0;
+            searchLabel = truncateToWidth(searchText, searchTextWidth);
+        }
+        ctx.drawText(textRenderer, searchLabel, searchX + 8, searchY + 8,
+            searchFocused ? WHITE : (searchText.isEmpty() ? MUTED : WHITE), false);
         if (!searchText.isEmpty()) {
             boolean clearHover = mouseX >= searchX + searchW - 23 && mouseX <= searchX + searchW - 4
                 && mouseY >= searchY + 3 && mouseY <= searchY + 22;
@@ -896,11 +919,25 @@ public final class AstraScreen extends Screen {
             && mouseY >= searchY && mouseY <= searchY + 25) {
             if (!searchText.isEmpty() && mouseX >= searchX + searchW - 25) {
                 searchText = "";
+                searchCursor = 0;
                 scrollOffset = 0;
                 searchFocused = true;
                 return true;
             }
             searchFocused = true;
+            int localX = Math.max(0, (int) mouseX - (searchX + 8));
+            int cursor = searchDisplayStart;
+            int bestDistance = Integer.MAX_VALUE;
+            for (int i = searchDisplayStart; i <= searchText.length(); i++) {
+                int atWidth = textRenderer.getWidth(searchText.substring(searchDisplayStart, i));
+                int distance = Math.abs(atWidth - localX);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    cursor = i;
+                }
+                if (atWidth > localX && distance > bestDistance) break;
+            }
+            searchCursor = Math.max(0, Math.min(searchText.length(), cursor));
             return true;
         }
         searchFocused = false;
@@ -922,6 +959,7 @@ public final class AstraScreen extends Screen {
                 scrollOffset = 0;
                 settingsScrollOffset = 0;
                 searchText = "";
+                searchCursor = 0;
                 searchFocused = false;
                 return true;
             }
@@ -1496,7 +1534,8 @@ public final class AstraScreen extends Screen {
     @Override
     public boolean charTyped(char chr, int modifiers) {
         if (searchFocused && !Character.isISOControl(chr) && searchText.length() < 30) {
-            searchText += chr;
+            searchText = searchText.substring(0, searchCursor) + chr + searchText.substring(searchCursor);
+            searchCursor++;
             scrollOffset = 0;
             return true;
         }
@@ -1537,16 +1576,36 @@ public final class AstraScreen extends Screen {
         }
         if (!searchFocused && keyCode == GLFW.GLFW_KEY_SLASH) {
             searchFocused = true;
+            searchCursor = searchText.length();
             return true;
         }
         if (searchFocused && keyCode == GLFW.GLFW_KEY_ENTER) {
             searchFocused = false;
             return true;
         }
-        if (searchFocused && keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-            if (!searchText.isEmpty()) searchText = searchText.substring(0, searchText.length() - 1);
-            scrollOffset = 0;
-            return true;
+        if (searchFocused) {
+            switch (keyCode) {
+                case GLFW.GLFW_KEY_BACKSPACE -> {
+                    if (searchCursor > 0) {
+                        searchText = searchText.substring(0, searchCursor - 1) + searchText.substring(searchCursor);
+                        searchCursor--;
+                        scrollOffset = 0;
+                    }
+                    return true;
+                }
+                case GLFW.GLFW_KEY_DELETE -> {
+                    if (searchCursor < searchText.length()) {
+                        searchText = searchText.substring(0, searchCursor) + searchText.substring(searchCursor + 1);
+                        scrollOffset = 0;
+                    }
+                    return true;
+                }
+                case GLFW.GLFW_KEY_LEFT -> { searchCursor = Math.max(0, searchCursor - 1); return true; }
+                case GLFW.GLFW_KEY_RIGHT -> { searchCursor = Math.min(searchText.length(), searchCursor + 1); return true; }
+                case GLFW.GLFW_KEY_HOME -> { searchCursor = 0; return true; }
+                case GLFW.GLFW_KEY_END -> { searchCursor = searchText.length(); return true; }
+                default -> { }
+            }
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
