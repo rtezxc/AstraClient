@@ -1830,24 +1830,34 @@ public final class AstraClient implements ClientModInitializer {
     /** Client-side movement helpers; they never change packet handling or anti-cheat behavior. */
     private static void updateNoSlow(MinecraftClient client) {
         if (!isEnabled("noslow") || client.player == null || client.world == null
-            || client.currentScreen != null || !client.player.isUsingItem()) return;
+            || (client.currentScreen != null && AstraModuleOptions.boolValue("noslow", "pause_in_menus", true))
+            || !client.player.isUsingItem()) return;
         var player = client.player;
+        if (AstraModuleOptions.boolValue("noslow", "only_on_ground", false) && !player.isOnGround()) return;
         var velocity = player.getVelocity();
         double horizontal = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-        if (horizontal < 0.01D || horizontal >= 0.30D) return;
-        double factor = Math.min(1.12D, 0.30D / horizontal);
+        double strength = AstraModuleOptions.numberValue("noslow", "movement_strength", 1.0D);
+        double cap = Math.min(0.42D, 0.30D * strength);
+        if (horizontal < 0.01D || horizontal >= cap) return;
+        double factor = Math.min(1.12D * strength, cap / horizontal);
         player.setVelocity(velocity.x * factor, velocity.y, velocity.z * factor);
     }
 
     private static void updateSpeed(MinecraftClient client) {
         if (!isEnabled("speed") || client.player == null || client.world == null
-            || client.currentScreen != null || client.player.isSneaking()) return;
+            || (client.currentScreen != null && AstraModuleOptions.boolValue("speed", "pause_in_menus", true))
+            || client.player.isSneaking()) return;
         var player = client.player;
+        if (AstraModuleOptions.boolValue("speed", "only_on_ground", false) && !player.isOnGround()) return;
         if (Math.abs(player.forwardSpeed) < 0.01F && Math.abs(player.sidewaysSpeed) < 0.01F) return;
         var velocity = player.getVelocity();
         double horizontal = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-        if (horizontal < 0.01D || horizontal >= 0.36D) return;
-        double factor = Math.min(1.13D, 0.36D / horizontal);
+        double strength = AstraModuleOptions.numberValue("speed", "movement_strength", 1.0D);
+        String mode = AstraModuleOptions.value("speed", "movement_mode", "Default");
+        double modeFactor = mode.equals("Gentle") ? 0.85D : mode.equals("Aggressive") ? 1.15D : 1.0D;
+        double cap = Math.min(0.44D, 0.36D * strength * modeFactor);
+        if (horizontal < 0.01D || horizontal >= cap) return;
+        double factor = Math.min(1.13D * strength * modeFactor, cap / horizontal);
         player.setVelocity(velocity.x * factor, velocity.y, velocity.z * factor);
     }
 
