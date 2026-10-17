@@ -63,12 +63,14 @@ jobs:
           grep -q '^com/astraclient/mixin/AstraFastBreakMixin.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraNoWeatherMixin.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraOverlayRemovalMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraFireOverlayMixin.class$' /tmp/jar-contents.txt
           unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraOverlayRemovalMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFireOverlayMixin"'
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
 
@@ -82,17 +84,20 @@ jobs:
           screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
 
           overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
+          fire_mixin = (root / "mixin" / "AstraFireOverlayMixin.java").read_text(encoding="utf-8")
 
           overlay_ids = (
               "nopumpkinoverlay", "nofireoverlay", "noportaloverlay",
-              "nospyglassoverlay", "nopowdersnowoverlay",
+              "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay",
+              "novignette", "noscoreboard",
           )
           for module_id in overlay_ids:
               if f'MODULES.put("{module_id}", false)' not in client:
                   sys.exit(f"ERROR: overlay module {module_id} is not registered")
               if f'new ModuleInfo("{module_id}"' not in screen:
                   sys.exit(f"ERROR: overlay module {module_id} is missing from the GUI")
-              if f'isEnabled("{module_id}")' not in overlay_mixin:
+              active_source = fire_mixin if module_id == "nofireoverlay" else overlay_mixin
+              if f'isEnabled("{module_id}")' not in active_source:
                   sys.exit(f"ERROR: overlay module {module_id} has no active mixin behavior")
 
           # The custom background must remain opt-out-able for renderer troubleshooting.
