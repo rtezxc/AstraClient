@@ -55,6 +55,8 @@ jobs:
           grep -q '^com/astraclient/AstraClient.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/AstraScreen.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/AstraModuleSettingsScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraModuleOptions.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraModuleOptionsScreen.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/AstraHudEditorScreen.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/AstraBackgroundRenderer.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraPanoramaMixin.class$' /tmp/jar-contents.txt
@@ -82,6 +84,29 @@ jobs:
           root = pathlib.Path("src/main/java/com/astraclient")
           client = (root / "AstraClient.java").read_text(encoding="utf-8")
           screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+          options = (root / "AstraModuleOptions.java").read_text(encoding="utf-8")
+          options_screen = (root / "AstraModuleOptionsScreen.java").read_text(encoding="utf-8")
+          module_screen = (root / "AstraModuleSettingsScreen.java").read_text(encoding="utf-8")
+
+          # The typed settings engine must expose every required control and persist values.
+          for control_type in ("TOGGLE", "DROPDOWN", "SLIDER", "MULTI_SELECT", "KEYBIND", "TEXT", "COLOR", "MODE"):
+              if f"{control_type}" not in options:
+                  sys.exit(f"ERROR: typed module setting control {control_type} is missing")
+          if "AstraModuleOptions.load(properties)" not in client or "AstraModuleOptions.save(properties)" not in client:
+              sys.exit("ERROR: module options are not integrated with persistent config load/save")
+          if "new AstraModuleOptionsScreen" not in module_screen:
+              sys.exit("ERROR: module settings page does not link to advanced options")
+          if "openModuleSettings(mouseX, mouseY)" not in screen or "hasShiftDown()" not in screen:
+              sys.exit("ERROR: right-click settings navigation or Shift-right-click context menu is missing")
+          for required_setting in ('"attack_mode"', '"attack_range"', '"rotation_mode"', '"target_priority"',
+                                   '"target_types"', '"show_target"', '"attack_effects"'):
+              if required_setting not in options:
+                  sys.exit(f"ERROR: Kill Aura setting {required_setting} is missing")
+          for runtime_hook in ("shouldWaitForCritical", "applyKillAuraRotation", "selectedTargets"):
+              if runtime_hook not in client:
+                  sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
+          if "AstraModuleOptions.previewValue" not in options_screen:
+              sys.exit("ERROR: slider/text preview controls are not wired")
 
           overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
           fire_mixin = (root / "mixin" / "AstraFireOverlayMixin.java").read_text(encoding="utf-8")
