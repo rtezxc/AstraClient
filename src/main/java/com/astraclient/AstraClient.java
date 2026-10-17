@@ -80,6 +80,7 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean configNeedsMigration;
 
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
+    private static final Set<String> FAVORITE_MODULES = new LinkedHashSet<>();
     /** Runtime snapshot lets PvP Mode restore the user's previous module states when disabled. */
     private static final Map<String, Boolean> PVP_MODE_PREVIOUS_STATES = new LinkedHashMap<>();
     private static final Map<String, Integer> MODULE_KEYBINDS = new LinkedHashMap<>();
@@ -265,6 +266,17 @@ public final class AstraClient implements ClientModInitializer {
 
     public static boolean isEnabled(String id) {
         return MODULES.getOrDefault(id, false);
+    }
+
+    public static boolean isFavorite(String id) {
+        return FAVORITE_MODULES.contains(id);
+    }
+
+    public static void toggleFavorite(String id) {
+        if (!MODULES.containsKey(id)) return;
+        if (!FAVORITE_MODULES.add(id)) FAVORITE_MODULES.remove(id);
+        saveConfig();
+        notifyUser((FAVORITE_MODULES.contains(id) ? "Pinned " : "Unpinned ") + readableName(id));
     }
 
     public static void toggle(String id) {
@@ -1513,6 +1525,12 @@ public final class AstraClient implements ClientModInitializer {
                     properties.getProperty("module." + id, Boolean.toString(MODULES.get(id)))
                 ));
             }
+            FAVORITE_MODULES.clear();
+            for (String id : MODULES.keySet()) {
+                if (Boolean.parseBoolean(properties.getProperty("favorite." + id, "false"))) {
+                    FAVORITE_MODULES.add(id);
+                }
+            }
             timeChangerPreset = Math.max(0L, Math.min(24000L, Long.parseLong(properties.getProperty("timechanger.preset", "6000"))));
             accentTheme = Math.max(0, Math.min(3, Integer.parseInt(
                 properties.getProperty("theme.accentTheme",
@@ -1620,6 +1638,8 @@ public final class AstraClient implements ClientModInitializer {
         AstraModuleOptions.save(properties);
         for (Map.Entry<String, Boolean> entry : MODULES.entrySet()) {
             properties.setProperty("module." + entry.getKey(), Boolean.toString(entry.getValue()));
+            properties.setProperty("favorite." + entry.getKey(),
+                Boolean.toString(FAVORITE_MODULES.contains(entry.getKey())));
         }
         properties.setProperty("theme.accentTheme", Integer.toString(accentTheme));
         properties.setProperty("timechanger.preset", Long.toString(timeChangerPreset));
