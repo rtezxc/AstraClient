@@ -86,6 +86,28 @@ public final class AstraHudEditorScreen extends Screen {
         context.fill(0, 0, width, height, 0xFF000000 | (shade << 16) | (shade << 8) | (shade + 4));
         int accent = AstraClient.accentColor();
 
+        // The same restrained cyan-violet technical grid as the main Astra menu.
+        // It is painted first so widget cards and labels always stay crisp above it.
+        int gridStep = Math.max(28, Math.min(44, width / 28));
+        int gridDrift = (int) ((now / 83L) % gridStep);
+        for (int gx = -gridStep + gridDrift; gx < width; gx += gridStep) {
+            if (gx >= 0 && gx < width) {
+                context.fill(gx, 0, Math.min(width, gx + 1), height, 0x0C4AD9F5);
+            }
+        }
+        for (int gy = gridDrift; gy < height; gy += gridStep) {
+            if (gy >= 0 && gy < height) {
+                context.fill(0, gy, width, Math.min(height, gy + 1), 0x0B8175E8);
+            }
+        }
+        for (int mote = 0; mote < 20; mote++) {
+            int mx = Math.floorMod(mote * 89 + (int) (now / (61L + mote % 5 * 19L)), Math.max(1, width));
+            int my = Math.floorMod(mote * 43 + (int) (now / (73L + mote % 4 * 23L)), Math.max(1, height));
+            int size = mote % 6 == 0 ? 2 : 1;
+            context.fill(mx, my, Math.min(width, mx + size), Math.min(height, my + size),
+                mote % 3 == 0 ? 0x9054E8FF : 0x78756BE0);
+        }
+
         int headerY = 10 + Math.round((1.0f - eased) * 9.0f);
         context.fill(10, headerY, width - 10, headerY + 52, PANEL);
         context.fill(10, headerY, width - 10, headerY + 3, accent);
@@ -132,6 +154,27 @@ public final class AstraHudEditorScreen extends Screen {
                 context.fill(x, y + boxH - 2, x + boxW, y + boxH, accent);
             }
             renderedBoxes.add(new Box(widget.id, widget.label, x, y, boxW, boxH, enabled));
+        }
+
+        // While moving a widget, show alignment guides and a live coordinate chip.
+        // This gives precise placement feedback without changing the saved coordinates.
+        if (draggedId != null) {
+            for (Box box : renderedBoxes) {
+                if (!box.id().equals(draggedId)) continue;
+                int centerX = box.x() + box.width() / 2;
+                int centerY = box.y() + box.height() / 2;
+                int guide = 0x3254E8FF;
+                context.fill(centerX, headerY + 55, centerX + 1, Math.max(headerY + 56, height - 36), guide);
+                context.fill(10, centerY, Math.max(11, width - 10), centerY + 1, guide);
+                String position = "X " + box.x() + "   Y " + box.y();
+                int chipW = textRenderer.getWidth(position) + 12;
+                int chipX = clamp(box.x() + box.width() + 7, 6, Math.max(6, width - chipW - 6));
+                int chipY = clamp(box.y() - 18, headerY + 56, Math.max(headerY + 56, height - 49));
+                context.fill(chipX, chipY, chipX + chipW, chipY + 15, 0xF20B101A);
+                context.fill(chipX, chipY, chipX + 2, chipY + 15, accent);
+                context.drawText(textRenderer, position, chipX + 6, chipY + 4, TEXT, false);
+                break;
+            }
         }
 
         int buttonY = height - 31;
