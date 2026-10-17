@@ -21,6 +21,10 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ShulkerBoxBlock;
+import net.minecraft.item.BlockItem;
+import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
@@ -78,6 +82,9 @@ public final class AstraClient implements ClientModInitializer {
     private static final Map<String, Integer> MODULE_KEYBINDS = new LinkedHashMap<>();
     private static final Map<String, Boolean> KEY_WAS_DOWN = new LinkedHashMap<>();
     private static final Map<UUID, GlowState> ORIGINAL_ENTITY_GLOW = new HashMap<>();
+    private static final Set<BlockPos> XRAY_ORE_POSITIONS = new HashSet<>();
+    private static long lastXrayScanAt;
+    private static Object xrayWorld;
     private static Object lastGlowWorld;
     private static final Map<String, Integer> HUD_X = new LinkedHashMap<>();
     private static final Map<String, Integer> HUD_Y = new LinkedHashMap<>();
@@ -222,6 +229,17 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("blockhighlight", false);
         MODULES.put("orbitsparks", false);
         MODULES.put("timechanger", false);
+        MODULES.put("xray", false);
+        MODULES.put("nametags", false);
+        MODULES.put("noslow", false);
+        MODULES.put("speed", false);
+        MODULES.put("noweather", false);
+        MODULES.put("fastplace", false);
+        MODULES.put("fastbreak", false);
+        MODULES.put("scaffold", false);
+        MODULES.put("aimassist", false);
+        MODULES.put("autototem", false);
+        MODULES.put("antiknockback", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -727,6 +745,9 @@ public final class AstraClient implements ClientModInitializer {
             lastGlowWorld = client.world;
         }
         ORIGINAL_ENTITY_GLOW.clear();
+        XRAY_ORE_POSITIONS.clear();
+        lastXrayScanAt = 0L;
+        xrayWorld = null;
         zoomOverrideActive = false;
         fullBrightWasEnabled = false;
         appliedNightVision = false;
@@ -1611,6 +1632,7 @@ public final class AstraClient implements ClientModInitializer {
             updateDamageTracker(client);
             updateBlockFinder(client);
             updateStorageFinder(client);
+            updateXrayOres(client);
             updateTracers(client);
             updateBreadcrumbs(client);
             updateTimeChanger(client);
@@ -1629,6 +1651,12 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoEat(client);
             updateAutoWalk(client);
             updateCombatModules(client);
+            updateAimAssist(client);
+            updateAutoTotem(client);
+            updateNoSlow(client);
+            updateSpeed(client);
+            updateScaffold(client);
+            updateAntiKnockback(client);
             updateTargetEspParticles(client);
             updatePlayerTrail(client);
             updateOrbitSparks(client);
