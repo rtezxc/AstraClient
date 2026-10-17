@@ -250,6 +250,9 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("noportaloverlay", false);
         MODULES.put("nospyglassoverlay", false);
         MODULES.put("nopowdersnowoverlay", false);
+        MODULES.put("nonauseaoverlay", false);
+        MODULES.put("novignette", false);
+        MODULES.put("noscoreboard", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
