@@ -91,6 +91,26 @@ public final class AstraBackgroundRenderer {
             }
         }
 
+        // Soft HUD-like framing panels add depth while keeping menu text readable.
+        int panelWidth = Math.min(260, Math.max(0, width / 3));
+        int panelTop = Math.max(58, height / 5);
+        int panelBottom = Math.min(height - 42, height * 4 / 5);
+        if (panelWidth > 48 && panelBottom > panelTop) {
+            int panelLeft = Math.max(18, width / 12);
+            int panelRight = Math.min(width - 18, panelLeft + panelWidth);
+            context.fill(panelLeft, panelTop, panelRight, panelTop + 1, 0x304AD9F5);
+            context.fill(panelLeft, panelBottom - 1, panelRight, panelBottom, 0x226D54D9);
+            context.fill(panelLeft, panelTop, panelLeft + 1, panelBottom, 0x224AD9F5);
+            context.fill(panelRight - 1, panelTop, panelRight, panelBottom, 0x226D54D9);
+            // Small segmented telemetry marks are decorative only; no gameplay state is read.
+            for (int mark = 0; mark < 9; mark++) {
+                int markX = panelLeft + 10 + mark * Math.max(4, (panelRight - panelLeft - 20) / 9);
+                int markHeight = 3 + Math.floorMod(mark * 7 + (int) (time / 240L), 12);
+                context.fill(markX, panelBottom - 8 - markHeight, Math.min(panelRight - 5, markX + 2),
+                    panelBottom - 8, mark % 3 == 0 ? 0xFF4AD9F5 : 0xFF655CC4);
+            }
+        }
+
         // A restrained horizontal scan line slowly travels down the backdrop.
         int scanY = Math.floorMod((int) (time / 28L), Math.max(1, height));
         context.fill(0, scanY, width, Math.min(height, scanY + 1), 0x184AD9F5);

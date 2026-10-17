@@ -358,8 +358,26 @@ public final class AstraScreen extends Screen {
                     ctx.fill(x, y, x + 3, y + cardH, module.implemented
                         ? (enabled ? accent : LINE) : 0xFF3A4050);
                     if (enabled) {
+                        // Subtle animated active-state glow; simple fills keep this renderer
+                        // compatible with vanilla, Sodium, and mobile OpenGL backends.
+                        int glowAlpha = 18 + (int) (14 * (0.5 + 0.5 * Math.sin(now / 260.0 + i * 0.7)));
+                        int activeGlow = (glowAlpha << 24) | (accent & 0x00FFFFFF);
                         ctx.fill(x + 4, y + 2, x + cardW - 2, y + 3, 0x553FCEE9);
+                        ctx.fill(x + 4, y + 3, x + cardW - 2, y + 7, activeGlow);
+                        // A moving highlight gives enabled cards a restrained energy pulse.
+                        int shineWidth = Math.max(8, cardW / 5);
+                        int shineTravel = Math.max(1, cardW - shineWidth - 8);
+                        int shineX = x + 4 + (int) ((now / 11L + i * 13L) % shineTravel);
+                        ctx.fill(shineX, y + 2, Math.min(x + cardW - 2, shineX + shineWidth), y + 3,
+                            0xBFFFFFFF);
                     }
+                    // Small corner cuts provide a crisp, technical card frame without
+                    // rounded-rectangle or custom-shader dependencies.
+                    int cornerColor = hover ? accent : (enabled ? 0xFF3E6477 : 0xFF30394A);
+                    ctx.fill(x + cardW - 8, y + 1, x + cardW - 2, y + 2, cornerColor);
+                    ctx.fill(x + cardW - 2, y + 1, x + cardW - 1, y + 7, cornerColor);
+                    ctx.fill(x + 1, y + cardH - 2, x + 7, y + cardH - 1, cornerColor);
+                    ctx.fill(x + 1, y + cardH - 7, x + 2, y + cardH - 2, cornerColor);
                     boolean iconHover = mouseX >= x + 7 && mouseX <= x + 32
                         && mouseY >= y + 7 && mouseY <= y + 32;
                     ctx.fill(x + 10, y + 10, x + 29, y + 29,
