@@ -71,6 +71,8 @@ public final class AstraClient implements ClientModInitializer {
     private static final Path CONFIG_PATH =
         FabricLoader.getInstance().getConfigDir().resolve("astraclient.properties");
     private static final DateTimeFormatter CLOCK_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final int CONFIG_SCHEMA_VERSION = 1;
+    private static boolean configNeedsMigration;
 
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
     private static final Map<String, Integer> MODULE_KEYBINDS = new LinkedHashMap<>();
@@ -1270,6 +1272,7 @@ public final class AstraClient implements ClientModInitializer {
      * snapshot if the primary file was truncated or contains invalid values.
      */
     private static void loadConfig() {
+        configNeedsMigration = false;
         if (!Files.isRegularFile(CONFIG_PATH)) return;
         try {
             loadConfigFile(CONFIG_PATH);
@@ -1288,6 +1291,11 @@ public final class AstraClient implements ClientModInitializer {
                 System.err.println("[Astra Client] Config backup recovery failed: " + backupFailure.getMessage());
             }
         }
+        if (configNeedsMigration) {
+            saveConfig();
+            configNeedsMigration = false;
+            System.out.println("[Astra Client] Migrated legacy settings to config schema " + CONFIG_SCHEMA_VERSION + ".");
+        }
     }
 
     /**
@@ -1296,7 +1304,7 @@ public final class AstraClient implements ClientModInitializer {
      */
     private static void validateConfigProperties(Properties properties) {
         for (String key : List.of(
-            "hud.opacity", "theme.accentTheme", "gui.keybind", "hud.editorKey", "gui.scale",
+            "config.version", "hud.opacity", "theme.accentTheme", "gui.keybind", "hud.editorKey", "gui.scale",
             "zoom.fov", "crosshair.size", "crosshair.gap", "crosshair.thickness",
             "breadcrumbs.length", "waypoint.x", "waypoint.y", "waypoint.z",
             "autoeat.hungerThreshold", "lowhealth.threshold", "effectalert.thresholdSeconds",
@@ -1314,13 +1322,28 @@ public final class AstraClient implements ClientModInitializer {
             if (x != null) Integer.parseInt(x);
             if (y != null) Integer.parseInt(y);
         }
+        int version = Integer.parseInt(properties.getProperty("config.version", "0"));
+        if (version < 0) throw new IllegalArgumentException("Negative Astra config version");
     }
 
     private static void loadConfigFile(Path sourcePath) throws Exception {
         Properties properties = new Properties();
+        int loadedVersion;
         try (InputStream input = Files.newInputStream(sourcePath)) {
             properties.load(input);
             validateConfigProperties(properties);
+            loadedVersion = Integer.parseInt(properties.getProperty("config.version", "0"));
+            if (loadedVersion > CONFIG_SCHEMA_VERSION) {
+                System.err.println("[Astra Client] Config schema " + loadedVersion
+                    + " is newer than supported schema " + CONFIG_SCHEMA_VERSION
+                    + "; known settings will be loaded where possible.");
+            }
+            // Version 0 predates the explicit theme key; retain support for its legacy alias.
+            if (loadedVersion == 0 && !properties.containsKey("theme.accentTheme")
+                && properties.containsKey("theme.alternateAccent")) {
+                properties.setProperty("theme.accentTheme",
+                    Boolean.parseBoolean(properties.getProperty("theme.alternateAccent")) ? "1" : "0");
+            }
             clickSounds = Boolean.parseBoolean(properties.getProperty("ui.clickSounds", "true"));
             hudOpacity = Math.max(35, Math.min(100, Integer.parseInt(properties.getProperty("hud.opacity", "84"))));
             hudBackgrounds = Boolean.parseBoolean(properties.getProperty("hud.backgrounds", "true"));
@@ -1405,6 +1428,7 @@ public final class AstraClient implements ClientModInitializer {
                 if (y != null) HUD_Y.put(id, Integer.parseInt(y));
             }
         }
+        configNeedsMigration = loadedVersion < CONFIG_SCHEMA_VERSION;
     }
 
     private static void backupExistingConfig(Path configDirectory) {
@@ -1432,6 +1456,7 @@ public final class AstraClient implements ClientModInitializer {
 
     public static void saveConfig() {
         Properties properties = new Properties();
+        properties.setProperty("config.version", Integer.toString(CONFIG_SCHEMA_VERSION));
         for (Map.Entry<String, Boolean> entry : MODULES.entrySet()) {
             properties.setProperty("module." + entry.getKey(), Boolean.toString(entry.getValue()));
         }
