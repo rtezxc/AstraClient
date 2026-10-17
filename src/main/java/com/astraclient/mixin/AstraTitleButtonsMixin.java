@@ -31,8 +31,11 @@ public abstract class AstraTitleButtonsMixin {
                 button.setPosition(centerX + 6, mainY);
             } else if (label.contains("minecraft realms") || label.equals("realms")) {
                 // Realms is a separate vanilla button on 1.21.4; give it its own row.
-                button.setDimensions(164, 24);
-                button.setPosition(centerX - 82, mainY + 40);
+                button.setDimensions(164, 20);
+                button.setPosition(centerX - 82, mainY + 36);
+            } else if (label.contains("options") || label.contains("quit")) {
+                // Move the utility row below Realms so no vanilla controls overlap.
+                button.setPosition(button.getX(), mainY + 64);
             }
         }
     }
