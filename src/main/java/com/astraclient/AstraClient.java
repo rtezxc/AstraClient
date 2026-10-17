@@ -2284,12 +2284,21 @@ if (isEnabled("blockfinder")) {
         }
 
         if (isEnabled("watermark")) {
-            int wx = hudX("watermark", 8);
-            int wy = hudY("watermark", 160);
             String brand = "ASTRA";
             String subtitle = "CLIENT";
+            String fpsText = Math.max(0, client.getCurrentFps()) + " FPS";
+            String pingText = "LOCAL";
+            if (client.getNetworkHandler() != null && client.player != null) {
+                var pingEntry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
+                if (pingEntry != null) pingText = Math.max(0, pingEntry.getLatency()) + " MS";
+            }
+            String stats = fpsText + "  ·  " + pingText;
             int brandWidth = client.textRenderer.getWidth(brand);
-            int panelWidth = brandWidth + client.textRenderer.getWidth(subtitle) + 30;
+            int subtitleWidth = client.textRenderer.getWidth(subtitle);
+            int statsWidth = client.textRenderer.getWidth(stats);
+            int panelWidth = brandWidth + subtitleWidth + statsWidth + 44;
+            int wx = clampInt(hudX("watermark", 8), 0, Math.max(0, screenWidth - panelWidth));
+            int wy = clampInt(hudY("watermark", 8), 0, Math.max(0, screenHeight - 24));
             HUD_RENDERED_BOUNDS.put("watermark", new HudBounds(wx, wy, panelWidth, 24));
             if (hudBackgrounds) context.fill(wx, wy, wx + panelWidth, wy + 24, 0xE90B101A);
             context.fill(wx, wy, wx + 3, wy + 24, accent);
@@ -2301,6 +2310,9 @@ if (isEnabled("blockfinder")) {
             if (shineRight > shineLeft) context.fill(shineLeft, wy + 1, shineRight, wy + 3, 0x80FFFFFF);
             context.drawText(client.textRenderer, brand, wx + 9, wy + 4, 0xFFF2F5FC, true);
             context.drawText(client.textRenderer, subtitle, wx + 12 + brandWidth, wy + 7, 0xFF4AD9F5, false);
+            int statsX = wx + 18 + brandWidth + subtitleWidth;
+            context.fill(statsX - 5, wy + 5, statsX - 4, wy + 19, 0xFF394155);
+            context.drawText(client.textRenderer, stats, statsX, wy + 7, 0xFFD8E1F1, false);
         }
 
         if (isEnabled("arraylist")) {
@@ -2343,15 +2355,24 @@ if (isEnabled("blockfinder")) {
         }
 
         if (isEnabled("keystrokes")) {
-            int keyX = hudX("keystrokes", 8);
+            int keyX = clampInt(hudX("keystrokes", 8), 0, Math.max(0, screenWidth - 96));
             int savedY = hudY("keystrokes", -110);
-            int keyY = savedY < 0 ? screenHeight + savedY : savedY;
+            int keyY = clampInt(savedY < 0 ? screenHeight + savedY : savedY, 0, Math.max(0, screenHeight - 85));
             drawKey(context, client, client.options.forwardKey, keyX + 22, keyY, "W", accent);
             drawKey(context, client, client.options.leftKey, keyX, keyY + 22, "A", accent);
             drawKey(context, client, client.options.backKey, keyX + 22, keyY + 22, "S", accent);
             drawKey(context, client, client.options.rightKey, keyX + 44, keyY + 22, "D", accent);
-            drawKey(context, client, client.options.jumpKey, keyX, keyY + 44, "JUMP", accent);
-            HUD_RENDERED_BOUNDS.put("keystrokes", new HudBounds(keyX, keyY, 64, 63));
+            drawKey(context, client, client.options.jumpKey, keyX + 11, keyY + 44, "JUMP", accent);
+            long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+            boolean leftMouseDown = windowHandle != 0L
+                && org.lwjgl.glfw.GLFW.glfwGetMouseButton(windowHandle, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                    == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            boolean rightMouseDown = windowHandle != 0L
+                && org.lwjgl.glfw.GLFW.glfwGetMouseButton(windowHandle, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)
+                    == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            drawMouseKey(context, client, keyX, keyY + 66, "LMB", leftMouseDown, accent);
+            drawMouseKey(context, client, keyX + 48, keyY + 66, "RMB", rightMouseDown, accent);
+            HUD_RENDERED_BOUNDS.put("keystrokes", new HudBounds(keyX, keyY, 96, 85));
         }
 
         if (isEnabled("damageindicators") && System.currentTimeMillis() < damageAlertUntil) {
@@ -3072,5 +3093,20 @@ if (isEnabled("blockfinder")) {
         context.drawText(client.textRenderer, label,
             x + (width - textWidth) / 2, y + 6,
             binding.isPressed() ? 0xFF10131C : 0xFFE9ECF6, false);
+    }
+
+    private static void drawMouseKey(
+        DrawContext context, MinecraftClient client, int x, int y,
+        String label, boolean pressed, int accent
+    ) {
+        int width = 46;
+        if (pressed) context.fill(x, y, x + width, y + 19, accent);
+        else if (hudBackgrounds) context.fill(x, y, x + width, y + 19,
+            (Math.round(255.0f * hudOpacity / 100.0f) << 24) | 0x00101420);
+        context.fill(x, y, x + width, y + 1, pressed ? 0xFFFFFFFF : 0xFF353D50);
+        int textWidth = client.textRenderer.getWidth(label);
+        context.drawText(client.textRenderer, label,
+            x + (width - textWidth) / 2, y + 6,
+            pressed ? 0xFF10131C : 0xFFE9ECF6, false);
     }
 }
