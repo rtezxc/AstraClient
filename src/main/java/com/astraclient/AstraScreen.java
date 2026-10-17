@@ -133,6 +133,7 @@ public final class AstraScreen extends Screen {
     private int contextMenuX, contextMenuY;
     private int dragOffsetX, dragOffsetY, resizeStartX, resizeStartScale;
     private int windowOffsetX, windowOffsetY;
+    private int renderOffsetY;
     private final long openedAt = System.currentTimeMillis();
     private long closingAt;
     private boolean closing;
@@ -199,17 +200,20 @@ public final class AstraScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         // Fully opaque canvas: never expose Minecraft's blurred world behind Astra.
         // This also avoids translucent compositing on mobile OpenGL renderers.
-        long now = System.currentTimeMillis();
-        float progress = closing
-            ? Math.max(0.0f, 1.0f - (now - closingAt) / 220.0f)
-            : Math.min(1.0f, Math.max(0.0f, (now - openedAt) / 260.0f));
+        long clockNow = System.currentTimeMillis();
+        boolean reducedMotion = AstraClient.isReducedMotionEnabled();
+        long now = reducedMotion ? 0L : clockNow;
+        float progress = reducedMotion ? 1.0f : closing
+            ? Math.max(0.0f, 1.0f - (clockNow - closingAt) / 220.0f)
+            : Math.min(1.0f, Math.max(0.0f, (clockNow - openedAt) / 260.0f));
         float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0);
+        renderOffsetY = Math.round((1.0f - eased) * 14.0f);
         int shade = Math.round(8 + 3 * eased);
         ctx.fill(0, 0, width, height, 0xFF000000 | (shade << 16) | (shade << 8) | (shade + 4));
         int panelW = panelWidth();
         int panelH = panelHeight();
         int left = panelLeft(panelW);
-        int top = panelTop(panelH) + Math.round((1.0f - eased) * 14.0f);
+        int top = panelTop(panelH) + renderOffsetY;
         int sideW = sidebarWidth(panelW);
         int accent = AstraClient.accentColor();
         int contentX = left + sideW + 18;
@@ -527,7 +531,7 @@ public final class AstraScreen extends Screen {
         ctx.fill(gx + 3, gy + 7, gx + 10, gy + 10, accent);
         ctx.fill(gx + 6, gy + 3, gx + 10, gy + 6, accent);
         // Reverse the opening motion for a short, smooth close transition.
-        if (closing && now - closingAt >= 220L) {
+        if (closing && clockNow - closingAt >= 220L) {
             if (client != null && client.currentScreen == this) client.setScreen(null);
             return;
         }
@@ -536,12 +540,13 @@ public final class AstraScreen extends Screen {
     }
 
     public void requestAnimatedClose() {
-        if (!closing) {
-            closing = true;
-            closingAt = System.currentTimeMillis();
-            searchFocused = false;
-            contextMenuModuleId = null;
-        }
+        if (closing) return;
+        closing = true;
+        closingAt = System.currentTimeMillis();
+        searchFocused = false;
+        contextMenuModuleId = null;
+        // Reduced motion closes immediately rather than running a fade/slide.
+        if (AstraClient.isReducedMotionEnabled()) closingAt -= 220L;
     }
 
     @Override
@@ -832,6 +837,8 @@ public final class AstraScreen extends Screen {
             "Quick module profiles", "OPEN", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 526 - settingsScrollOffset, contentW,
             "Animated menu background", AstraClient.isCustomMenuBackgroundEnabled() ? "ON" : "OFF", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 562 - settingsScrollOffset, contentW,
+            "Reduced motion", AstraClient.isReducedMotionEnabled() ? "ON" : "OFF", accent);
     }
 
     private void renderSettingRow(
@@ -982,6 +989,10 @@ public final class AstraScreen extends Screen {
             }
             if (inside(mouseX, mouseY, contentX, top + 526 - settingsScrollOffset, contentW, 34)) {
                 AstraClient.toggleCustomMenuBackground();
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 562 - settingsScrollOffset, contentW, 34)) {
+                AstraClient.toggleReducedMotion();
                 return true;
             }
             return true;
@@ -1388,7 +1399,7 @@ public final class AstraScreen extends Screen {
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (button == 0 && draggingListScrollbar) {
             int panelH = panelHeight();
-            int top = panelTop(panelH);
+            int top = panelTop(panelH) + renderOffsetY;
             int listTop = top + 105, listBottom = top + panelH - 43;
             List<ModuleInfo> visible = getVisibleModules();
             int rows = (visible.size() + 1) / 2;
@@ -1410,7 +1421,7 @@ public final class AstraScreen extends Screen {
         }
         if (button == 0 && draggingWindow) {
             int left = (width - panelWidth()) / 2;
-            int top = (height - panelHeight()) / 2;
+            int top = (height - panelHeight()) / 2 + renderOffsetY;
             windowOffsetX = (int) mouseX - dragOffsetX - left;
             windowOffsetY = (int) mouseY - dragOffsetY - top;
             windowOffsetX = Math.max(-left, Math.min(width - panelWidth() - left, windowOffsetX));
@@ -1458,7 +1469,7 @@ public final class AstraScreen extends Screen {
         }
         if (category.equals("Settings")) {
             int panelH = panelHeight();
-            int maxSettingsScroll = Math.max(0, 564 - Math.max(90, panelH - 130));
+            int maxSettingsScroll = Math.max(0, 604 - Math.max(90, panelH - 130));
             settingsScrollOffset = Math.max(0, Math.min(maxSettingsScroll,
                 settingsScrollOffset - (int) Math.round(verticalAmount * 32.0)));
             return true;

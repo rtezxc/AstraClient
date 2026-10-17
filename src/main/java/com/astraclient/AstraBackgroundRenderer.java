@@ -16,7 +16,7 @@ public final class AstraBackgroundRenderer {
     public static void render(DrawContext context) {
         int width = Math.max(1, context.getScaledWindowWidth());
         int height = Math.max(1, context.getScaledWindowHeight());
-        long time = System.currentTimeMillis();
+        long time = AstraClient.isReducedMotionEnabled() ? 0L : System.currentTimeMillis();
 
         // Deep-space base and broad vertical color falloff.
         context.fill(0, 0, width, height, 0xFF050711);

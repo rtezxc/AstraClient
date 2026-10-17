@@ -125,6 +125,7 @@ public final class AstraClient implements ClientModInitializer {
     private static int hudOpacity = 84;
     private static boolean hudBackgrounds = true;
     private static boolean customMenuBackground = true;
+    private static boolean reducedMotion;
     private static long sessionStartedAt = System.currentTimeMillis();
     private static String notification = "Astra Client loaded";
     private static long notificationUntil = System.currentTimeMillis() + 2400L;
@@ -855,6 +856,16 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    public static boolean isReducedMotionEnabled() {
+        return reducedMotion;
+    }
+
+    public static void toggleReducedMotion() {
+        reducedMotion = !reducedMotion;
+        notifyUser("Reduced motion " + (reducedMotion ? "enabled" : "disabled"));
+        saveConfig();
+    }
+
     public static int previewHudOpacity(int value) {
         hudOpacity = Math.max(35, Math.min(100, value));
         return hudOpacity;
@@ -1516,6 +1527,7 @@ public final class AstraClient implements ClientModInitializer {
                     Boolean.parseBoolean(properties.getProperty("theme.alternateAccent")) ? "1" : "0");
             }
             clickSounds = Boolean.parseBoolean(properties.getProperty("ui.clickSounds", "true"));
+            reducedMotion = Boolean.parseBoolean(properties.getProperty("ui.reducedMotion", "false"));
             hudOpacity = Math.max(35, Math.min(100, Integer.parseInt(properties.getProperty("hud.opacity", "84"))));
             hudBackgrounds = Boolean.parseBoolean(properties.getProperty("hud.backgrounds", "true"));
             customMenuBackground = Boolean.parseBoolean(properties.getProperty("graphics.menuBackground", "true"));
@@ -1647,6 +1659,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("theme.customEnabled", Boolean.toString(customAccentEnabled));
         properties.setProperty("theme.customColor", String.format(Locale.ROOT, "%06X", customAccentColor & 0x00FFFFFF));
         properties.setProperty("ui.clickSounds", Boolean.toString(clickSounds));
+        properties.setProperty("ui.reducedMotion", Boolean.toString(reducedMotion));
         properties.setProperty("autosprint.groundOnly", Boolean.toString(autoSprintGroundOnly));
         properties.setProperty("autosprint.disableInMenus", Boolean.toString(autoSprintDisableInMenus));
         properties.setProperty("gui.keybind", Integer.toString(guiKeybindCode));

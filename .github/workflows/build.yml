@@ -130,6 +130,14 @@ jobs:
               sys.exit("ERROR: menu background setting is not persisted/toggleable")
           if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
               sys.exit("ERROR: menu background setting is missing from the GUI")
+          if '"ui.reducedMotion"' not in client or 'isReducedMotionEnabled()' not in client:
+              sys.exit("ERROR: reduced-motion preference is not persisted")
+          if '"Reduced motion"' not in screen or 'toggleReducedMotion()' not in screen:
+              sys.exit("ERROR: reduced-motion setting is missing from the GUI")
+          ui_effects = (root / "AstraUiEffects.java").read_text(encoding="utf-8")
+          background = (root / "AstraBackgroundRenderer.java").read_text(encoding="utf-8")
+          if 'isReducedMotionEnabled()' not in ui_effects or 'isReducedMotionEnabled()' not in background:
+              sys.exit("ERROR: animated backgrounds ignore reduced-motion preference")
           for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
               mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
               if "isCustomMenuBackgroundEnabled()" not in mixin_source:

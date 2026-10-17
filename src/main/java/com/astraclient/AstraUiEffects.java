@@ -14,6 +14,7 @@ public final class AstraUiEffects {
     public static void renderAmbientBackdrop(DrawContext context, int width, int height,
                                              long time, int accent) {
         if (width <= 0 || height <= 0) return;
+        if (AstraClient.isReducedMotionEnabled()) time = 0L;
 
         // Two drifting, soft-edged aurora clouds add depth to secondary Astra screens.
         // The effect is DrawContext-only: no framebuffer, shader, texture, or per-frame object allocation.
