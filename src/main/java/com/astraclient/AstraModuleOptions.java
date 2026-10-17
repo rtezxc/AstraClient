@@ -73,7 +73,7 @@ public final class AstraModuleOptions {
                 out.add(toggle("target_passive", "Target Passive Mobs", "Allow passive mobs as targets.", false));
                 out.add(slider("attack_range", "Attack Range", "Vanilla melee range only; this never extends reach.", "3.0", 2.0, 3.0, 0.1));
                 out.add(slider("fov", "Target FOV", "Angle around the view direction in which targets can be selected.", "180", 60, 180, 5));
-                out.add(dropdown("rotation_mode", "Rotation Mode", "Choose whether target rotation is applied.", "None", ROTATION_MODES));
+                out.add(dropdown("rotation_mode", "Rotation Mode", "Choose whether target rotation is applied.", "Visible", ROTATION_MODES));
                 out.add(dropdown("target_priority", "Target Priority", "Choose which valid target is preferred.", "Closest", TARGET_PRIORITIES));
                 out.add(toggle("show_target", "Show Target", "Show target feedback while Kill Aura is active.", true));
                 out.add(toggle("attack_effects", "Attack Effects", "Show lightweight target particles.", true));
@@ -279,6 +279,12 @@ public final class AstraModuleOptions {
             String moduleId = remainder.substring(0, split);
             String optionId = remainder.substring(split + 1);
             String raw = properties.getProperty(key, "");
+            // Earlier builds defaulted Kill Aura to no rotation, which can make attacks
+            // fail on servers that validate facing. Migrate that old default once; users
+            // can still choose None again from the settings screen.
+            if (moduleId.equals("killaura") && optionId.equals("rotation_mode") && raw.equals("None")) {
+                raw = "Visible";
+            }
             // Preserve unknown future options as strings for forward-compatible config migration.
             VALUES.put(key(moduleId, optionId), raw.length() > 128 ? raw.substring(0, 128) : raw);
         }
