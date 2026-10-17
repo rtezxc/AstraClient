@@ -988,7 +988,7 @@ public final class AstraScreen extends Screen {
                 if (module.implemented && mouseX >= x + 7 && mouseX <= x + 32
                     && mouseY >= y + 7 && mouseY <= y + 32) {
                     client.setScreen(new AstraModuleSettingsScreen(this, module.id,
-                        module.name, module.description, true));
+                        module.name, module.description, module.category, true));
                 } else if (module.implemented && mouseY >= y + 49
                     && mouseX >= x + Math.min(54, cardW - 10)) {
                     captureKeybindId = module.id;
@@ -998,7 +998,7 @@ public final class AstraScreen extends Screen {
                     AstraClient.toggle(module.id);
                 } else if (mouseX >= x + 7 && mouseX <= x + 32 && mouseY >= y + 7 && mouseY <= y + 32) {
                     client.setScreen(new AstraModuleSettingsScreen(this, module.id,
-                        module.name, module.description, false));
+                        module.name, module.description, module.category, false));
                 }
                 return true;
             }
