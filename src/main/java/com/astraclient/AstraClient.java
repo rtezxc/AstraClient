@@ -93,6 +93,7 @@ public final class AstraClient implements ClientModInitializer {
     private static int hudEditKeybindCode = GLFW.GLFW_KEY_F6;
     private static boolean hudEditKeyWasDown;
     private static boolean hudChatEditMode;
+    private static boolean hudChatWasOpen;
     private static boolean hudMouseWasDown;
     private static boolean hudRightMouseWasDown;
     private static String draggedHudId;
@@ -2801,13 +2802,22 @@ if (isEnabled("blockfinder")) {
     }
 
     /**
-     * Chat HUD editor: open chat, press the configured editor key, then drag a widget.
-     * Right-clicking a widget toggles it. Movement is committed on mouse release,
-     * so config writes do not happen every tick or every rendered frame.
+     * Chat HUD editor: opening chat automatically enables drag mode. Drag any
+     * visible HUD widget to reposition it; right-click toggles that widget.
+     * The configured editor key can still toggle edit mode while chat is open.
+     * Positions are saved on release rather than every tick or rendered frame.
      */
     private static void updateChatHudEditor(MinecraftClient client) {
         long handle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
         boolean chatOpen = client.currentScreen instanceof ChatScreen;
+        if (chatOpen && !hudChatWasOpen) {
+            hudChatEditMode = true;
+            draggedHudId = null;
+            hudMouseWasDown = false;
+            hudRightMouseWasDown = false;
+            notifyUser("HUD EDIT MODE: drag widgets to move; right-click to toggle");
+        }
+        hudChatWasOpen = chatOpen;
         boolean editorKeyDown = handle != 0L && hudEditKeybindCode != GLFW.GLFW_KEY_UNKNOWN
             && GLFW.glfwGetKey(handle, hudEditKeybindCode) == GLFW.GLFW_PRESS;
         if (chatOpen && editorKeyDown && !hudEditKeyWasDown) {
@@ -2951,7 +2961,7 @@ if (isEnabled("blockfinder")) {
         int accent = accentColor();
         long now = System.currentTimeMillis();
         String key = keyName(hudEditKeybindCode);
-        String banner = "ASTRA HUD EDIT  •  DRAG TO MOVE  •  RIGHT-CLICK TO TOGGLE  •  " + key + " TO EXIT";
+        String banner = "ASTRA HUD EDIT  •  DRAG ANY WIDGET TO MOVE  •  RIGHT-CLICK TO TOGGLE  •  " + key + " TO EXIT";
         int bannerWidth = Math.min(screenWidth - 12, client.textRenderer.getWidth(banner) + 18);
         int bx = Math.max(6, (screenWidth - bannerWidth) / 2);
         int by = 6;
