@@ -125,20 +125,32 @@ public final class AstraModuleOptions {
             case "orbitsparks", "playertrail" -> {
                 out.add(slider("effect_density", "Effect Density", "Number of client-side particles emitted per update.", "2", 1, 8, 1));
             }
-            case "speed", "noslow", "sprint", "autosprint", "fly", "autowalk", "safewalk", "eagle", "inventorymove" -> {
-                out.add(slider("movement_strength", "Movement Strength", "Strength factor used by supported movement logic.", "1.0", 0.5, 1.5, 0.05));
-                out.add(mode("movement_mode", "Movement Mode", "Select the movement behavior profile.", "Default", MOVEMENT_MODES));
-                out.add(toggle("only_on_ground", "Only On Ground", "Restrict supported movement effects to grounded movement.", false));
-                out.add(toggle("pause_in_menus", "Pause In Menus", "Do not apply this module while a screen is open.", true));
+            case "speed" -> {
+                out.add(slider("movement_strength", "Speed Strength", "Controls the local horizontal velocity boost.", "1.0", 0.5, 1.5, 0.05));
+                out.add(mode("movement_mode", "Movement Mode", "Gentle, default or aggressive speed profile.", "Default", MOVEMENT_MODES));
+                out.add(toggle("only_on_ground", "Only On Ground", "Apply the speed boost only while grounded.", false));
+                out.add(toggle("pause_in_menus", "Pause In Menus", "Pause speed while a screen is open.", true));
             }
-            case "autoeat", "autototem", "autotool", "autoweapon", "potioncounter", "durabilityhud", "inventoryhud", "armorhud", "potionhud", "healthhud", "hungerhud" -> {
-                out.add(toggle("smart_mode", "Smart Mode", "Use the module's normal safety checks before acting.", true));
-                out.add(slider("threshold", "Activation Threshold", "Threshold for modules that use a numeric trigger.", "16", 1, 20, 1));
-                out.add(toggle("notify_changes", "Notify Changes", "Show a short notification when the module acts.", true));
-                if (moduleId.equals("autototem")) {
-                    out.add(toggle("offhand_only", "Offhand Only", "Only move a totem into the offhand slot.", true));
-                }
+            case "noslow" -> {
+                out.add(slider("movement_strength", "No Slow Strength", "Controls the horizontal velocity compensation while using an item.", "1.0", 0.5, 1.5, 0.05));
+                out.add(toggle("only_on_ground", "Only On Ground", "Apply compensation only while grounded.", false));
+                out.add(toggle("pause_in_menus", "Pause In Menus", "Pause No Slow while a screen is open.", true));
             }
+            case "sprint", "autosprint" -> {
+                out.add(toggle("only_on_ground", "Only On Ground", "Only start sprinting while grounded.", true));
+                out.add(toggle("pause_in_menus", "Pause In Menus", "Pause automatic sprinting while a screen is open.", true));
+            }
+            case "fly" -> {
+                out.add(slider("movement_strength", "Flight Strength", "Vertical flight movement speed.", "1.0", 0.5, 1.5, 0.05));
+            }
+            case "autowalk" -> {
+                out.add(toggle("pause_in_menus", "Pause In Menus", "Release forced forward movement while a screen is open.", true));
+            }
+            case "safewalk", "eagle", "inventorymove" -> { }
+            case "autoeat" -> {
+                out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
+            }
+            case "autototem", "autotool", "autoweapon", "potioncounter", "durabilityhud", "inventoryhud", "armorhud", "potionhud", "healthhud", "hungerhud" -> { }
             case "blockfinder" -> {
                 out.add(slider("scan_range", "Scan Radius", "Radius used to search for a configured block.", "24", 8, 48, 4));
                 out.add(text("custom_value", "Block Target", "Use a supported ore alias or a registry ID such as minecraft:diamond_ore.", "DIAMOND"));
