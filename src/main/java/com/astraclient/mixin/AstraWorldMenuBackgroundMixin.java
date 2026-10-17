@@ -1,6 +1,7 @@
 package com.astraclient.mixin;
 
 import com.astraclient.AstraBackgroundRenderer;
+import com.astraclient.AstraClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
