@@ -321,8 +321,9 @@ jobs:
           unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
 
           # Validate that every configured client mixin is packaged and has source code.
-          python - <<'PY'
+          JAR="$JAR" python - <<'PY'
           import json
+          import os
           import pathlib
           import subprocess
           import sys
@@ -341,7 +342,7 @@ jobs:
           if "astraclient.mixins.json" not in mod_json.get("mixins", []):
               sys.exit("ERROR: fabric.mod.json does not load astraclient.mixins.json")
 
-          jar_entries = set(subprocess.check_output(["jar", "tf", __import__("os").environ["JAR"]], text=True).splitlines())
+          jar_entries = set(subprocess.check_output(["jar", "tf", os.environ["JAR"]], text=True).splitlines())
           for name in mixin_names:
               source = root / "java" / pathlib.Path(*mixin_package.split(".")) / f"{name}.java"
               class_entry = f"{mixin_package.replace('.', '/')}/{name}.class"
