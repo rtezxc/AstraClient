@@ -691,9 +691,6 @@ public final class AstraScreen extends Screen {
         }
         int gap = 10, cardW = Math.max(70, (contentW - gap) / 2);
         int stride = 76, cardH = 65;
-        int viewportH = Math.max(1, listBottom - listTop);
-        int rows = (visible.size() + 1) / 2;
-        int maxScroll = Math.max(0, rows * stride - viewportH);
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
