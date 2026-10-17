@@ -1205,6 +1205,7 @@ public final class AstraClient implements ClientModInitializer {
                         return;
                     }
                 }
+                AstraModuleOptions.syncValue("timechanger", "time_of_day", Long.toString(timeChangerPreset));
                 MODULES.put("timechanger", true);
                 saveConfig();
                 client.player.sendMessage(Text.literal("§b[Astra] §fClient time set to §e" + preset), false);
