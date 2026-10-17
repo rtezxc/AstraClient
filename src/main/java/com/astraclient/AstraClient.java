@@ -1894,10 +1894,11 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null || client.world == null || client.interactionManager == null
             || client.currentScreen != null || client.player.isSpectator()) return;
 
-        // Stay inside ordinary vanilla melee distance. A larger configured search
-        // range must not make the client send impossible long-range attacks that
-        // multiplayer servers will reject.
-        final double attackRange = 3.0D;
+        // Per-module sliders may reduce range, but never extend vanilla melee reach.
+        final double triggerRange = Math.min(3.0D, Math.max(2.0D,
+            AstraModuleOptions.numberValue("triggerbot", "attack_range", 3.0D)));
+        final double attackRange = Math.min(3.0D, Math.max(2.0D,
+            AstraModuleOptions.numberValue("killaura", "attack_range", 3.0D)));
 
         // Auto Clicker repeats ordinary crosshair attacks at a conservative interval;
         // the vanilla attack cooldown and normal melee reach are still enforced.
@@ -1906,7 +1907,7 @@ public final class AstraClient implements ClientModInitializer {
                 org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS
             && client.crosshairTarget instanceof EntityHitResult autoHit
             && autoHit.getEntity() instanceof LivingEntity autoTarget
-            && isValidCombatTarget(autoTarget, client.player)
+            && isValidCombatTarget(autoTarget, client.player, "autoclicker")
             && client.player.distanceTo(autoTarget) <= 3.0D
             && client.player.canSee(autoTarget) && hasClearLineOfSight(client, autoTarget)) {
             long now = System.currentTimeMillis();
@@ -1921,8 +1922,8 @@ public final class AstraClient implements ClientModInitializer {
         if (isEnabled("triggerbot")
             && client.crosshairTarget instanceof EntityHitResult hit
             && hit.getEntity() instanceof LivingEntity target
-            && isValidCombatTarget(target, client.player)
-            && client.player.distanceTo(target) <= attackRange
+            && isValidCombatTarget(target, client.player, "triggerbot")
+            && client.player.distanceTo(target) <= triggerRange
             && client.player.canSee(target) && hasClearLineOfSight(client, target)) {
             if (attackTarget(client, target)) return;
         }
