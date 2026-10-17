@@ -1987,7 +1987,10 @@ public final class AstraClient implements ClientModInitializer {
 
     private static void updateTargetEspParticles(MinecraftClient client) {
         if (client.player == null || client.world == null || client.currentScreen != null
-            || !isEnabled("killaura") || lastCombatTarget == null || !lastCombatTarget.isAlive()
+            || !isEnabled("killaura")
+            || !AstraModuleOptions.boolValue("killaura", "show_target", true)
+            || !AstraModuleOptions.boolValue("killaura", "attack_effects", true)
+            || lastCombatTarget == null || !lastCombatTarget.isAlive()
             || client.player.distanceTo(lastCombatTarget) > 3.0D) {
             targetEspParticleTick = 0;
             return;
@@ -2088,6 +2091,45 @@ public final class AstraClient implements ClientModInitializer {
         if (target == self || !target.isAlive() || target.isSpectator()) return false;
         if (target instanceof PlayerEntity) return targetPlayers;
         return target instanceof HostileEntity ? targetHostile : targetPassive;
+    }
+
+    private static boolean isValidCombatTarget(LivingEntity target, PlayerEntity self, String moduleId) {
+        if (target == self || !target.isAlive() || target.isSpectator()) return false;
+        if (target instanceof PlayerEntity) {
+            return AstraModuleOptions.boolValue(moduleId, "target_players", targetPlayers);
+        }
+        if (target instanceof HostileEntity) {
+            return AstraModuleOptions.boolValue(moduleId, "target_hostile", targetHostile);
+        }
+        return AstraModuleOptions.boolValue(moduleId, "target_passive", targetPassive);
+    }
+
+    private static boolean shouldWaitForCritical(String moduleId, PlayerEntity player) {
+        String mode = AstraModuleOptions.value(moduleId, "attack_mode", "Normal");
+        boolean criticalOnly = AstraModuleOptions.boolValue(moduleId, "critical_hits", false)
+            || mode.equals("Critical Hits Only")
+            || (moduleId.equals("killaura") && killAuraCriticalOnly);
+        if (criticalOnly) return !isCriticalHitReady(player);
+        // Mixed mode uses normal attacks on the ground, but waits for a clean critical
+        // when the player is already descending so the option changes actual attack timing.
+        return mode.equals("Mixed") && !player.isOnGround()
+            && player.getVelocity().y < 0.0D && !isCriticalHitReady(player);
+    }
+
+    private static void applyKillAuraRotation(MinecraftClient client, LivingEntity target, String mode) {
+        if (client.player == null || target == null || mode.equals("None")) return;
+        double dx = target.getX() - client.player.getX();
+        double dz = target.getZ() - client.player.getZ();
+        double dy = target.getEyeY() - client.player.getEyeY();
+        double horizontal = Math.sqrt(dx * dx + dz * dz);
+        float targetYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0D);
+        float targetPitch = (float)-Math.toDegrees(Math.atan2(dy, Math.max(0.0001D, horizontal)));
+        float yawDelta = net.minecraft.util.math.MathHelper.wrapDegrees(targetYaw - client.player.getYaw());
+        float pitchDelta = targetPitch - client.player.getPitch();
+        float factor = mode.equals("Visible") ? 1.0F : 0.22F;
+        client.player.setYaw(client.player.getYaw() + yawDelta * factor);
+        client.player.setPitch(Math.max(-90.0F, Math.min(90.0F,
+            client.player.getPitch() + pitchDelta * factor)));
     }
 
     /**
