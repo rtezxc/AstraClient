@@ -64,6 +64,9 @@ jobs:
           grep -q '^com/astraclient/mixin/AstraNoWeatherMixin.class$' /tmp/jar-contents.txt
           unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
 
           python - <<'PY'
           import pathlib
