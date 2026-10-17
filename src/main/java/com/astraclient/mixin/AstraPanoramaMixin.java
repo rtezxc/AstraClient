@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class AstraPanoramaMixin {
     @Inject(method = "renderPanoramaBackground", at = @At("HEAD"), cancellable = true)
     private void astra$renderBackground(DrawContext context, float delta, CallbackInfo ci) {
+        if (!AstraClient.isCustomMenuBackgroundEnabled()) return;
         ci.cancel();
         AstraBackgroundRenderer.render(context);
     }
