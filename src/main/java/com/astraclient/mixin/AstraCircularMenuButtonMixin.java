@@ -29,12 +29,14 @@ public abstract class AstraCircularMenuButtonMixin {
         boolean multi = label.contains("multiplayer");
         if (!solo && !multi) return;
 
-        ci.cancel();
         int x = button.getX();
         int y = button.getY();
         int w = button.getWidth();
         int h = button.getHeight();
+        // Do not cancel vanilla rendering until we know the custom renderer can
+        // draw this widget. Otherwise unusually small/scaled buttons become invisible.
         if (w < 40 || h < 10) return;
+        ci.cancel();
 
         boolean hovered = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
         int accent = solo ? 0xFFB16CFF : 0xFF39DDF5;
