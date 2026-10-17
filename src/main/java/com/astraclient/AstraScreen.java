@@ -22,7 +22,7 @@ public final class AstraScreen extends Screen {
     private static final int AMBER = 0xFFFFC66E;
 
     private static final String[] CATEGORIES = {
-        "Combat", "Render", "Movement", "Player", "Inventory", "World", "Utility", "HUD", "Settings"
+        "Favorites", "Combat", "Render", "Movement", "Player", "Inventory", "World", "Utility", "HUD", "Settings"
     };
 
     private static final List<ModuleInfo> MODULES = List.of(
@@ -455,9 +455,16 @@ public final class AstraScreen extends Screen {
                     int statusColor = captureKeybindId != null && captureKeybindId.equals(module.id)
                         ? AMBER : (!module.implemented ? 0xFF777F90 : (enabled ? GREEN : MUTED));
                     int statusW = textRenderer.getWidth(status);
-                    ctx.drawText(textRenderer, status, x + cardW - statusW - 8, y + 11, statusColor, true);
+                    ctx.drawText(textRenderer, status, x + cardW - statusW - 25, y + 11, statusColor, true);
+                    boolean favorite = AstraClient.isFavorite(module.id);
+                    boolean favoriteHover = mouseX >= x + cardW - 21 && mouseX <= x + cardW - 5
+                        && mouseY >= y + 5 && mouseY <= y + 23;
+                    ctx.fill(x + cardW - 22, y + 5, x + cardW - 4, y + 23,
+                        favoriteHover ? 0xFF393047 : 0xFF1A202D);
+                    ctx.drawCenteredTextWithShadow(textRenderer, favorite ? "★" : "☆",
+                        x + cardW - 13, y + 10, favorite ? 0xFFFFD166 : (favoriteHover ? accent : MUTED));
 
-                    ctx.drawText(textRenderer, truncateToWidth(module.name, Math.max(8, cardW - 82)),
+                    ctx.drawText(textRenderer, truncateToWidth(module.name, Math.max(8, cardW - 104)),
                         x + 36, y + 9, WHITE, true);
                     ctx.drawText(textRenderer, truncateToWidth(module.description, Math.max(12, cardW - 22)),
                         x + 10, y + 34, MUTED, false);
@@ -544,6 +551,10 @@ public final class AstraScreen extends Screen {
     /** Draw compact, font-independent glyphs for the nine workspace categories. */
     private void drawCategoryIcon(DrawContext ctx, String category, int x, int y, int color) {
         switch (category) {
+            case "Favorites" -> {
+                ctx.fill(x + 1, y + 2, x + 11, y + 12, color);
+                ctx.fill(x + 4, y + 5, x + 8, y + 9, 0xFF111621);
+            }
             case "Combat" -> {
                 ctx.fill(x + 4, y, x + 8, y + 1, color);
                 ctx.fill(x + 4, y + 11, x + 8, y + 12, color);
@@ -737,7 +748,11 @@ public final class AstraScreen extends Screen {
         String query = searchText.trim().toLowerCase(Locale.ROOT);
         List<ModuleInfo> result = new ArrayList<>();
         for (ModuleInfo module : MODULES) {
-            if (!module.category.equals(category)) continue;
+            if (category.equals("Favorites")) {
+                if (!AstraClient.isFavorite(module.id)) continue;
+            } else if (!module.category.equals(category)) {
+                continue;
+            }
             if (query.isEmpty()
                 || module.name.toLowerCase(Locale.ROOT).contains(query)
                 || module.description.toLowerCase(Locale.ROOT).contains(query)) {
@@ -985,6 +1000,12 @@ public final class AstraScreen extends Screen {
             int x = contentX + (i % 2) * (cardW + gap);
             int y = listTop + (i / 2) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
+                // The star is a one-tap shortcut for pinning frequently used modules.
+                if (mouseX >= x + cardW - 21 && mouseX <= x + cardW - 4
+                    && mouseY >= y + 5 && mouseY <= y + 23) {
+                    AstraClient.toggleFavorite(module.id);
+                    return true;
+                }
                 // Tap the icon to open module settings; tap the key label to bind on touchscreens.
                 // Right-click anywhere on a card also starts key capture.
                 if (module.implemented && mouseX >= x + 7 && mouseX <= x + 32
