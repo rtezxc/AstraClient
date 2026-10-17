@@ -150,7 +150,7 @@ public final class AstraModuleOptions {
             case "autoeat" -> {
                 out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
             }
-            case "autototem", "autotool", "autoweapon", "potioncounter", "durabilityhud", "inventoryhud", "armorhud", "potionhud", "healthhud", "hungerhud" -> { }
+            case "autototem", "autotool", "autoweapon" -> { }
             case "blockfinder" -> {
                 out.add(slider("scan_range", "Scan Radius", "Radius used to search for a configured block.", "24", 8, 48, 4));
                 out.add(text("custom_value", "Block Target", "Use a supported ore alias or a registry ID such as minecraft:diamond_ore.", "DIAMOND"));
@@ -174,7 +174,7 @@ public final class AstraModuleOptions {
             case "noweather", "nopumpkinoverlay", "nofireoverlay", "noportaloverlay", "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay", "novignette", "noscoreboard" -> {
                 // These modules remove one visual effect; the module toggle is their meaningful control.
             }
-            case "healthhud", "hungerhud", "blockreachhud", "frametimehud", "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock", "cps", "worldinfo", "waypoint", "storagefinder", "blockfinder", "potioncounter", "biome", "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud", "durabilityhud", "inventoryhud", "sessionstats", "serverinfo" -> {
+            case "healthhud", "hungerhud", "potionhud", "potioncounter", "durabilityhud", "inventoryhud", "armorhud", "blockreachhud", "frametimehud", "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock", "cps", "worldinfo", "biome", "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "sessionstats", "serverinfo" -> {
                 out.add(toggle("background", "HUD Background", "Show or hide this widget's panel background.", true));
                 out.add(color("module_color", "HUD Accent Color", "Color used for this widget's accent stripe.", "AA70FF"));
             }
