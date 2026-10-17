@@ -58,6 +58,43 @@ public final class AstraBackgroundRenderer {
             if (right - 1 >= 0 && right - 1 < width) context.fill(right - 1, Math.max(0, top), right, Math.min(height, bottom), color);
         }
 
+        // Slow diagonal light shafts add depth without textures or shader dependencies.
+        // Each shaft is only a few dozen tiny fills, keeping the title screen mobile-friendly.
+        for (int beam = 0; beam < 3; beam++) {
+            int beamOffset = Math.floorMod((int) (time / (70L + beam * 17L)) + beam * width / 3, width + height);
+            for (int step = 0; step < height; step += 8) {
+                int x = beamOffset - step;
+                int y = step;
+                if (x >= 0 && x < width) {
+                    int beamWidth = beam == 1 ? 3 : 2;
+                    int beamColor = beam == 1 ? 0x124AD9F5 : 0x0D7D69E8;
+                    context.fill(x, y, Math.min(width, x + beamWidth), Math.min(height, y + 8), beamColor);
+                }
+            }
+        }
+
+        // Dotted circular orbital tracks break up the square grid and frame the Astra emblem.
+        // Fixed sample counts avoid allocations and keep rendering cost bounded at every resolution.
+        int orbitRadius = Math.max(18, Math.min(width, height) / 6);
+        for (int orbit = 0; orbit < 3; orbit++) {
+            double rotation = time / (1250.0 + orbit * 310.0) + orbit * 1.7;
+            int radius = orbitRadius + orbit * 11;
+            for (int point = 0; point < 64; point++) {
+                double angle = point * (Math.PI * 2.0 / 64.0) + rotation;
+                int px = cx + (int) Math.round(Math.cos(angle) * radius);
+                int py = cy + (int) Math.round(Math.sin(angle) * radius * 0.72);
+                // Gaps create a segmented, technical orbital-ring look.
+                if (point % 4 == 0 && px >= 0 && px < width && py >= 0 && py < height) {
+                    int dot = orbit == 1 ? 0xFF4AD9F5 : 0xFF8175E8;
+                    context.fill(px, py, Math.min(width, px + 2), Math.min(height, py + 2), dot);
+                }
+            }
+        }
+
+        // A restrained horizontal scan line slowly travels down the backdrop.
+        int scanY = Math.floorMod((int) (time / 28L), Math.max(1, height));
+        context.fill(0, scanY, width, Math.min(height, scanY + 1), 0x184AD9F5);
+
         // Sparse moving particles, calculated from time so no per-frame collections are allocated.
         for (int i = 0; i < 44; i++) {
             int sx = Math.floorMod(i * 97 + (int) (time / (19L + i % 5)), width);
