@@ -1273,7 +1273,14 @@ public final class AstraClient implements ClientModInitializer {
      */
     private static void loadConfig() {
         configNeedsMigration = false;
-        if (!Files.isRegularFile(CONFIG_PATH)) return;
+        if (!Files.isRegularFile(CONFIG_PATH)) {
+            // First launch should leave a ready-to-edit config instead of waiting for the first toggle.
+            saveConfig();
+            if (Files.isRegularFile(CONFIG_PATH)) {
+                System.out.println("[Astra Client] Created default configuration at " + CONFIG_PATH + ".");
+            }
+            return;
+        }
         try {
             loadConfigFile(CONFIG_PATH);
         } catch (Exception primaryFailure) {
