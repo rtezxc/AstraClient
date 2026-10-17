@@ -229,6 +229,12 @@ public final class AstraModuleOptions {
         }
     }
 
+    /** Mirrors an existing legacy control into the typed settings store without an extra disk write. */
+    public static void syncValue(String moduleId, String optionId, String value) {
+        if (moduleId == null || optionId == null || value == null) return;
+        VALUES.put(key(moduleId, optionId), value.length() > 128 ? value.substring(0, 128) : value);
+    }
+
     public static String normalize(Option option, String raw) {
         try {
             return switch (option.type()) {
