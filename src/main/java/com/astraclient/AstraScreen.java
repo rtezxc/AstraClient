@@ -798,6 +798,8 @@ public final class AstraScreen extends Screen {
             "Import config backup", "IMPORT", accent);
         renderSettingRow(ctx, mouseX, mouseY, contentX, top + 490 - settingsScrollOffset, contentW,
             "Quick module profiles", "OPEN", accent);
+        renderSettingRow(ctx, mouseX, mouseY, contentX, top + 526 - settingsScrollOffset, contentW,
+            "Animated menu background", AstraClient.isCustomMenuBackgroundEnabled() ? "ON" : "OFF", accent);
     }
 
     private void renderSettingRow(
@@ -938,6 +940,10 @@ public final class AstraScreen extends Screen {
             }
             if (inside(mouseX, mouseY, contentX, top + 490 - settingsScrollOffset, contentW, 34)) {
                 client.setScreen(new AstraProfileScreen(this));
+                return true;
+            }
+            if (inside(mouseX, mouseY, contentX, top + 526 - settingsScrollOffset, contentW, 34)) {
+                AstraClient.toggleCustomMenuBackground();
                 return true;
             }
             return true;
@@ -1378,7 +1384,7 @@ public final class AstraScreen extends Screen {
         }
         if (category.equals("Settings")) {
             int panelH = panelHeight();
-            int maxSettingsScroll = Math.max(0, 528 - Math.max(90, panelH - 130));
+            int maxSettingsScroll = Math.max(0, 564 - Math.max(90, panelH - 130));
             settingsScrollOffset = Math.max(0, Math.min(maxSettingsScroll,
                 settingsScrollOffset - (int) Math.round(verticalAmount * 32.0)));
             return true;
