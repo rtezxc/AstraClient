@@ -58,6 +58,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("reach", "Reach Info", "Displays target distance; attacks remain capped at vanilla melee reach", "Combat", true),
         new ModuleInfo("triggerbot", "TriggerBot", "Attacks a valid target under your crosshair when the vanilla attack cooldown is ready", "Combat", true),
         new ModuleInfo("killaura", "Kill Aura", "Automatically attacks nearby living targets in front of you", "Combat", true),
+        new ModuleInfo("pvpmode", "PvP Mode", "One-toggle PvP loadout: combat, defense, target tracking and useful HUDs; restores previous states when disabled", "Combat", true),
         new ModuleInfo("autototem", "Auto Totem", "Moves an available Totem of Undying to the offhand", "Combat", true),
         new ModuleInfo("antiknockback", "Anti Knockback", "Reduces local horizontal velocity during the hurt animation", "Combat", true),
         new ModuleInfo("targethud", "Target HUD", "Show target name and distance", "HUD", true),
