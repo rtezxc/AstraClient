@@ -25,6 +25,7 @@ public final class AstraModuleOptionsScreen extends Screen {
     private int editingTextIndex = -1;
     private String textBuffer = "";
     private String originalTextValue = "";
+    private int textCursor;
 
     public AstraModuleOptionsScreen(Screen parent, String moduleId, String moduleName, String category) {
         super(Text.literal("Astra Advanced Module Settings"));
@@ -143,7 +144,9 @@ public final class AstraModuleOptionsScreen extends Screen {
             default -> {
                 ctx.fill(controlX, ry+9, controlX+controlW, ry+34, 0xFF252D3D);
                 ctx.fill(controlX, ry+9, controlX+2, ry+34, accent);
-                String label = truncate(value, 18);
+                String label = option.type() == AstraModuleOptions.Type.TEXT && index == editingTextIndex
+                    ? truncate(textBuffer.substring(0, textCursor) + "|" + textBuffer.substring(textCursor), 18)
+                    : truncate(value, 18);
                 ctx.drawText(textRenderer, label, controlX+8, ry+17, WHITE, false);
                 ctx.drawText(textRenderer, "›", controlX+controlW-12, ry+16, accent, true);
             }
@@ -205,6 +208,7 @@ public final class AstraModuleOptionsScreen extends Screen {
                 editingTextIndex = options().indexOf(option);
                 textBuffer = current;
                 originalTextValue = current;
+                textCursor = textBuffer.length();
             }
             case KEYBIND -> {
                 capturedKeyIndex = options().indexOf(option);
@@ -219,15 +223,34 @@ public final class AstraModuleOptionsScreen extends Screen {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
         int pw=panelWidth(), ph=panelHeight(), x=(width-pw)/2, y=(height-ph)/2;
         if (!inside(mouseX, mouseY, x, y, pw, ph)) {
-            if (editingTextIndex >= 0 && editingTextIndex < options().size()) {
-                AstraModuleOptions.setValue(moduleId, options().get(editingTextIndex), textBuffer);
-                editingTextIndex = -1;
-            }
+            commitTextEdit();
             client.setScreen(parent);
             return true;
         }
+        if (editingTextIndex >= 0 && editingTextIndex < options().size()) {
+            int editingY = listTop(y) + editingTextIndex * rowStep() - scrollOffset;
+            if (!inside(mouseX, mouseY, x + 14, editingY, pw - 28, rowHeight())) {
+                commitTextEdit();
+            } else {
+                int controlX = x + pw - 160;
+                int relativeX = Math.max(0, (int) mouseX - (controlX + 8));
+                int cursor = 0;
+                int bestDistance = Integer.MAX_VALUE;
+                for (int i = 0; i <= textBuffer.length(); i++) {
+                    int atWidth = textRenderer.getWidth(textBuffer.substring(0, i));
+                    int distance = Math.abs(atWidth - relativeX);
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        cursor = i;
+                    }
+                }
+                textCursor = cursor;
+                return true;
+            }
+        }
         int footer=y+ph-35;
         if (inside(mouseX,mouseY,x+pw-104,footer,86,24)) {
+            commitTextEdit();
             client.setScreen(parent);
             return true;
         }
@@ -271,12 +294,20 @@ public final class AstraModuleOptionsScreen extends Screen {
     @Override
     public boolean charTyped(char chr,int modifiers) {
         if(editingTextIndex>=0&&!Character.isISOControl(chr)&&textBuffer.length()<64) {
-            textBuffer+=chr;
+            textBuffer = textBuffer.substring(0, textCursor) + chr + textBuffer.substring(textCursor);
+            textCursor++;
             AstraModuleOptions.Option option=options().get(editingTextIndex);
             AstraModuleOptions.previewValue(moduleId,option,textBuffer);
             return true;
         }
         return super.charTyped(chr,modifiers);
+    }
+
+    private void commitTextEdit() {
+        if (editingTextIndex >= 0 && editingTextIndex < options().size()) {
+            AstraModuleOptions.setValue(moduleId, options().get(editingTextIndex), textBuffer);
+        }
+        editingTextIndex = -1;
     }
 
     @Override
@@ -302,11 +333,25 @@ public final class AstraModuleOptionsScreen extends Screen {
                 editingTextIndex=-1;
                 return true;
             }
-            if(keyCode==GLFW.GLFW_KEY_BACKSPACE&&!textBuffer.isEmpty()) {
-                textBuffer=textBuffer.substring(0,textBuffer.length()-1);
-                AstraModuleOptions.previewValue(moduleId,option,textBuffer);
+            if(keyCode==GLFW.GLFW_KEY_BACKSPACE) {
+                if(textCursor>0) {
+                    textBuffer=textBuffer.substring(0,textCursor-1)+textBuffer.substring(textCursor);
+                    textCursor--;
+                    AstraModuleOptions.previewValue(moduleId,option,textBuffer);
+                }
                 return true;
             }
+            if(keyCode==GLFW.GLFW_KEY_DELETE) {
+                if(textCursor<textBuffer.length()) {
+                    textBuffer=textBuffer.substring(0,textCursor)+textBuffer.substring(textCursor+1);
+                    AstraModuleOptions.previewValue(moduleId,option,textBuffer);
+                }
+                return true;
+            }
+            if(keyCode==GLFW.GLFW_KEY_LEFT) { textCursor=Math.max(0,textCursor-1); return true; }
+            if(keyCode==GLFW.GLFW_KEY_RIGHT) { textCursor=Math.min(textBuffer.length(),textCursor+1); return true; }
+            if(keyCode==GLFW.GLFW_KEY_HOME) { textCursor=0; return true; }
+            if(keyCode==GLFW.GLFW_KEY_END) { textCursor=textBuffer.length(); return true; }
             return true;
         }
         if(keyCode==GLFW.GLFW_KEY_ESCAPE||keyCode==GLFW.GLFW_KEY_RIGHT_SHIFT) {
