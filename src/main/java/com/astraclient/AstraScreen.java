@@ -27,6 +27,7 @@ public final class AstraScreen extends Screen {
 
     private static final List<ModuleInfo> MODULES = List.of(
         new ModuleInfo("fullbright", "FullBright", "Night vision for dark areas", "Render", true),
+        new ModuleInfo("orbitcubes", "Orbit Cubes", "Transparent theme-colored cubes orbit and rotate around your player", "Render", true),
         new ModuleInfo("customcrosshair", "Custom Crosshair", "Draws a compact accent-colored crosshair overlay", "Render", true),
         new ModuleInfo("playeresp", "Player ESP", "Local glowing outline around other players", "Render", true),
         new ModuleInfo("mobesp", "Mob ESP", "Local glowing outlines around nearby mobs", "Render", true),
@@ -88,6 +89,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("storagefinder", "Storage Finder", "Find nearby chests, barrels, ender chests, and shulker boxes", "HUD", true),
         new ModuleInfo("effectalert", "Effect Expiry Alert", "Warn when active potion effects have ten seconds or less remaining", "HUD", true),
         new ModuleInfo("noweather", "No Weather", "Hide weather effects", "World", false),
+        new ModuleInfo("timechanger", "Time Changer", "Locally hold the world at day, noon, sunset, or night", "World", true),
         new ModuleInfo("autotool", "Auto Tool", "Select the fastest hotbar tool for the targeted block", "World", true),
         new ModuleInfo("blockfinder", "Block Finder", "Find nearby diamond, ancient debris, emerald, gold, iron, coal, copper, lapis, redstone, or quartz", "World", true),
         new ModuleInfo("autoweapon", "Auto Weapon", "Selects a sword or axe while aiming at a living target", "Combat", true),

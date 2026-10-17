@@ -6,6 +6,11 @@ import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.minecraft.text.Text;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.WorldRenderer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -93,6 +98,7 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean guiKeyWasDown;
     private static long guiKeybindIgnoreUntil;
     private static int accentTheme;
+    private static long timeChangerPreset = 6000L;
     private static boolean customAccentEnabled;
     private static int customAccentColor = 0xFFAA70FF;
     private static boolean clickSounds = true;
@@ -200,6 +206,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("waypoint", false);
         MODULES.put("storagefinder", false);
         MODULES.put("effectalert", false);
+        MODULES.put("orbitcubes", false);
+        MODULES.put("timechanger", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -301,6 +309,8 @@ public final class AstraClient implements ClientModInitializer {
     private static String readableName(String id) {
         return switch (id) {
             case "fullbright" -> "FullBright";
+            case "orbitcubes" -> "Orbit Cubes";
+            case "timechanger" -> "Time Changer";
             case "customcrosshair" -> "Custom Crosshair";
             case "tracers" -> "Tracers";
             case "autosprint" -> "Auto Sprint";
@@ -946,10 +956,36 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null) return;
         String[] args = rawMessage.trim().split("\\s+");
         if (args.length == 1 || args[1].equalsIgnoreCase("help")) {
-            client.player.sendMessage(Text.literal("§b[Astra] §fCommands: §e.astra status/coords/fps§7, §e.astra inventory/armor§7, §e.astra waypoint [set|show|clear]§7, §e.astra modules [all]§7, §e.astra toggle <id>§7, §e.astra disableall§7, §e.astra profile <name>§7, §e.astra hud§7, §e.configs"), false);
+            client.player.sendMessage(Text.literal("§b[Astra] §fCommands: §e.astra status/coords/fps§7, §e.astra time <day|noon|sunset|night|normal>§7, §e.astra inventory/armor§7, §e.astra waypoint [set|show|clear]§7, §e.astra modules [all]§7, §e.astra toggle <id>§7, §e.astra disableall§7, §e.astra profile <name>§7, §e.astra hud§7, §e.configs"), false);
             return;
         }
         switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "time" -> {
+                if (args.length < 3) {
+                    client.player.sendMessage(Text.literal("§b[Astra] §fTime: §eday§7, §enoон§7, §esunset§7, §enight§7, §enormal"), false);
+                    return;
+                }
+                String preset = args[2].toLowerCase(Locale.ROOT);
+                switch (preset) {
+                    case "day" -> timeChangerPreset = 1000L;
+                    case "noon" -> timeChangerPreset = 6000L;
+                    case "sunset" -> timeChangerPreset = 12000L;
+                    case "night" -> timeChangerPreset = 18000L;
+                    case "normal" -> {
+                        MODULES.put("timechanger", false);
+                        saveConfig();
+                        client.player.sendMessage(Text.literal("§b[Astra] §fWorld time override disabled"), false);
+                        return;
+                    }
+                    default -> {
+                        client.player.sendMessage(Text.literal("§b[Astra] §cUsage: .astra time <day|noon|sunset|night|normal>"), false);
+                        return;
+                    }
+                }
+                MODULES.put("timechanger", true);
+                saveConfig();
+                client.player.sendMessage(Text.literal("§b[Astra] §fClient time set to §e" + preset), false);
+            }
             case "waypoint" -> {
                 String action = args.length > 2 ? args[2].toLowerCase(Locale.ROOT) : "show";
                 switch (action) {
@@ -1126,6 +1162,7 @@ public final class AstraClient implements ClientModInitializer {
                     properties.getProperty("module." + id, Boolean.toString(MODULES.get(id)))
                 ));
             }
+            timeChangerPreset = Math.max(0L, Math.min(24000L, Long.parseLong(properties.getProperty("timechanger.preset", "6000"))));
             accentTheme = Math.max(0, Math.min(3, Integer.parseInt(
                 properties.getProperty("theme.accentTheme",
                     Boolean.parseBoolean(properties.getProperty("theme.alternateAccent", "false")) ? "1" : "0")
@@ -1199,6 +1236,7 @@ public final class AstraClient implements ClientModInitializer {
             properties.setProperty("module." + entry.getKey(), Boolean.toString(entry.getValue()));
         }
         properties.setProperty("theme.accentTheme", Integer.toString(accentTheme));
+        properties.setProperty("timechanger.preset", Long.toString(timeChangerPreset));
         properties.setProperty("theme.customEnabled", Boolean.toString(customAccentEnabled));
         properties.setProperty("theme.customColor", String.format(Locale.ROOT, "%06X", customAccentColor & 0x00FFFFFF));
         properties.setProperty("ui.clickSounds", Boolean.toString(clickSounds));
@@ -1295,6 +1333,7 @@ public final class AstraClient implements ClientModInitializer {
             updateStorageFinder(client);
             updateTracers(client);
             updateBreadcrumbs(client);
+            updateTimeChanger(client);
             boolean guiDown = guiWindow != 0L && guiKeybindCode != GLFW.GLFW_KEY_UNKNOWN
                 && GLFW.glfwGetKey(guiWindow, guiKeybindCode) == GLFW.GLFW_PRESS;
             if (guiDown && !guiKeyWasDown) {
@@ -1384,6 +1423,7 @@ public final class AstraClient implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register((drawContext, tickCounter) ->
             renderHud(MinecraftClient.getInstance(), drawContext));
+        WorldRenderEvents.AFTER_ENTITIES.register(AstraClient::renderOrbitCubes);
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> restoreZoom(client));
 
         System.out.println("[Astra Client] Initialized for Minecraft 1.21.4");
@@ -2269,6 +2309,48 @@ if (isEnabled("blockfinder")) {
         }
 
         renderChatHudEditingOverlay(client, context);
+    }
+
+    private static void updateTimeChanger(MinecraftClient client) {
+        if (client.world == null || !isEnabled("timechanger")) return;
+        // ClientWorld is local to this client; this does not issue a server command.
+        client.world.setTimeOfDay(timeChangerPreset);
+    }
+
+    private static void renderOrbitCubes(WorldRenderContext context) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (!isEnabled("orbitcubes") || client.player == null || client.world == null
+                || context.matrixStack() == null || context.consumers() == null) return;
+
+        var playerPos = client.player.getLerpedPos(context.tickCounter().getTickDelta(true));
+        var cameraPos = context.camera().getPos();
+        double time = (System.currentTimeMillis() % 120000L) / 120000.0D * Math.PI * 2.0D;
+        int accent = accentColor();
+        float red = ((accent >> 16) & 255) / 255.0F;
+        float green = ((accent >> 8) & 255) / 255.0F;
+        float blue = (accent & 255) / 255.0F;
+        VertexConsumer lines = context.consumers().getBuffer(RenderLayer.getLines());
+        var matrices = context.matrixStack();
+
+        // Four lightweight glass-like wire cubes orbit the player. Their tint reads
+        // the live theme color, so preset and custom accent changes apply immediately.
+        for (int i = 0; i < 4; i++) {
+            double angle = time * 1.7D + i * (Math.PI / 2.0D);
+            double radius = 1.15D + (i % 2) * 0.45D;
+            double x = playerPos.x + Math.cos(angle) * radius;
+            double z = playerPos.z + Math.sin(angle) * radius;
+            double y = playerPos.y + 0.95D + Math.sin(angle * 1.35D + i) * 0.42D;
+            float size = 0.22F + (i % 2) * 0.07F;
+
+            matrices.push();
+            matrices.translate(x - cameraPos.x, y - cameraPos.y, z - cameraPos.z);
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float) (time * 100.0D + i * 31.0D)));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees((float) (time * 73.0D + i * 19.0D)));
+            WorldRenderer.drawBox(matrices, lines,
+                new Box(-size, -size, -size, size, size, size),
+                red, green, blue, 0.72F);
+            matrices.pop();
+        }
     }
 
     private static void updateBreadcrumbs(MinecraftClient client) {
