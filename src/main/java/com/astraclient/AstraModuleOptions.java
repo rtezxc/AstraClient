@@ -197,8 +197,12 @@ public final class AstraModuleOptions {
     }
 
     public static double numberValue(String moduleId, String optionId, double fallback) {
-        try { return Double.parseDouble(value(moduleId, optionId, Double.toString(fallback))); }
-        catch (NumberFormatException ignored) { return fallback; }
+        try {
+            double parsed = Double.parseDouble(value(moduleId, optionId, Double.toString(fallback)));
+            return Double.isFinite(parsed) ? parsed : fallback;
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
     }
 
     public static int colorValue(String moduleId, String optionId, int fallback) {
@@ -242,8 +246,15 @@ public final class AstraModuleOptions {
                 case TOGGLE -> Boolean.toString(Boolean.parseBoolean(raw));
                 case SLIDER -> {
                     double value = Double.parseDouble(raw);
+                    // Properties files can be edited manually or partially corrupted.
+                    // NaN/Infinity poison slider math because min/max do not clamp them.
+                    if (!Double.isFinite(value)) yield option.defaultValue();
                     value = Math.max(option.min(), Math.min(option.max(), value));
-                    if (option.step() > 0) value = option.min() + Math.round((value - option.min()) / option.step()) * option.step();
+                    if (option.step() > 0) {
+                        value = option.min()
+                            + Math.round((value - option.min()) / option.step()) * option.step();
+                        value = Math.max(option.min(), Math.min(option.max(), value));
+                    }
                     yield formatNumber(value);
                 }
                 case DROPDOWN, MODE -> option.choices().contains(raw) ? raw : option.defaultValue();
@@ -285,8 +296,17 @@ public final class AstraModuleOptions {
             if (moduleId.equals("killaura") && optionId.equals("rotation_mode") && raw.equals("None")) {
                 raw = "Visible";
             }
-            // Preserve unknown future options as strings for forward-compatible config migration.
-            VALUES.put(key(moduleId, optionId), raw.length() > 128 ? raw.substring(0, 128) : raw);
+            // Validate settings we recognize as they enter memory. This prevents invalid
+            // values (for example NaN slider values) from reaching render/tick code.
+            // Keep unknown future options for forward-compatible config migration.
+            Option knownOption = definitions(moduleId, "Utility").stream()
+                .filter(option -> option.id().equals(optionId))
+                .findFirst().orElse(null);
+            if (knownOption != null) {
+                VALUES.put(key(moduleId, optionId), normalize(knownOption, raw));
+            } else {
+                VALUES.put(key(moduleId, optionId), raw.length() > 128 ? raw.substring(0, 128) : raw);
+            }
         }
     }
 
