@@ -253,8 +253,16 @@ public final class AstraClient implements ClientModInitializer {
         return MODULE_KEYBINDS.getOrDefault(id, GLFW.GLFW_KEY_UNKNOWN);
     }
 
+    /** Rejects malformed config or UI key codes before they reach GLFW input polling. */
+    private static int normalizeKeyCode(int keyCode) {
+        if (keyCode == GLFW.GLFW_KEY_UNKNOWN) return GLFW.GLFW_KEY_UNKNOWN;
+        return keyCode >= GLFW.GLFW_KEY_SPACE && keyCode <= GLFW.GLFW_KEY_LAST
+            ? keyCode : GLFW.GLFW_KEY_UNKNOWN;
+    }
+
     public static void setModuleKeybind(String id, int keyCode) {
         if (!MODULES.containsKey(id)) return;
+        keyCode = normalizeKeyCode(keyCode);
         if (keyCode != GLFW.GLFW_KEY_UNKNOWN) {
             for (Map.Entry<String, Integer> entry : MODULE_KEYBINDS.entrySet()) {
                 if (!entry.getKey().equals(id) && entry.getValue() == keyCode) {
@@ -1324,8 +1332,16 @@ public final class AstraClient implements ClientModInitializer {
             targetHostile = Boolean.parseBoolean(properties.getProperty("combat.targetHostile", "true"));
             targetPassive = Boolean.parseBoolean(properties.getProperty("combat.targetPassive", "false"));
             for (String id : MODULE_KEYBINDS.keySet()) {
-                MODULE_KEYBINDS.put(id, Integer.parseInt(
-                    properties.getProperty("keybind." + id, Integer.toString(GLFW.GLFW_KEY_UNKNOWN))));
+                String savedKey = properties.getProperty("keybind." + id,
+                    Integer.toString(GLFW.GLFW_KEY_UNKNOWN));
+                int parsedKey;
+                try {
+                    parsedKey = Integer.parseInt(savedKey);
+                } catch (NumberFormatException malformedKeybind) {
+                    // One bad keybind should not discard otherwise valid saved settings.
+                    parsedKey = GLFW.GLFW_KEY_UNKNOWN;
+                }
+                MODULE_KEYBINDS.put(id, normalizeKeyCode(parsedKey));
             }
             for (String id : HUD_WIDGET_IDS) {
                 String x = properties.getProperty("hud." + id + ".x");
