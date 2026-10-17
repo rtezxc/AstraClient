@@ -107,6 +107,7 @@ public final class AstraScreen extends Screen {
     private boolean resizingWindow;
     private boolean draggingScale;
     private boolean draggingOpacity;
+    private boolean draggingListScrollbar;
     private String captureKeybindId;
     private String contextMenuModuleId;
     private int contextMenuX, contextMenuY;
@@ -367,6 +368,21 @@ public final class AstraScreen extends Screen {
                     }
                 }
                 ctx.disableScissor();
+                // Slim draggable scrollbar makes the module list's scroll position obvious.
+                if (maxScroll > 0) {
+                    int trackX = contentX + contentW - 5;
+                    int trackTop = listTop + 2;
+                    int trackBottom = listBottom - 2;
+                    int trackH = Math.max(1, trackBottom - trackTop);
+                    int thumbH = Math.max(24, (int) ((long) trackH * viewportH / (rows * (long) stride)));
+                    thumbH = Math.min(trackH, thumbH);
+                    int thumbTravel = Math.max(0, trackH - thumbH);
+                    int thumbY = trackTop + (int) Math.round((double) scrollOffset / maxScroll * thumbTravel);
+                    ctx.fill(trackX, trackTop, trackX + 3, trackBottom, 0xFF252D3D);
+                    ctx.fill(trackX - 1, thumbY, trackX + 4, thumbY + thumbH,
+                        mouseX >= trackX - 4 && mouseX <= trackX + 7 ? 0xFFB7A0FF : accent);
+                    ctx.fill(trackX, thumbY + 2, trackX + 2, thumbY + thumbH - 2, 0xFF54E8FF);
+                }
                 long ready = visible.stream().filter(m -> m.implemented).count();
                 String moduleSummary = visible.size() + " MODULES  •  " + ready + " AVAILABLE";
                 ctx.drawText(textRenderer, moduleSummary, contentX, top + panelH - 26, MUTED, false);
@@ -664,6 +680,15 @@ public final class AstraScreen extends Screen {
         int listTop = top + 105, listBottom = top + panelH - 43;
         if (mouseY < listTop || mouseY > listBottom) return true;
         List<ModuleInfo> visible = getVisibleModules();
+        int viewportH = Math.max(1, listBottom - listTop);
+        int rows = (visible.size() + 1) / 2;
+        int maxScroll = Math.max(0, rows * 76 - viewportH);
+        int scrollbarX = contentX + contentW - 7;
+        if (maxScroll > 0 && mouseX >= scrollbarX && mouseX <= contentX + contentW + 1) {
+            draggingListScrollbar = true;
+            updateListScrollFromMouse(mouseY, listTop, listBottom, rows, maxScroll);
+            return true;
+        }
         int gap = 10, cardW = Math.max(70, (contentW - gap) / 2);
         int stride = 76, cardH = 65;
         int viewportH = Math.max(1, listBottom - listTop);
@@ -705,6 +730,19 @@ public final class AstraScreen extends Screen {
     private void updateScaleFromMouse(double mouseX, int x, int trackW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - x) / Math.max(1.0, trackW)));
         AstraClient.previewGuiScale(75 + (int) Math.round(progress * 50.0));
+    }
+
+    private void updateListScrollFromMouse(double mouseY, int listTop, int listBottom, int rows, int maxScroll) {
+        int trackTop = listTop + 2;
+        int trackBottom = listBottom - 2;
+        int trackH = Math.max(1, trackBottom - trackTop);
+        int viewportH = Math.max(1, listBottom - listTop);
+        int thumbH = Math.max(24, (int) ((long) trackH * viewportH / (rows * 76L)));
+        thumbH = Math.min(trackH, thumbH);
+        int thumbTravel = Math.max(1, trackH - thumbH);
+        double progress = Math.max(0.0, Math.min(1.0,
+            (mouseY - trackTop - thumbH / 2.0) / thumbTravel));
+        scrollOffset = (int) Math.round(progress * maxScroll);
     }
 
     private void updateOpacityFromMouse(double mouseX, int x, int trackW) {
@@ -999,6 +1037,16 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (button == 0 && draggingListScrollbar) {
+            int panelH = panelHeight();
+            int top = panelTop(panelH);
+            int listTop = top + 105, listBottom = top + panelH - 43;
+            List<ModuleInfo> visible = getVisibleModules();
+            int rows = (visible.size() + 1) / 2;
+            int maxScroll = Math.max(0, rows * 76 - Math.max(1, listBottom - listTop));
+            if (maxScroll > 0) updateListScrollFromMouse(mouseY, listTop, listBottom, rows, maxScroll);
+            return true;
+        }
         if (button == 0 && (draggingScale || draggingOpacity)) {
             int panelW = panelWidth(), sideW = sidebarWidth(panelW);
             int x = panelLeft(panelW) + sideW + 18;
@@ -1037,6 +1085,7 @@ public final class AstraScreen extends Screen {
         resizingWindow = false;
         draggingScale = false;
         draggingOpacity = false;
+        draggingListScrollbar = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
