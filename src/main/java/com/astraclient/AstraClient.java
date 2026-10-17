@@ -75,7 +75,7 @@ public final class AstraClient implements ClientModInitializer {
     private static final Path CONFIG_PATH =
         FabricLoader.getInstance().getConfigDir().resolve("astraclient.properties");
     private static final DateTimeFormatter CLOCK_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
-    private static final int CONFIG_SCHEMA_VERSION = 1;
+    private static final int CONFIG_SCHEMA_VERSION = 2;
     private static boolean configNeedsMigration;
 
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
@@ -119,6 +119,7 @@ public final class AstraClient implements ClientModInitializer {
     private static int guiScale = 100;
     private static int hudOpacity = 84;
     private static boolean hudBackgrounds = true;
+    private static boolean customMenuBackground = true;
     private static long sessionStartedAt = System.currentTimeMillis();
     private static String notification = "Astra Client loaded";
     private static long notificationUntil = System.currentTimeMillis() + 2400L;
@@ -720,6 +721,17 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    /** Whether Astra should replace the vanilla title and world-browser backgrounds. */
+    public static boolean isCustomMenuBackgroundEnabled() {
+        return customMenuBackground;
+    }
+
+    public static void toggleCustomMenuBackground() {
+        customMenuBackground = !customMenuBackground;
+        notifyUser("Animated menu background " + (customMenuBackground ? "enabled" : "disabled"));
+        saveConfig();
+    }
+
     public static int previewHudOpacity(int value) {
         hudOpacity = Math.max(35, Math.min(100, value));
         return hudOpacity;
@@ -911,6 +923,7 @@ public final class AstraClient implements ClientModInitializer {
             guiScale = 100;
             hudOpacity = 84;
             hudBackgrounds = true;
+            customMenuBackground = true;
             zoomFov = 30;
             autoEatHungerThreshold = 16;
             espRange = 64;
@@ -1380,6 +1393,7 @@ public final class AstraClient implements ClientModInitializer {
             clickSounds = Boolean.parseBoolean(properties.getProperty("ui.clickSounds", "true"));
             hudOpacity = Math.max(35, Math.min(100, Integer.parseInt(properties.getProperty("hud.opacity", "84"))));
             hudBackgrounds = Boolean.parseBoolean(properties.getProperty("hud.backgrounds", "true"));
+            customMenuBackground = Boolean.parseBoolean(properties.getProperty("graphics.menuBackground", "true"));
             autoSprintGroundOnly = Boolean.parseBoolean(properties.getProperty("autosprint.groundOnly", "true"));
             autoSprintDisableInMenus = Boolean.parseBoolean(properties.getProperty("autosprint.disableInMenus", "true"));
             for (String id : MODULES.keySet()) {
@@ -1505,6 +1519,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("gui.scale", Integer.toString(guiScale));
         properties.setProperty("hud.opacity", Integer.toString(hudOpacity));
         properties.setProperty("hud.backgrounds", Boolean.toString(hudBackgrounds));
+        properties.setProperty("graphics.menuBackground", Boolean.toString(customMenuBackground));
         properties.setProperty("zoom.fov", Integer.toString(zoomFov));
         properties.setProperty("crosshair.size", Integer.toString(crosshairSize));
         properties.setProperty("crosshair.gap", Integer.toString(crosshairGap));
