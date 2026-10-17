@@ -219,6 +219,16 @@ public final class AstraModuleOptions {
         VALUES.put(key(moduleId, option.id()), normalize(option, rawValue));
     }
 
+    /** Keep legacy settings controls and the typed editor in sync for the same option. */
+    public static void syncBooleanValue(String moduleId, String optionId, boolean value) {
+        for (Option option : definitions(moduleId, "Movement")) {
+            if (option.id().equals(optionId) && option.type() == Type.TOGGLE) {
+                VALUES.put(key(moduleId, optionId), Boolean.toString(value));
+                return;
+            }
+        }
+    }
+
     public static String normalize(Option option, String raw) {
         try {
             return switch (option.type()) {
