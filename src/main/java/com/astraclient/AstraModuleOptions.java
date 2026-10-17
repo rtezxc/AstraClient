@@ -118,9 +118,12 @@ public final class AstraModuleOptions {
             case "customcrosshair" -> {
                 out.add(color("module_color", "Crosshair Color", "Color used by the custom crosshair.", "AA70FF"));
             }
-            case "orbitsparks", "orbitcubes", "playertrail" -> {
-                out.add(slider("effect_density", "Effect Density", "Controls how many visual elements are emitted.", "3", 1, 8, 1));
-                out.add(color("module_color", "Effect Color", "Color used by supported effect renderers.", "AA70FF"));
+            case "orbitcubes" -> {
+                out.add(slider("effect_density", "Cube Count", "Number of animated wire cubes orbiting the player.", "4", 1, 8, 1));
+                out.add(color("module_color", "Cube Color", "Tint used by the orbiting wire cubes.", "AA70FF"));
+            }
+            case "orbitsparks", "playertrail" -> {
+                out.add(slider("effect_density", "Effect Density", "Number of client-side particles emitted per update.", "2", 1, 8, 1));
             }
             case "speed", "noslow", "sprint", "autosprint", "fly", "autowalk", "safewalk", "eagle", "inventorymove" -> {
                 out.add(slider("movement_strength", "Movement Strength", "Strength factor used by supported movement logic.", "1.0", 0.5, 1.5, 0.05));
