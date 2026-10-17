@@ -139,11 +139,28 @@ public final class AstraModuleOptions {
                     out.add(toggle("offhand_only", "Offhand Only", "Only move a totem into the offhand slot.", true));
                 }
             }
-            case "blockfinder", "storagefinder", "waypoint", "breadcrumbs", "timechanger", "noweather", "nopumpkinoverlay", "nofireoverlay", "noportaloverlay", "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay", "novignette", "noscoreboard" -> {
-                out.add(slider("scan_range", "Scan / Display Range", "Distance or interval used by this world/visual utility.", "24", 8, 64, 4));
-                out.add(toggle("show_hud", "Show HUD Feedback", "Show the related HUD marker or information where supported.", true));
-                out.add(text("custom_value", "Custom Value", "Custom target, block name, or text used by supported utilities.", moduleId.equals("blockfinder") ? "DIAMOND" : ""));
-                out.add(color("module_color", "Module Color", "Color used by supported markers and overlays.", "54E8FF"));
+            case "blockfinder" -> {
+                out.add(slider("scan_range", "Scan Radius", "Radius used to search for a configured block.", "24", 8, 48, 4));
+                out.add(text("custom_value", "Block Target", "Use a supported ore alias or a registry ID such as minecraft:diamond_ore.", "DIAMOND"));
+                out.add(toggle("show_hud", "Show HUD Result", "Show the nearest matching block in the HUD.", true));
+            }
+            case "storagefinder" -> {
+                out.add(slider("scan_range", "Search Radius", "Maximum radius used to find nearby storage.", "16", 8, 32, 4));
+                out.add(toggle("show_hud", "Show HUD Result", "Show the nearest storage location in the HUD.", true));
+            }
+            case "waypoint" -> {
+                out.add(toggle("show_hud", "Show Waypoint HUD", "Show waypoint distance and direction.", true));
+                out.add(color("module_color", "Waypoint Color", "Color used by waypoint markers.", "54E8FF"));
+            }
+            case "breadcrumbs" -> {
+                out.add(slider("trail_length", "Trail Length", "Number of recent positions kept in the breadcrumb trail.", "48", 12, 120, 12));
+                out.add(toggle("show_hud", "Show Breadcrumb HUD", "Show the breadcrumb minimap.", true));
+            }
+            case "timechanger" -> {
+                out.add(slider("time_of_day", "Time Of Day", "Client-side visual time, from dawn through the full day cycle.", "6000", 0, 24000, 1000));
+            }
+            case "noweather", "nopumpkinoverlay", "nofireoverlay", "noportaloverlay", "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay", "novignette", "noscoreboard" -> {
+                // These modules remove one visual effect; the module toggle is their meaningful control.
             }
             default -> {
                 if ("HUD".equals(category)) {
@@ -152,9 +169,7 @@ public final class AstraModuleOptions {
                     out.add(color("module_color", "Module Color", "Color used by supported HUD elements.", "AA70FF"));
                     out.add(toggle("show_in_arraylist", "Show In Array List", "List this module in the enabled-module HUD.", true));
                 } else if ("World".equals(category)) {
-                    out.add(slider("scan_range", "Scan Range", "Search radius for supported world utilities.", "24", 8, 64, 4));
                     out.add(toggle("show_hud", "Show HUD Feedback", "Show related information where supported.", true));
-                    out.add(text("custom_value", "Custom Value", "Target block or text used by supported utilities.", ""));
                 } else if ("Movement".equals(category)) {
                     out.add(slider("movement_strength", "Movement Strength", "Strength factor for supported movement modules.", "1.0", 0.5, 1.5, 0.05));
                     out.add(mode("movement_mode", "Movement Mode", "Choose a supported movement profile.", "Default", MOVEMENT_MODES));
