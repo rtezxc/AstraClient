@@ -162,6 +162,7 @@ public final class AstraClient implements ClientModInitializer {
     private static float lastObservedHealth = -1.0F;
     private static float recentDamageAmount;
     private static long damageAlertUntil;
+    private static long lastAutoClickAt;
 
     static {
         MODULES.put("fullbright", false);
@@ -240,6 +241,9 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("aimassist", false);
         MODULES.put("autototem", false);
         MODULES.put("antiknockback", false);
+        MODULES.put("autoclicker", false);
+        MODULES.put("criticals", false);
+        MODULES.put("reach", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -813,6 +817,7 @@ public final class AstraClient implements ClientModInitializer {
 
         // Clear transient trackers so the next tick starts from a clean state.
         CLICK_TIMESTAMPS.clear();
+        lastAutoClickAt = 0L;
         attackMouseWasDown = false;
         useMouseWasDown = false;
         fpsHistoryIndex = 0;
@@ -1868,9 +1873,25 @@ public final class AstraClient implements ClientModInitializer {
         // multiplayer servers will reject.
         final double attackRange = 3.0D;
 
+        // Auto Clicker repeats ordinary crosshair attacks at a conservative interval;
+        // the vanilla attack cooldown and normal melee reach are still enforced.
+        if (isEnabled("autoclicker") && client.getWindow() != null
+            && org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),
+                org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS
+            && client.crosshairTarget instanceof EntityHitResult autoHit
+            && autoHit.getEntity() instanceof LivingEntity autoTarget
+            && isValidCombatTarget(autoTarget, client.player)
+            && client.player.distanceTo(autoTarget) <= 3.0D
+            && client.player.canSee(autoTarget) && hasClearLineOfSight(client, autoTarget)) {
+            long now = System.currentTimeMillis();
+            if (now - lastAutoClickAt >= 125L && attackTarget(client, autoTarget)) {
+                lastAutoClickAt = now;
+                return;
+            }
+        }
+
         // TriggerBot is deliberately crosshair-only, but it must not require a
-        // critical hit: that old condition made it appear completely broken
-        // whenever the player was standing on the ground.
+        // critical hit unless the explicit Criticals module is enabled.
         if (isEnabled("triggerbot")
             && client.crosshairTarget instanceof EntityHitResult hit
             && hit.getEntity() instanceof LivingEntity target
@@ -2059,6 +2080,7 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null || client.interactionManager == null
             || client.currentScreen != null || target == null || !target.isAlive()
             || client.player.isSpectator()
+            || (isEnabled("criticals") && !isCriticalHitReady(client.player))
             || client.player.distanceTo(target) > 3.0D
             || client.player.getAttackCooldownProgress(0.0F) < 0.9F) return false;
         client.interactionManager.attackEntity(client.player, target);
@@ -2332,6 +2354,7 @@ public final class AstraClient implements ClientModInitializer {
         int screenWidth = context.getScaledWindowWidth();
         int screenHeight = context.getScaledWindowHeight();
 
+        if (isEnabled("reach")) renderReachInfo(client, context, screenWidth, accent);
         if (isEnabled("tracers")) renderTracers(client, context, screenWidth, screenHeight, accent);
         if (isEnabled("nametags")) renderNametags(client, context, screenWidth, screenHeight, accent);
         if (isEnabled("breadcrumbs")) renderBreadcrumbs(client, context, screenWidth, screenHeight, accent);
@@ -3116,6 +3139,23 @@ if (isEnabled("blockfinder")) {
         cachedTracerTargets.addAll(found.subList(0, Math.min(8, found.size())));
     }
 
+    /** On-screen distance readout; this module never increases the vanilla attack reach. */
+    private static void renderReachInfo(MinecraftClient client, DrawContext context, int screenWidth, int accent) {
+        if (client.player == null || client.crosshairTarget == null) return;
+        double distance;
+        if (client.crosshairTarget instanceof EntityHitResult entityHit) {
+            distance = client.player.getEyePos().distanceTo(entityHit.getEntity().getEyePos());
+        } else if (client.crosshairTarget instanceof BlockHitResult blockHit) {
+            distance = client.player.getEyePos().distanceTo(blockHit.getPos());
+        } else {
+            return;
+        }
+        String label = String.format(Locale.ROOT, "Reach: %.2f / 3.00 blocks", distance);
+        context.fill(8, 8, 12 + client.textRenderer.getWidth(label), 22, 0xB80A0D16);
+        context.fill(8, 8, 10, 22, accent);
+        context.drawTextWithShadow(client.textRenderer, label, 14, 11, 0xFFF4F6FF);
+    }
+
     private static void renderNametags(MinecraftClient client, DrawContext context,
                                         int screenWidth, int screenHeight, int accent) {
         if (!isEnabled("nametags") || client.player == null || client.world == null) return;
@@ -3141,7 +3181,7 @@ if (isEnabled("blockfinder")) {
                 - Math.max(8, (int) (entity.getHeight() * 9.0D));
             String label = entity.getDisplayName().getString();
             String distance = String.format(Locale.ROOT, "%.1fm", player.distanceTo(entity));
-            String text = label + "  §7" + distance;
+            String text = label + "  " + distance;
             int tw = client.textRenderer.getWidth(text);
             if (sx < 2 || sx + tw > screenWidth - 2 || sy < 2 || sy > screenHeight - 12) continue;
             context.fill(sx - tw / 2 - 4, sy - 3, sx + tw / 2 + 4, sy + 11, 0xB80A0D16);
