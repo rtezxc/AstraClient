@@ -5,7 +5,10 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "AstraPanoramaMixin",
-    "AstraWorldMenuBackgroundMixin"
+    "AstraWorldMenuBackgroundMixin",
+    "AstraFastPlaceMixin",
+    "AstraFastBreakMixin",
+    "AstraNoWeatherMixin"
   ],
   "injectors": {
     "defaultRequire": 1
