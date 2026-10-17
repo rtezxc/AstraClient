@@ -2103,12 +2103,23 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean isValidCombatTarget(LivingEntity target, PlayerEntity self, String moduleId) {
         if (target == self || !target.isAlive() || target.isSpectator()) return false;
         if (target instanceof PlayerEntity) {
-            return AstraModuleOptions.boolValue(moduleId, "target_players", targetPlayers);
+            boolean enabled = AstraModuleOptions.boolValue(moduleId, "target_players", targetPlayers);
+            if (moduleId.equals("killaura")) enabled &= selectedTargets(moduleId).contains("Players");
+            return enabled;
         }
         if (target instanceof HostileEntity) {
-            return AstraModuleOptions.boolValue(moduleId, "target_hostile", targetHostile);
+            boolean enabled = AstraModuleOptions.boolValue(moduleId, "target_hostile", targetHostile);
+            if (moduleId.equals("killaura")) enabled &= selectedTargets(moduleId).contains("Hostile Mobs");
+            return enabled;
         }
-        return AstraModuleOptions.boolValue(moduleId, "target_passive", targetPassive);
+        boolean enabled = AstraModuleOptions.boolValue(moduleId, "target_passive", targetPassive);
+        if (moduleId.equals("killaura")) enabled &= selectedTargets(moduleId).contains("Passive Mobs");
+        return enabled;
+    }
+
+    private static List<String> selectedTargets(String moduleId) {
+        String raw = AstraModuleOptions.value(moduleId, "target_types", "Players,Hostile Mobs");
+        return raw.isBlank() ? List.of() : java.util.Arrays.asList(raw.split(","));
     }
 
     private static boolean shouldWaitForCritical(String moduleId, PlayerEntity player) {
