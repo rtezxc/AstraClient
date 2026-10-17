@@ -104,7 +104,12 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("autoweapon", "Auto Weapon", "Selects a sword or axe while aiming at a living target", "Combat", true),
         new ModuleInfo("fastplace", "Fast Place", "Removes the client item-use cooldown before placement", "World", true),
         new ModuleInfo("fastbreak", "Fast Break", "Removes the client-side block-breaking cooldown", "World", true),
-        new ModuleInfo("scaffold", "Scaffold", "Places held blocks beside existing support while bridging", "World", true)
+        new ModuleInfo("scaffold", "Scaffold", "Places held blocks beside existing support while bridging", "World", true),
+        new ModuleInfo("nopumpkinoverlay", "No Pumpkin Overlay", "Hide the pumpkin blur when wearing a carved pumpkin", "Render", true),
+        new ModuleInfo("nofireoverlay", "No Fire Overlay", "Hide the first-person flames when on fire", "Render", true),
+        new ModuleInfo("noportaloverlay", "No Portal Overlay", "Hide the purple portal distortion overlay", "Render", true),
+        new ModuleInfo("nospyglassoverlay", "No Spyglass Overlay", "Hide the circular spyglass mask while zooming", "Render", true),
+        new ModuleInfo("nopowdersnowoverlay", "No Powder Snow Overlay", "Hide the powder-snow screen frost", "Render", true)
     );
 
     private String category = "Render";
