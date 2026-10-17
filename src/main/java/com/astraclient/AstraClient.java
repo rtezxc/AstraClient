@@ -3353,7 +3353,7 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
             player.getBoundingBox().expand(nameRange),
             candidate -> candidate != player && !candidate.isRemoved()
                 && (candidate instanceof PlayerEntity || candidate instanceof LivingEntity)
-                && player.distanceTo(candidate) <= nameRange) {
+                && player.distanceTo(candidate) <= nameRange)) {
             var delta = entity.getBoundingBox().getCenter().subtract(player.getEyePos());
             double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
             if (horizontal < 0.1D) continue;
