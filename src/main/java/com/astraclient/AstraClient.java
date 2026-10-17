@@ -1741,10 +1741,13 @@ public final class AstraClient implements ClientModInitializer {
             fullBrightWasEnabled = fullBrightEnabled;
 
             boolean movingForward = client.player.forwardSpeed > 0.0F;
+            String sprintModuleId = isEnabled("autosprint") ? "autosprint" : "sprint";
+            boolean groundOnly = AstraModuleOptions.boolValue(sprintModuleId, "only_on_ground", autoSprintGroundOnly);
+            boolean pauseInMenus = AstraModuleOptions.boolValue(sprintModuleId, "pause_in_menus", autoSprintDisableInMenus);
             boolean sprintAllowed = movingForward && !client.player.isSneaking()
                 && !client.player.horizontalCollision
-                && (!autoSprintGroundOnly || client.player.isOnGround())
-                && (!autoSprintDisableInMenus || client.currentScreen == null);
+                && (!groundOnly || client.player.isOnGround())
+                && (!pauseInMenus || client.currentScreen == null);
             if ((isEnabled("autosprint") || isEnabled("sprint")) && sprintAllowed) {
                 client.player.setSprinting(true);
             }
@@ -2255,8 +2258,10 @@ public final class AstraClient implements ClientModInitializer {
     private static void updateAutoEat(MinecraftClient client) {
         if (client.options == null) return;
         PlayerEntity player = client.player;
+        int foodThreshold = (int)Math.round(Math.max(10.0D, Math.min(19.0D,
+            AstraModuleOptions.numberValue("autoeat", "threshold", autoEatHungerThreshold))));
         boolean wantsFood = isEnabled("autoeat") && player != null && client.world != null
-            && client.currentScreen == null && player.getHungerManager().getFoodLevel() <= autoEatHungerThreshold;
+            && client.currentScreen == null && player.getHungerManager().getFoodLevel() <= foodThreshold;
 
         if (autoEatWasForcing && (!wantsFood || player == null
                 || player.getInventory().selectedSlot != autoEatSelectedSlot)) {
@@ -2300,7 +2305,9 @@ public final class AstraClient implements ClientModInitializer {
     private static void updateAutoWalk(MinecraftClient client) {
         if (client.options == null) return;
         boolean enabled = isEnabled("autowalk") && client.player != null
-            && client.world != null && client.currentScreen == null;
+            && client.world != null
+            && (client.currentScreen == null
+                || !AstraModuleOptions.boolValue("autowalk", "pause_in_menus", true));
         if (enabled) {
             client.options.forwardKey.setPressed(true);
             autoWalkWasForcing = true;
@@ -2336,9 +2343,11 @@ public final class AstraClient implements ClientModInitializer {
 
         player.setNoGravity(true);
         flyWasActive = true;
+        double flightStrength = Math.max(0.5D, Math.min(1.5D,
+            AstraModuleOptions.numberValue("fly", "movement_strength", 1.0D)));
         double vertical = 0.0D;
-        if (client.options.jumpKey.isPressed()) vertical = 0.42D;
-        else if (client.options.sneakKey.isPressed()) vertical = -0.42D;
+        if (client.options.jumpKey.isPressed()) vertical = 0.42D * flightStrength;
+        else if (client.options.sneakKey.isPressed()) vertical = -0.42D * flightStrength;
         var velocity = player.getVelocity();
         player.setVelocity(velocity.x, vertical, velocity.z);
     }
