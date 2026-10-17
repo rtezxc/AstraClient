@@ -9,7 +9,8 @@
     "AstraFastPlaceMixin",
     "AstraFastBreakMixin",
     "AstraNoWeatherMixin",
-    "AstraOverlayRemovalMixin"
+    "AstraOverlayRemovalMixin",
+    "AstraFireOverlayMixin"
   ],
   "injectors": {
     "defaultRequire": 1
