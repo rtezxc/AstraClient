@@ -24,6 +24,7 @@ public final class AstraModuleOptionsScreen extends Screen {
     private int capturedKeyIndex = -1;
     private int editingTextIndex = -1;
     private String textBuffer = "";
+    private String originalTextValue = "";
 
     public AstraModuleOptionsScreen(Screen parent, String moduleId, String moduleName, String category) {
         super(Text.literal("Astra Advanced Module Settings"));
@@ -203,6 +204,7 @@ public final class AstraModuleOptionsScreen extends Screen {
             case TEXT -> {
                 editingTextIndex = options().indexOf(option);
                 textBuffer = current;
+                originalTextValue = current;
             }
             case KEYBIND -> {
                 capturedKeyIndex = options().indexOf(option);
@@ -217,6 +219,10 @@ public final class AstraModuleOptionsScreen extends Screen {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
         int pw=panelWidth(), ph=panelHeight(), x=(width-pw)/2, y=(height-ph)/2;
         if (!inside(mouseX, mouseY, x, y, pw, ph)) {
+            if (editingTextIndex >= 0 && editingTextIndex < options().size()) {
+                AstraModuleOptions.setValue(moduleId, options().get(editingTextIndex), textBuffer);
+                editingTextIndex = -1;
+            }
             client.setScreen(parent);
             return true;
         }
@@ -292,6 +298,7 @@ public final class AstraModuleOptionsScreen extends Screen {
                 return true;
             }
             if(keyCode==GLFW.GLFW_KEY_ESCAPE) {
+                AstraModuleOptions.previewValue(moduleId,option,originalTextValue);
                 editingTextIndex=-1;
                 return true;
             }
