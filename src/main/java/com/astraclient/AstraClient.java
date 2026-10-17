@@ -2031,9 +2031,8 @@ public final class AstraClient implements ClientModInitializer {
         for (LivingEntity candidate : client.world.getEntitiesByClass(
             LivingEntity.class, client.player.getBoundingBox().expand(attackRange),
             entity -> isValidCombatTarget(entity, client.player, "killaura"))) {
-            double distance = client.player.distanceTo(candidate);
-            if (distance > attackRange || !client.player.canSee(candidate)
-                || !hasClearLineOfSight(client, candidate)) continue;
+            double distance = distanceToTargetBox(client.player, candidate);
+            if (distance > attackRange || !hasClearLineOfSight(client, candidate)) continue;
 
             // Prefer targets actually in front of the player, while allowing a
             // generous cone so ordinary mouse movement doesn't make the aura miss.
@@ -2061,8 +2060,11 @@ public final class AstraClient implements ClientModInitializer {
 
         lastCombatTarget = bestTarget;
         if (bestTarget != null && !shouldWaitForCritical("killaura", client.player)) {
+            // Face the selected target before issuing the attack. This is the reliable
+            // default for ordinary multiplayer servers; users can still select Assist
+            // or None in the module options if they prefer less visible rotation.
             applyKillAuraRotation(client, bestTarget,
-                AstraModuleOptions.value("killaura", "rotation_mode", "None"));
+                AstraModuleOptions.value("killaura", "rotation_mode", "Visible"));
             attackTarget(client, bestTarget);
         }
     }
@@ -2259,6 +2261,20 @@ public final class AstraClient implements ClientModInitializer {
             && !player.hasStatusEffect(StatusEffects.BLINDNESS);
     }
 
+    /**
+     * Measures reach to the nearest point on the target's hitbox from the player's
+     * eye position. Entity-origin distance incorrectly rejects nearby targets when
+     * their feet/origin are just beyond the reach boundary.
+     */
+    private static double distanceToTargetBox(PlayerEntity player, Entity target) {
+        Box box = target.getBoundingBox();
+        Vec3d eye = player.getEyePos();
+        double x = Math.max(box.minX, Math.min(eye.x, box.maxX));
+        double y = Math.max(box.minY, Math.min(eye.y, box.maxY));
+        double z = Math.max(box.minZ, Math.min(eye.z, box.maxZ));
+        return eye.distanceTo(new Vec3d(x, y, z));
+    }
+
     private static boolean attackTarget(MinecraftClient client, LivingEntity target) {
         return attackTarget(client, target, true);
     }
@@ -2268,7 +2284,7 @@ public final class AstraClient implements ClientModInitializer {
             || client.currentScreen != null || target == null || !target.isAlive()
             || client.player.isSpectator()
             || (isEnabled("criticals") && !isCriticalHitReady(client.player))
-            || client.player.distanceTo(target) > 3.0D
+            || distanceToTargetBox(client.player, target) > 3.0D
             || (respectCooldown && client.player.getAttackCooldownProgress(0.0F) < 0.9F)) return false;
         client.interactionManager.attackEntity(client.player, target);
         client.player.swingHand(Hand.MAIN_HAND);
