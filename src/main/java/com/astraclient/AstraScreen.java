@@ -32,6 +32,8 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("targetbox", "Target Box", "Draw a bright pink 3D outline around the current combat target", "Render", true),
         new ModuleInfo("targethalo", "Target Halo", "Two animated rings of tiny cubes orbit the current target", "Render", true),
         new ModuleInfo("playertrail", "Player Trail", "Leave a sparkling end-rod particle trail as you move", "Render", true),
+        new ModuleInfo("blockhighlight", "Block Highlight", "Draw a crisp theme-colored outline around the block under your crosshair", "Render", true),
+        new ModuleInfo("orbitsparks", "Orbit Sparks", "Two glowing particles spiral around your player", "Render", true),
         new ModuleInfo("customcrosshair", "Custom Crosshair", "Draws a compact accent-colored crosshair overlay", "Render", true),
         new ModuleInfo("playeresp", "Player ESP", "Local glowing outline around other players", "Render", true),
         new ModuleInfo("mobesp", "Mob ESP", "Local glowing outlines around nearby mobs", "Render", true),

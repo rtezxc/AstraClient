@@ -214,6 +214,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("targetbox", false);
         MODULES.put("targethalo", false);
         MODULES.put("playertrail", false);
+        MODULES.put("blockhighlight", false);
+        MODULES.put("orbitsparks", false);
         MODULES.put("timechanger", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
@@ -321,6 +323,8 @@ public final class AstraClient implements ClientModInitializer {
             case "targetbox" -> "Target Box";
             case "targethalo" -> "Target Halo";
             case "playertrail" -> "Player Trail";
+            case "blockhighlight" -> "Block Highlight";
+            case "orbitsparks" -> "Orbit Sparks";
             case "timechanger" -> "Time Changer";
             case "customcrosshair" -> "Custom Crosshair";
             case "tracers" -> "Tracers";
@@ -1370,6 +1374,7 @@ public final class AstraClient implements ClientModInitializer {
             updateCombatModules(client);
             updateTargetEspParticles(client);
             updatePlayerTrail(client);
+            updateOrbitSparks(client);
             updateAutoWeapon(client);
             updateAutoTool(client);
             updateFly(client);
@@ -2421,6 +2426,22 @@ if (isEnabled("blockfinder")) {
             0.0D, 0.015D, 0.0D);
     }
 
+    private static void updateOrbitSparks(MinecraftClient client) {
+        if (!isEnabled("orbitsparks") || client.player == null || client.world == null
+                || client.player.age % 2 != 0) return;
+        var player = client.player;
+        double time = player.age * 0.18D;
+        for (int i = 0; i < 2; i++) {
+            double angle = time + i * Math.PI;
+            double radius = 0.82D + i * 0.12D;
+            double x = player.getX() + Math.cos(angle) * radius;
+            double z = player.getZ() + Math.sin(angle) * radius;
+            double y = player.getY() + 0.65D + Math.sin(time * 1.4D + i) * 0.35D;
+            client.world.addParticle(ParticleTypes.END_ROD, x, y, z,
+                -Math.sin(angle) * 0.015D, 0.025D, Math.cos(angle) * 0.015D);
+        }
+    }
+
     private static void renderVisualOverlays(WorldRenderContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null || context.matrixStack() == null
@@ -2433,7 +2454,10 @@ if (isEnabled("blockfinder")) {
         boolean showTargetHalo = isEnabled("targethalo") && lastCombatTarget != null
             && lastCombatTarget.isAlive() && !lastCombatTarget.isRemoved()
             && lastCombatTarget.getWorld() == client.world;
-        if (!showHitboxes && !showTargetBox && !showTargetHalo) return;
+        boolean showBlockHighlight = isEnabled("blockhighlight")
+            && client.crosshairTarget instanceof BlockHitResult blockHit
+            && client.crosshairTarget.getType() == HitResult.Type.BLOCK;
+        if (!showHitboxes && !showTargetBox && !showTargetHalo && !showBlockHighlight) return;
 
         int accent = accentColor();
         float red = ((accent >> 16) & 255) / 255.0F;
@@ -2446,6 +2470,11 @@ if (isEnabled("blockfinder")) {
 
         matrices.push();
         matrices.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
+
+        if (showBlockHighlight && client.crosshairTarget instanceof BlockHitResult blockHit) {
+            VertexRendering.drawBox(matrices, lines,
+                new Box(blockHit.getBlockPos()).expand(0.002D), red, green, blue, 1.0F);
+        }
 
         if (showHitboxes) {
             Box nearby = client.player.getBoundingBox().expand(espRange);
