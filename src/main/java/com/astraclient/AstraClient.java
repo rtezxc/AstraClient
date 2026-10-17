@@ -80,6 +80,8 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean configNeedsMigration;
 
     private static final Map<String, Boolean> MODULES = new LinkedHashMap<>();
+    /** Runtime snapshot lets PvP Mode restore the user's previous module states when disabled. */
+    private static final Map<String, Boolean> PVP_MODE_PREVIOUS_STATES = new LinkedHashMap<>();
     private static final Map<String, Integer> MODULE_KEYBINDS = new LinkedHashMap<>();
     private static final Map<String, Boolean> KEY_WAS_DOWN = new LinkedHashMap<>();
     private static final Map<UUID, GlowState> ORIGINAL_ENTITY_GLOW = new HashMap<>();
@@ -183,6 +185,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("inventorymove", false);
         MODULES.put("autoeat", false);
         MODULES.put("killaura", false);
+        MODULES.put("pvpmode", false);
         MODULES.put("triggerbot", false);
         MODULES.put("autotool", false);
         MODULES.put("autoweapon", false);
@@ -267,6 +270,10 @@ public final class AstraClient implements ClientModInitializer {
     public static void toggle(String id) {
         if (!MODULES.containsKey(id)) return;
         boolean value = !MODULES.get(id);
+        if (id.equals("pvpmode")) {
+            setPvpMode(value, true);
+            return;
+        }
         MODULES.put(id, value);
         notifyUser((value ? "Enabled " : "Disabled ") + readableName(id));
         saveConfig();
@@ -274,8 +281,46 @@ public final class AstraClient implements ClientModInitializer {
 
     public static void setEnabled(String id, boolean enabled) {
         if (!MODULES.containsKey(id)) return;
+        if (id.equals("pvpmode")) {
+            setPvpMode(enabled, true);
+            return;
+        }
         MODULES.put(id, enabled);
         notifyUser((enabled ? "Enabled " : "Disabled ") + readableName(id));
+        saveConfig();
+    }
+
+    /**
+     * Enables a curated PvP loadout and restores the exact previous module states
+     * when turned off. Combat automation is explicit here because the user enabled
+     * this dedicated mode; ordinary profiles remain non-automating.
+     */
+    private static void setPvpMode(boolean enabled, boolean announce) {
+        if (enabled == MODULES.getOrDefault("pvpmode", false)) return;
+        Set<String> loadout = Set.of(
+            "killaura", "autototem", "antiknockback", "autoweapon",
+            "targethud", "tracers", "playeresp", "lowhealthalert",
+            "fps", "watermark", "keystrokes", "cps", "armorhud",
+            "potionhud", "healthhud", "effectalert", "autosprint", "noslow"
+        );
+        if (enabled) {
+            PVP_MODE_PREVIOUS_STATES.clear();
+            for (String moduleId : loadout) {
+                if (!MODULES.containsKey(moduleId)) continue;
+                PVP_MODE_PREVIOUS_STATES.put(moduleId, MODULES.get(moduleId));
+                MODULES.put(moduleId, true);
+            }
+            MODULES.put("pvpmode", true);
+        } else {
+            for (Map.Entry<String, Boolean> entry : PVP_MODE_PREVIOUS_STATES.entrySet()) {
+                if (MODULES.containsKey(entry.getKey())) MODULES.put(entry.getKey(), entry.getValue());
+            }
+            PVP_MODE_PREVIOUS_STATES.clear();
+            MODULES.put("pvpmode", false);
+        }
+        if (announce) notifyUser(enabled
+            ? "PvP Mode ON — combat, defense and HUD loadout enabled"
+            : "PvP Mode OFF — previous module states restored");
         saveConfig();
     }
 
@@ -382,6 +427,7 @@ public final class AstraClient implements ClientModInitializer {
             case "inventorymove" -> "Inventory Move";
             case "autoeat" -> "Auto Eat";
             case "killaura" -> "Kill Aura";
+            case "pvpmode" -> "PvP Mode";
             case "triggerbot" -> "TriggerBot";
             case "autotool" -> "Auto Tool";
             case "autoweapon" -> "Auto Weapon";
