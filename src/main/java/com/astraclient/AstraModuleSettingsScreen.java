@@ -358,6 +358,10 @@ public final class AstraModuleSettingsScreen extends Screen {
         int statusY = y + 133, bindY = statusY + 48, nextY = bindY + 45;
         int bottomY = y + ph - 44;
 
+        if (!inside(mouseX, mouseY, x, y, pw, ph)) {
+            client.setScreen(parent);
+            return true;
+        }
         if (pw < 600 && inside(mouseX, mouseY, x + pw - 118, y + 12, 102, 24)) {
             client.setScreen(new AstraModuleOptionsScreen(this, moduleId, moduleName, category));
             return true;
