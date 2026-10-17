@@ -1902,16 +1902,22 @@ public final class AstraClient implements ClientModInitializer {
 
         // Auto Clicker repeats ordinary crosshair attacks at a conservative interval;
         // the vanilla attack cooldown and normal melee reach are still enforced.
-        if (isEnabled("autoclicker") && client.getWindow() != null
+        boolean leftMouseHeld = client.getWindow() != null
             && org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),
-                org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS
+                org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        boolean autoClickNeedsHold = AstraModuleOptions.boolValue("autoclicker", "only_when_held", true);
+        if (isEnabled("autoclicker") && client.getWindow() != null
+            && (!autoClickNeedsHold || leftMouseHeld)
             && client.crosshairTarget instanceof EntityHitResult autoHit
             && autoHit.getEntity() instanceof LivingEntity autoTarget
             && isValidCombatTarget(autoTarget, client.player, "autoclicker")
             && client.player.distanceTo(autoTarget) <= 3.0D
             && client.player.canSee(autoTarget) && hasClearLineOfSight(client, autoTarget)) {
             long now = System.currentTimeMillis();
-            if (now - lastAutoClickAt >= 125L && attackTarget(client, autoTarget)) {
+            long clickInterval = Math.round(AstraModuleOptions.numberValue("autoclicker", "click_interval", 125.0D));
+            boolean respectCooldown = AstraModuleOptions.boolValue("autoclicker", "respect_cooldown", true);
+            if (now - lastAutoClickAt >= Math.max(100L, Math.min(500L, clickInterval))
+                && attackTarget(client, autoTarget, respectCooldown)) {
                 lastAutoClickAt = now;
                 return;
             }
@@ -1924,7 +1930,8 @@ public final class AstraClient implements ClientModInitializer {
             && hit.getEntity() instanceof LivingEntity target
             && isValidCombatTarget(target, client.player, "triggerbot")
             && client.player.distanceTo(target) <= triggerRange
-            && client.player.canSee(target) && hasClearLineOfSight(client, target)) {
+            && client.player.canSee(target) && hasClearLineOfSight(client, target)
+            && !shouldWaitForCritical("triggerbot", client.player)) {
             if (attackTarget(client, target)) return;
         }
 
