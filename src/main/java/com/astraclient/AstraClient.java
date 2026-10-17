@@ -2646,7 +2646,7 @@ public final class AstraClient implements ClientModInitializer {
             }
             int serverX = hudX("serverinfo", 8);
             int serverY = hudY("serverinfo", screenHeight - 122);
-            drawHudLineAt(client, context, serverX, serverY, "SERVER", serverName + " · " + serverPing, accent);
+            drawHudLineAt(client, context, "serverinfo", serverX, serverY, "SERVER", serverName + " · " + serverPing, accent);
         }
                 if (isEnabled("waypoint") && AstraModuleOptions.boolValue("waypoint", "show_hud", true)) {
             String value;
@@ -2751,7 +2751,7 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
                 if (effectY + 18 > screenHeight - 20) break;
                 String name = effect.getEffectType().value().getName().getString();
                 String duration = effect.getDuration() < 0 ? "∞" : formatDuration(effect.getDuration());
-                potionMaxWidth = Math.max(potionMaxWidth, drawHudLineAt(client, context, potionX, effectY, "EFFECT",
+                potionMaxWidth = Math.max(potionMaxWidth, drawHudLineAt(client, context, "effectalert", potionX, effectY, "EFFECT",
                     name + " " + duration, accent));
                 effectY += 21;
                 potionRows++;
@@ -3811,12 +3811,13 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         int screenHeight = context.getScaledWindowHeight();
         x = Math.max(0, Math.min(screenWidth - 50, x));
         y = Math.max(0, Math.min(screenHeight - 20, y));
-        int width = drawHudLineAt(client, context, x, y, label, value, accent);
+        int width = drawHudLineAt(client, context, id, x, y, label, value, accent);
         HUD_RENDERED_BOUNDS.put(id, new HudBounds(x, y, width, 18));
     }
 
-    private static int drawHudLineAt(MinecraftClient client, DrawContext context, int x, int y,
+    private static int drawHudLineAt(MinecraftClient client, DrawContext context, String id, int x, int y,
                                       String label, String value, int accent) {
+        accent = moduleColor(id, accent);
         x = Math.max(0, Math.min(context.getScaledWindowWidth() - 50, x));
         y = Math.max(0, Math.min(context.getScaledWindowHeight() - 20, y));
         String text = label + "  " + value;
@@ -3826,7 +3827,8 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         }
         int width = Math.min(maxWidth, client.textRenderer.getWidth(text) + 16);
         int hudAlpha = Math.round(255.0f * hudOpacity / 100.0f);
-        if (hudBackgrounds) context.fill(x, y, x + width, y + 18, (hudAlpha << 24) | 0x00101420);
+        boolean showBackground = AstraModuleOptions.boolValue(id, "background", hudBackgrounds);
+        if (showBackground) context.fill(x, y, x + width, y + 18, (hudAlpha << 24) | 0x00101420);
         context.fill(x, y, x + 2, y + 18, accent);
         context.drawText(client.textRenderer, text, x + 8, y + 5, 0xFFF3F5FF, false);
         return width;
