@@ -212,6 +212,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("orbitcubes", false);
         MODULES.put("hitboxes", false);
         MODULES.put("targetbox", false);
+        MODULES.put("targethalo", false);
+        MODULES.put("playertrail", false);
         MODULES.put("timechanger", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
@@ -317,6 +319,8 @@ public final class AstraClient implements ClientModInitializer {
             case "orbitcubes" -> "Orbit Cubes";
             case "hitboxes" -> "Hitbox ESP";
             case "targetbox" -> "Target Box";
+            case "targethalo" -> "Target Halo";
+            case "playertrail" -> "Player Trail";
             case "timechanger" -> "Time Changer";
             case "customcrosshair" -> "Custom Crosshair";
             case "tracers" -> "Tracers";
@@ -1365,6 +1369,7 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoWalk(client);
             updateCombatModules(client);
             updateTargetEspParticles(client);
+            updatePlayerTrail(client);
             updateAutoWeapon(client);
             updateAutoTool(client);
             updateFly(client);
@@ -2402,6 +2407,20 @@ if (isEnabled("blockfinder")) {
         }
     }
 
+    private static void updatePlayerTrail(MinecraftClient client) {
+        if (!isEnabled("playertrail") || client.player == null || client.world == null
+                || client.player.age % 3 != 0) return;
+        var player = client.player;
+        double backX = -Math.sin(Math.toRadians(player.getYaw())) * 0.28D;
+        double backZ = Math.cos(Math.toRadians(player.getYaw())) * 0.28D;
+        // Client-side particles only; this visual sends no gameplay packets.
+        client.world.addParticle(ParticleTypes.END_ROD,
+            player.getX() + backX + (Math.random() - 0.5D) * 0.16D,
+            player.getY() + 0.12D + Math.random() * 0.22D,
+            player.getZ() + backZ + (Math.random() - 0.5D) * 0.16D,
+            0.0D, 0.015D, 0.0D);
+    }
+
     private static void renderVisualOverlays(WorldRenderContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null || context.matrixStack() == null
@@ -2411,7 +2430,10 @@ if (isEnabled("blockfinder")) {
         boolean showTargetBox = isEnabled("targetbox") && lastCombatTarget != null
             && lastCombatTarget.isAlive() && !lastCombatTarget.isRemoved()
             && lastCombatTarget.getWorld() == client.world;
-        if (!showHitboxes && !showTargetBox) return;
+        boolean showTargetHalo = isEnabled("targethalo") && lastCombatTarget != null
+            && lastCombatTarget.isAlive() && !lastCombatTarget.isRemoved()
+            && lastCombatTarget.getWorld() == client.world;
+        if (!showHitboxes && !showTargetBox && !showTargetHalo) return;
 
         int accent = accentColor();
         float red = ((accent >> 16) & 255) / 255.0F;
@@ -2442,9 +2464,37 @@ if (isEnabled("blockfinder")) {
             }
         }
 
-        if (showTargetBox && client.player.squaredDistanceTo(lastCombatTarget) <= rangeSq) {
-            Box targetBox = lastCombatTarget.getBoundingBox().expand(0.055D);
-            VertexRendering.drawBox(matrices, lines, targetBox, 1.0F, 0.18F, 0.52F, 1.0F);
+        if ((showTargetBox || showTargetHalo) && client.player.squaredDistanceTo(lastCombatTarget) <= rangeSq) {
+            Box targetBounds = lastCombatTarget.getBoundingBox();
+            if (showTargetBox) {
+                VertexRendering.drawBox(matrices, lines, targetBounds.expand(0.055D),
+                    1.0F, 0.18F, 0.52F, 1.0F);
+            }
+            if (showTargetHalo) {
+                double time = System.currentTimeMillis() / 500.0D;
+                double centerX = (targetBounds.minX + targetBounds.maxX) * 0.5D;
+                double centerZ = (targetBounds.minZ + targetBounds.maxZ) * 0.5D;
+                double radius = Math.max(0.62D, Math.max(targetBounds.getX(), targetBounds.getZ()) * 0.72D);
+                double baseY = targetBounds.minY + 0.08D;
+                // Two orbiting rings made of tiny wire cubes create a lightweight animated halo.
+                for (int ring = 0; ring < 2; ring++) {
+                    for (int i = 0; i < 18; i++) {
+                        double angle = time + i * (Math.PI * 2.0D / 18.0D) + ring * Math.PI / 18.0D;
+                        double x = centerX + Math.cos(angle) * radius;
+                        double z = centerZ + Math.sin(angle) * radius;
+                        double y = baseY + ring * Math.max(0.45D, targetBounds.getY() * 0.42D)
+                            + Math.sin(angle * 2.0D) * 0.08D;
+                        float size = 0.045F;
+                        matrices.push();
+                        matrices.translate(x, y, z);
+                        VertexRendering.drawBox(matrices, lines,
+                            new Box(-size, -size, -size, size, size, size),
+                            ring == 0 ? red : 1.0F, ring == 0 ? green : 0.35F,
+                            ring == 0 ? blue : 0.85F, 0.95F);
+                        matrices.pop();
+                    }
+                }
+            }
         }
         matrices.pop();
     }
