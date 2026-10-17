@@ -67,6 +67,8 @@ jobs:
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
 
           python - <<'PY'
           import pathlib
@@ -76,6 +78,16 @@ jobs:
           root = pathlib.Path("src/main/java/com/astraclient")
           client = (root / "AstraClient.java").read_text(encoding="utf-8")
           screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+
+          # The custom background must remain opt-out-able for renderer troubleshooting.
+          if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
+              sys.exit("ERROR: menu background setting is not persisted/toggleable")
+          if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
+              sys.exit("ERROR: menu background setting is missing from the GUI")
+          for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
+              mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
+              if "isCustomMenuBackgroundEnabled()" not in mixin_source:
+                  sys.exit(f"ERROR: {mixin_name} ignores the background fallback setting")
 
           # Restrict registry parsing to the static initializer, where modules are registered.
           static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
