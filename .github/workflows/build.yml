@@ -1,5 +1,5 @@
 name: Build Astra Client
-# CI refresh: validate the latest main branch after the Astra 1.1.0 update
+# Build and inspect the distributable mod JAR on every main-branch update.
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
       - name: Build mod from clean state
         run: gradle clean build --no-daemon
 
-      - name: Verify mod JAR contents
+      - name: Verify production JAR contents and metadata
         id: verify
         shell: bash
         run: |
@@ -46,100 +46,19 @@ jobs:
             find build/libs -maxdepth 1 -type f -print || true
             exit 1
           fi
-          echo "Built artifact: $JAR"
           test -s "$JAR"
+          echo "Built artifact: $JAR"
           ls -lh "$JAR"
           jar tf "$JAR" | tee /tmp/jar-contents.txt
-          grep -q '^fabric.mod.json
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^astraclient.mixins.json
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraClient.class
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraScreen.class
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraModuleSettingsScreen.class
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraHudEditorScreen.class
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraBackgroundRenderer.class
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraPanoramaMixin.class
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraWorldMenuBackgroundMixin.class
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
+          grep -q '^fabric.mod.json$' /tmp/jar-contents.txt
+          grep -q '^astraclient.mixins.json$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraClient.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraModuleSettingsScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraHudEditorScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraBackgroundRenderer.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraPanoramaMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraWorldMenuBackgroundMixin.class$' /tmp/jar-contents.txt
           unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
           echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
