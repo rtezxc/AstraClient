@@ -60,6 +60,36 @@ public final class AstraProfileScreen extends Screen {
             ctx.fill(x, cardY, x + cardW, cardY + cardH, hover ? HOVER : PANEL);
             ctx.fill(x, cardY, x + cardW, cardY + 3, p.color);
             ctx.fill(x, cardY + 3, x + 3, cardY + cardH, p.color);
+
+            // Each preset gets its own geometric mark instead of a generic text glyph.
+            int ix = x + cardW - 34;
+            int iy = cardY + 13;
+            ctx.fill(ix - 5, iy - 3, ix + 23, iy + 21, 0xFF131925);
+            ctx.fill(ix - 5, iy - 3, ix + 23, iy - 1, p.color);
+            switch (p.id) {
+                case "performance" -> {
+                    ctx.fill(ix + 1, iy + 11, ix + 5, iy + 17, p.color);
+                    ctx.fill(ix + 8, iy + 6, ix + 12, iy + 17, p.color);
+                    ctx.fill(ix + 15, iy + 1, ix + 19, iy + 17, p.color);
+                }
+                case "pvp" -> {
+                    ctx.fill(ix + 2, iy + 1, ix + 7, iy + 2, p.color);
+                    ctx.fill(ix + 2, iy + 1, ix + 3, iy + 6, p.color);
+                    ctx.fill(ix + 13, iy + 1, ix + 18, iy + 2, p.color);
+                    ctx.fill(ix + 17, iy + 1, ix + 18, iy + 6, p.color);
+                    ctx.fill(ix + 2, iy + 12, ix + 3, iy + 17, p.color);
+                    ctx.fill(ix + 2, iy + 16, ix + 7, iy + 17, p.color);
+                    ctx.fill(ix + 17, iy + 12, ix + 18, iy + 17, p.color);
+                    ctx.fill(ix + 13, iy + 16, ix + 18, iy + 17, p.color);
+                    ctx.fill(ix + 9, iy + 8, ix + 12, iy + 11, p.color);
+                }
+                default -> {
+                    ctx.fill(ix + 9, iy + 1, ix + 11, iy + 17, p.color);
+                    ctx.fill(ix + 2, iy + 8, ix + 18, iy + 10, p.color);
+                    ctx.fill(ix + 5, iy + 4, ix + 8, iy + 7, p.color);
+                    ctx.fill(ix + 12, iy + 11, ix + 15, iy + 14, p.color);
+                }
+            }
             ctx.drawText(textRenderer, p.title, x + 12, cardY + 17, p.color, true);
             ctx.drawText(textRenderer, p.subtitle, x + 12, cardY + 39, WHITE, false);
             drawWrapped(ctx, p.details, x + 12, cardY + 63, cardW - 24, 12, 9, MUTED);
