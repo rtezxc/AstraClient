@@ -1839,7 +1839,7 @@ public final class AstraClient implements ClientModInitializer {
             Direction face = direction.getOpposite();
             Vec3d hitPos = Vec3d.ofCenter(support).add(
                 face.getOffsetX() * 0.5D, face.getOffsetY() * 0.5D, face.getOffsetZ() * 0.5D);
-            client.interactionManager.interactBlock(player, Hand.MAIN_HAND,
+            client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND,
                 new BlockHitResult(hitPos, face, support, false));
             return;
         }
