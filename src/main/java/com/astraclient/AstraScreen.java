@@ -156,11 +156,13 @@ public final class AstraScreen extends Screen {
     }
 
     private int panelWidth() {
-        return Math.max(220, Math.min(Math.round(760 * AstraClient.guiScale() / 100.0f), width - 24));
+        // Keep the complete window on-screen, including compact mobile and split-screen sizes.
+        return Math.max(1, Math.min(Math.round(760 * AstraClient.guiScale() / 100.0f), width - 24));
     }
 
     private int panelHeight() {
-        return Math.max(210, Math.min(Math.round(470 * AstraClient.guiScale() / 100.0f), height - 24));
+        // Avoid the old minimum-size overflow when the scaled game viewport is short.
+        return Math.max(1, Math.min(Math.round(470 * AstraClient.guiScale() / 100.0f), height - 24));
     }
 
     private int panelLeft(int panelW) {
@@ -204,6 +206,48 @@ public final class AstraScreen extends Screen {
         int listBottom = top + panelH - 43;
         int viewportH = Math.max(1, listBottom - listTop);
 
+        // Ambient nebula grid and tiny drifting particles. These are drawn before the
+        // opaque panel, so effects stay in the margins and never reduce text contrast.
+        int ambientGrid = Math.max(30, Math.min(48, width / 26));
+        int ambientDrift = (int) ((now / 72L) % ambientGrid);
+        for (int gx = -ambientGrid + ambientDrift; gx < width; gx += ambientGrid) {
+            if (gx >= 0 && gx < width) {
+                ctx.fill(gx, 0, Math.min(width, gx + 1), height, 0x0C4AD9F5);
+            }
+        }
+        for (int gy = ambientDrift; gy < height; gy += ambientGrid) {
+            if (gy >= 0 && gy < height) {
+                ctx.fill(0, gy, width, Math.min(height, gy + 1), 0x0C8175E8);
+            }
+        }
+        // Small, deterministic particles avoid per-frame object creation and random jitter.
+        for (int mote = 0; mote < 28; mote++) {
+            int mx = Math.floorMod(mote * 83 + (int) (now / (51L + mote % 6 * 13L)), Math.max(1, width));
+            int my = Math.floorMod(mote * 47 + (int) (now / (67L + mote % 5 * 17L)), Math.max(1, height));
+            int size = mote % 7 == 0 ? 2 : 1;
+            int moteColor = mote % 4 == 0 ? 0x9A54E8FF : 0x657C70D9;
+            ctx.fill(mx, my, Math.min(width, mx + size), Math.min(height, my + size), moteColor);
+        }
+
+        // Delicate edge rails reinforce the Astra instrument-panel look without competing
+        // with the module cards. Skip them on narrow screens where margins are too small.
+        if (width >= panelW + 100 && height >= 220) {
+            int railY = Math.max(16, Math.min(height - 36, top + panelH - 56));
+            int railColor = (0x42 << 24) | (accent & 0x00FFFFFF);
+            ctx.fill(14, 22, 16, Math.min(height - 14, 88), 0x554AD9F5);
+            ctx.fill(width - 16, Math.max(14, height - 88), width - 14, height - 22, 0x556D54D9);
+            ctx.fill(18, railY, Math.min(width / 2 - 12, 64), railY + 1, railColor);
+            int meterStartX = Math.max(width / 2 + 12, width - 64);
+            ctx.fill(meterStartX, railY + 2, Math.max(meterStartX + 1, width - 18), railY + 3, railColor);
+            for (int meter = 0; meter < 9; meter++) {
+                int meterHeight = 2 + Math.floorMod(meter * 5 + (int) (now / 170L), 10);
+                int meterX = width - 30 - meter * 7;
+                if (meterX >= 0) {
+                    ctx.fill(meterX, railY - meterHeight - 3, meterX + 3, railY - 3,
+                        meter % 3 == 0 ? 0xAA54E8FF : 0x8A8175E8);
+                }
+            }
+        }
 
         // Shell, glow rails and title bar
         ctx.fill(left - 1, top - 1, left + panelW + 1, top + panelH + 1, 0xFF32284A);
@@ -367,8 +411,8 @@ public final class AstraScreen extends Screen {
                         // A moving highlight gives enabled cards a restrained energy pulse.
                         int shineWidth = Math.max(8, cardW / 5);
                         int shineTravel = Math.max(1, cardW - shineWidth - 8);
-                        int shineX = x + 4 + (int) ((now / 11L + i * 13L) % shineTravel);
-                        ctx.fill(shineX, y + 2, Math.min(x + cardW - 2, shineX + shineWidth), y + 3,
+                        int cardShineX = x + 4 + (int) ((now / 11L + i * 13L) % shineTravel);
+                        ctx.fill(cardShineX, y + 2, Math.min(x + cardW - 2, cardShineX + shineWidth), y + 3,
                             0xBFFFFFFF);
                     }
                     // Small corner cuts provide a crisp, technical card frame without
