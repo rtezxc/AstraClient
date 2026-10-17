@@ -67,7 +67,7 @@ public final class AstraModuleSettingsScreen extends Screen {
         ctx.drawCenteredTextWithShadow(textRenderer, "A", x + 30, y + 24, WHITE);
         ctx.drawText(textRenderer, moduleName, x + 55, y + 14, WHITE, true);
         ctx.drawText(textRenderer, "ASTRA  /  MODULE SETTINGS", x + 55, y + 33, a, false);
-        if (panelW < 560) drawButton(ctx, x + panelW - 118, y + 12, 102, 24,
+        if (panelW < 600) drawButton(ctx, x + panelW - 118, y + 12, 102, 24,
             "ADVANCED…", mouseX, mouseY, a);
 
         ctx.drawText(textRenderer, "DESCRIPTION", x + 20, y + 72, MUTED, false);
@@ -287,7 +287,7 @@ public final class AstraModuleSettingsScreen extends Screen {
         }
 
         int bottomY = y + panelH - 44;
-        if (panelW >= 560) {
+        if (panelW >= 600) {
             drawButton(ctx, x + 20, bottomY, 120, 28, "BACK", mouseX, mouseY, a);
             drawButton(ctx, x + 151, bottomY, 160, 28,
                 implemented ? (AstraClient.isEnabled(moduleId) ? "DISABLE MODULE" : "ENABLE MODULE") : "LOCKED",
@@ -358,7 +358,7 @@ public final class AstraModuleSettingsScreen extends Screen {
         int statusY = y + 133, bindY = statusY + 48, nextY = bindY + 45;
         int bottomY = y + ph - 44;
 
-        if (pw < 560 && inside(mouseX, mouseY, x + pw - 118, y + 12, 102, 24)) {
+        if (pw < 600 && inside(mouseX, mouseY, x + pw - 118, y + 12, 102, 24)) {
             client.setScreen(new AstraModuleOptionsScreen(this, moduleId, moduleName, category));
             return true;
         }
@@ -494,7 +494,7 @@ public final class AstraModuleSettingsScreen extends Screen {
                 return true;
             }
         }
-        if (pw >= 560) {
+        if (pw >= 600) {
             if (inside(mouseX, mouseY, x + 20, bottomY, 120, 28)) {
                 client.setScreen(parent);
                 return true;
