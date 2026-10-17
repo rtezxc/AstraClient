@@ -805,6 +805,7 @@ public final class AstraScreen extends Screen {
             actions.add("crosshairGap");
             actions.add("crosshairThickness");
         } else if (module.id.equals("killaura")) {
+            actions.add("auraFov");
             actions.add("players");
             actions.add("hostile");
             actions.add("passive");
@@ -867,6 +868,7 @@ public final class AstraScreen extends Screen {
             case "crosshairSize" -> "Arm length: " + AstraClient.crosshairSize();
             case "crosshairGap" -> "Center gap: " + AstraClient.crosshairGap();
             case "crosshairThickness" -> "Line thickness: " + AstraClient.crosshairThickness();
+            case "auraFov" -> "FOV: " + AstraClient.killAuraFov() + " degrees (scroll to adjust)";
             case "players" -> "Target players: " + (AstraClient.targetPlayers() ? "ON" : "OFF");
             case "hostile" -> "Target hostile: " + (AstraClient.targetHostile() ? "ON" : "OFF");
             case "passive" -> "Target passive: " + (AstraClient.targetPassive() ? "ON" : "OFF");
@@ -965,6 +967,7 @@ public final class AstraScreen extends Screen {
                 captureKeybindId = module.id;
                 AstraClient.notifyUser("Press a key to bind " + module.name + " (Esc clears)");
             }
+            case "auraFov" -> AstraClient.setKillAuraFov(AstraClient.killAuraFov() >= 180 ? 60 : Math.min(180, AstraClient.killAuraFov() + 15));
             case "players" -> AstraClient.toggleCombatTarget("players");
             case "hostile" -> AstraClient.toggleCombatTarget("hostile");
             case "passive" -> AstraClient.toggleCombatTarget("passive");
@@ -1090,6 +1093,22 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        // Scroll over the FOV row in Kill Aura's right-click menu for five-degree steps.
+        if (contextMenuModuleId != null && contextMenuModuleId.equals("killaura") && verticalAmount != 0.0D) {
+            ModuleInfo module = findModule(contextMenuModuleId);
+            List<String> actions = contextMenuActions();
+            int menuW = Math.min(202, Math.max(174, width - 12));
+            int menuH = 28 + actions.size() * 21 + 5;
+            int menuX = Math.max(6, Math.min(width - menuW - 6, contextMenuX));
+            int menuY = Math.max(6, Math.min(height - menuH - 6, contextMenuY));
+            if (module != null && inside(mouseX, mouseY, menuX, menuY, menuW, menuH)) {
+                int row = (int) ((mouseY - (menuY + 27)) / 21);
+                if (row >= 0 && row < actions.size() && actions.get(row).equals("auraFov")) {
+                    AstraClient.setKillAuraFov(AstraClient.killAuraFov() + (verticalAmount > 0 ? 5 : -5));
+                    return true;
+                }
+            }
+        }
         if (category.equals("Settings")) {
             int panelH = panelHeight();
             int maxSettingsScroll = Math.max(0, 528 - Math.max(90, panelH - 130));

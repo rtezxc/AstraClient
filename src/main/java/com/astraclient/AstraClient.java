@@ -127,6 +127,7 @@ public final class AstraClient implements ClientModInitializer {
     private record TrailPoint(double x, double z) { }
     private static int espRange = 64;
     private static int combatRange = 4;
+    private static int killAuraFov = 180;
     private static boolean targetPlayers = true;
     private static boolean targetHostile = true;
     private static boolean targetPassive = false;
@@ -615,6 +616,12 @@ public final class AstraClient implements ClientModInitializer {
 
     public static int espRange() { return espRange; }
     public static int combatRange() { return combatRange; }
+    public static int killAuraFov() { return killAuraFov; }
+    public static void setKillAuraFov(int value) {
+        killAuraFov = Math.max(60, Math.min(180, value));
+        notifyUser("Kill Aura FOV: " + killAuraFov + " degrees");
+        saveConfig();
+    }
     public static boolean targetPlayers() { return targetPlayers; }
     public static boolean targetHostile() { return targetHostile; }
     public static boolean targetPassive() { return targetPassive; }
@@ -1213,6 +1220,7 @@ public final class AstraClient implements ClientModInitializer {
                 Integer.parseInt(properties.getProperty("esp.range", "64"))));
             combatRange = Math.max(3, Math.min(6,
                 Integer.parseInt(properties.getProperty("combat.range", "4"))));
+            killAuraFov = Math.max(60, Math.min(180, Integer.parseInt(properties.getProperty("combat.killauraFov", "180"))));
             targetPlayers = Boolean.parseBoolean(properties.getProperty("combat.targetPlayers", "true"));
             targetHostile = Boolean.parseBoolean(properties.getProperty("combat.targetHostile", "true"));
             targetPassive = Boolean.parseBoolean(properties.getProperty("combat.targetPassive", "false"));
@@ -1267,6 +1275,7 @@ public final class AstraClient implements ClientModInitializer {
         properties.setProperty("storagefinder.range", Integer.toString(storageFinderRange));
         properties.setProperty("esp.range", Integer.toString(espRange));
         properties.setProperty("combat.range", Integer.toString(combatRange));
+        properties.setProperty("combat.killauraFov", Integer.toString(killAuraFov));
         properties.setProperty("combat.targetPlayers", Boolean.toString(targetPlayers));
         properties.setProperty("combat.targetHostile", Boolean.toString(targetHostile));
         properties.setProperty("combat.targetPassive", Boolean.toString(targetPassive));
@@ -1479,14 +1488,16 @@ public final class AstraClient implements ClientModInitializer {
             // Prefer targets actually in front of the player, while allowing a
             // generous cone so ordinary mouse movement doesn't make the aura miss.
             var direction = candidate.getBoundingBox().getCenter().subtract(eye).normalize();
-            if (look.dotProduct(direction) < 0.20D) continue;
+            double fovDotThreshold = Math.cos(Math.toRadians(killAuraFov / 2.0D));
+            if (look.dotProduct(direction) < fovDotThreshold) continue;
 
             bestTarget = candidate;
             bestDistance = distance;
         }
 
         lastCombatTarget = bestTarget;
-        if (bestTarget != null) attackTarget(client, bestTarget);
+        // Kill Aura waits for vanilla critical-hit conditions before attacking.
+        if (bestTarget != null && isCriticalHitReady(client.player)) attackTarget(client, bestTarget);
     }
 
     /**
