@@ -3143,14 +3143,18 @@ if (isEnabled("blockfinder")) {
     private static void renderReachInfo(MinecraftClient client, DrawContext context, int screenWidth, int accent) {
         if (client.player == null || client.crosshairTarget == null) return;
         double distance;
+        double vanillaReach;
         if (client.crosshairTarget instanceof EntityHitResult entityHit) {
-            distance = client.player.getEyePos().distanceTo(entityHit.getEntity().getEyePos());
+            // Measure to the actual crosshair hit point, not the entity's eye position.
+            distance = client.player.getEyePos().distanceTo(entityHit.getPos());
+            vanillaReach = 3.0D;
         } else if (client.crosshairTarget instanceof BlockHitResult blockHit) {
             distance = client.player.getEyePos().distanceTo(blockHit.getPos());
+            vanillaReach = 4.5D;
         } else {
             return;
         }
-        String label = String.format(Locale.ROOT, "Reach: %.2f / 3.00 blocks", distance);
+        String label = String.format(Locale.ROOT, "Reach: %.2f / %.2f blocks", distance, vanillaReach);
         context.fill(8, 8, 12 + client.textRenderer.getWidth(label), 22, 0xB80A0D16);
         context.fill(8, 8, 10, 22, accent);
         context.drawTextWithShadow(client.textRenderer, label, 14, 11, 0xFFF4F6FF);
