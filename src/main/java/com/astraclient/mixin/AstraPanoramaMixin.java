@@ -1,6 +1,7 @@
 package com.astraclient.mixin;
 
 import com.astraclient.AstraBackgroundRenderer;
+import com.astraclient.AstraClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.TitleScreen;
 import org.spongepowered.asm.mixin.Mixin;
