@@ -1532,9 +1532,31 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    /** Logs lightweight runtime information without making assumptions about optional renderer compatibility. */
+    private static void runStartupDiagnostics() {
+        int javaFeature = Runtime.version().feature();
+        boolean sodiumLoaded = FabricLoader.getInstance().isModLoaded("sodium");
+        boolean irisLoaded = FabricLoader.getInstance().isModLoaded("iris");
+
+        System.out.println("[Astra Client] Runtime check: Java " + javaFeature
+            + " | target Minecraft 1.21.4 | registered modules " + MODULES.size());
+        System.out.println("[Astra Client] HUD widgets " + HUD_WIDGET_IDS.length
+            + " | saved config present " + Files.isRegularFile(CONFIG_PATH));
+        System.out.println("[Astra Client] Optional renderer detection: Sodium=" + sodiumLoaded
+            + ", Iris=" + irisLoaded + ".");
+        if (javaFeature < 21) {
+            System.err.println("[Astra Client] WARNING: Minecraft 1.21.4 targets Java 21 or newer.");
+        }
+        if (sodiumLoaded || irisLoaded) {
+            System.out.println("[Astra Client] Renderer note: custom overlays use Fabric render callbacks; "
+                + "compatibility can vary by renderer and shader versions.");
+        }
+    }
+
     @Override
     public void onInitializeClient() {
         loadConfig();
+        runStartupDiagnostics();
 
         // Intercept only Astra's local dot-command; never send it to a multiplayer server.
         ClientSendMessageEvents.ALLOW_CHAT.register(message -> {
