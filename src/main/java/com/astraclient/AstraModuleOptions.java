@@ -100,11 +100,15 @@ public final class AstraModuleOptions {
                 out.add(toggle("target_players", "Trace Players", "Draw tracer lines to players.", true));
                 out.add(toggle("target_mobs", "Trace Mobs", "Draw tracer lines to mobs.", true));
             }
-            case "hitboxes", "targetbox", "targethalo", "blockhighlight" -> {
+            case "hitboxes", "targetbox", "targethalo" -> {
                 double defaultRange = moduleId.equals("hitboxes") ? 64 : 48;
                 out.add(slider("render_range", "Render Range", "Maximum distance for this world overlay.", Double.toString(defaultRange), 8, 128, 4));
                 out.add(color("module_color", "Overlay Color", "Color used by this world overlay.", moduleId.equals("targetbox") ? "FF6B9D" : "AA70FF"));
                 out.add(dropdown("render_mode", "Render Style", "Choose outline brightness.", "Outline", RENDER_MODES));
+            }
+            case "blockhighlight" -> {
+                out.add(color("module_color", "Highlight Color", "Color used for the targeted block outline.", "AA70FF"));
+                out.add(dropdown("render_mode", "Highlight Style", "Choose outline brightness.", "Outline", RENDER_MODES));
             }
             case "nametags" -> {
                 out.add(slider("render_range", "Nametag Range", "Maximum distance for on-screen name labels.", "48", 8, 128, 4));
@@ -150,7 +154,7 @@ public final class AstraModuleOptions {
             case "autoeat" -> {
                 out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
             }
-            case "autototem", "autotool", "autoweapon" -> { }
+            case "autototem", "autotool", "autoweapon", "potionhud" -> { }
             case "blockfinder" -> {
                 out.add(slider("scan_range", "Scan Radius", "Radius used to search for a configured block.", "24", 8, 48, 4));
                 out.add(text("custom_value", "Block Target", "Use a supported ore alias or a registry ID such as minecraft:diamond_ore.", "DIAMOND"));
@@ -174,7 +178,7 @@ public final class AstraModuleOptions {
             case "noweather", "nopumpkinoverlay", "nofireoverlay", "noportaloverlay", "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay", "novignette", "noscoreboard" -> {
                 // These modules remove one visual effect; the module toggle is their meaningful control.
             }
-            case "healthhud", "hungerhud", "potionhud", "potioncounter", "durabilityhud", "inventoryhud", "armorhud", "blockreachhud", "frametimehud", "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock", "cps", "worldinfo", "biome", "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "sessionstats", "serverinfo" -> {
+            case "healthhud", "hungerhud", "potioncounter", "durabilityhud", "inventoryhud", "armorhud", "blockreachhud", "frametimehud", "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock", "cps", "worldinfo", "biome", "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "sessionstats", "serverinfo" -> {
                 out.add(toggle("background", "HUD Background", "Show or hide this widget's panel background.", true));
                 out.add(color("module_color", "HUD Accent Color", "Color used for this widget's accent stripe.", "AA70FF"));
             }
