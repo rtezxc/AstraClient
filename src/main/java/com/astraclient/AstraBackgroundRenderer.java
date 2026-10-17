@@ -91,6 +91,22 @@ public final class AstraBackgroundRenderer {
             }
         }
 
+        // A large, angular Astra "A" sits inside the orbital core as a recognizable
+        // brand mark. It is rasterized with short fills, not textures or custom shaders.
+        int emblemSize = Math.max(20, Math.min(72, Math.min(width, height) / 9));
+        int corePulse = 160 + (int) (50 * (0.5 + 0.5 * Math.sin(time / 330.0)));
+        int coreColor = (corePulse << 24) | 0x004AD9F5;
+        for (int step = 0; step <= emblemSize / 2; step += 2) {
+            int py = cy + emblemSize / 2 - step;
+            int leftX = cx - emblemSize / 2 + step;
+            int rightX = cx + emblemSize / 2 - step;
+            context.fill(leftX, py, Math.min(width, leftX + 2), Math.min(height, py + 2), coreColor);
+            context.fill(Math.max(0, rightX - 1), py, rightX + 1, Math.min(height, py + 2), 0xB68175E8);
+        }
+        int crossY = cy + emblemSize / 6;
+        int crossHalf = Math.max(4, emblemSize / 4);
+        context.fill(cx - crossHalf, crossY, cx + crossHalf, crossY + 2, 0xD04AD9F5);
+
         // Soft HUD-like framing panels add depth while keeping menu text readable.
         int panelWidth = Math.min(260, Math.max(0, width / 3));
         int panelTop = Math.max(58, height / 5);
