@@ -2503,7 +2503,7 @@ if (isEnabled("blockfinder")) {
                 double time = System.currentTimeMillis() / 500.0D;
                 double centerX = (targetBounds.minX + targetBounds.maxX) * 0.5D;
                 double centerZ = (targetBounds.minZ + targetBounds.maxZ) * 0.5D;
-                double radius = Math.max(0.62D, Math.max(targetBounds.getX(), targetBounds.getZ()) * 0.72D);
+                double radius = Math.max(0.62D, Math.max(targetBounds.maxX - targetBounds.minX, targetBounds.maxZ - targetBounds.minZ) * 0.72D);
                 double baseY = targetBounds.minY + 0.08D;
                 // Two orbiting rings made of tiny wire cubes create a lightweight animated halo.
                 for (int ring = 0; ring < 2; ring++) {
@@ -2511,7 +2511,7 @@ if (isEnabled("blockfinder")) {
                         double angle = time + i * (Math.PI * 2.0D / 18.0D) + ring * Math.PI / 18.0D;
                         double x = centerX + Math.cos(angle) * radius;
                         double z = centerZ + Math.sin(angle) * radius;
-                        double y = baseY + ring * Math.max(0.45D, targetBounds.getY() * 0.42D)
+                        double y = baseY + ring * Math.max(0.45D, (targetBounds.maxY - targetBounds.minY) * 0.42D)
                             + Math.sin(angle * 2.0D) * 0.08D;
                         float size = 0.045F;
                         matrices.push();
