@@ -620,9 +620,13 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
-    public static int storageFinderRange() { return storageFinderRange; }
+    public static int storageFinderRange() {
+        return (int)Math.round(Math.max(8.0D, Math.min(32.0D,
+            AstraModuleOptions.numberValue("storagefinder", "scan_range", storageFinderRange))));
+    }
     public static void previewStorageFinderRange(int value) {
         storageFinderRange = Math.max(8, Math.min(32, value));
+        AstraModuleOptions.syncValue("storagefinder", "scan_range", Integer.toString(storageFinderRange));
         nearestStorageBlock = null;
         lastStorageScanAt = 0L;
     }
@@ -656,12 +660,14 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
-    public static int breadcrumbTrailLength() { return breadcrumbTrailLength; }
+    public static int breadcrumbTrailLength() {
+        return (int)Math.round(Math.max(12.0D, Math.min(120.0D,
+            AstraModuleOptions.numberValue("breadcrumbs", "trail_length", breadcrumbTrailLength))));
+    }
     public static void previewBreadcrumbTrailLength(int value) {
         breadcrumbTrailLength = Math.max(12, Math.min(120, value));
-        int trailLength = (int)Math.round(Math.max(12.0D, Math.min(120.0D,
-            AstraModuleOptions.numberValue("breadcrumbs", "trail_length", breadcrumbTrailLength))));
-        while (BREADCRUMB_TRAIL.size() > trailLength) BREADCRUMB_TRAIL.remove(0);
+        AstraModuleOptions.syncValue("breadcrumbs", "trail_length", Integer.toString(breadcrumbTrailLength));
+        while (BREADCRUMB_TRAIL.size() > breadcrumbTrailLength) BREADCRUMB_TRAIL.remove(0);
     }
     public static void setBreadcrumbTrailLength(int value) {
         previewBreadcrumbTrailLength(value);
@@ -2024,7 +2030,9 @@ public final class AstraClient implements ClientModInitializer {
             // Prefer targets actually in front of the player, while allowing a
             // generous cone so ordinary mouse movement doesn't make the aura miss.
             var direction = candidate.getBoundingBox().getCenter().subtract(eye).normalize();
-            double fovDotThreshold = Math.cos(Math.toRadians(killAuraFov / 2.0D));
+            double auraFov = Math.max(60.0D, Math.min(180.0D,
+                AstraModuleOptions.numberValue("killaura", "fov", killAuraFov)));
+            double fovDotThreshold = Math.cos(Math.toRadians(auraFov / 2.0D));
             if (look.dotProduct(direction) < fovDotThreshold) continue;
 
             boolean better = bestTarget == null;
