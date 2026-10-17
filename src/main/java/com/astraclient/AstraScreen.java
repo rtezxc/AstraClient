@@ -430,8 +430,12 @@ public final class AstraScreen extends Screen {
                         && mouseY >= y + 7 && mouseY <= y + 32;
                     ctx.fill(x + 10, y + 10, x + 29, y + 29,
                         iconHover ? 0xFF463765 : (enabled ? 0xFF302747 : 0xFF252B37));
-                    ctx.drawText(textRenderer, iconHover ? "⚙" : iconFor(module.name), x + 15, y + 15,
-                        module.implemented ? accent : 0xFF727B8D, true);
+                    int iconColor = module.implemented ? accent : 0xFF727B8D;
+                    if (iconHover) {
+                        ctx.drawText(textRenderer, "⚙", x + 15, y + 15, WHITE, true);
+                    } else {
+                        drawModuleIcon(ctx, module.id, x + 10, y + 10, iconColor);
+                    }
 
                     String status = captureKeybindId != null && captureKeybindId.equals(module.id)
                         ? "PRESS KEY" : (module.implemented ? (enabled ? "ON" : "OFF") : "LOCKED");
@@ -524,20 +528,115 @@ public final class AstraScreen extends Screen {
         requestAnimatedClose();
     }
 
-    private String iconFor(String name) {
-        return switch (name) {
-            case "FullBright" -> "☼";
-            case "Player ESP", "Mob ESP", "Item ESP" -> "◎";
-            case "Auto Sprint" -> "➤";
-            case "FPS Counter", "Memory Display", "Ping Display" -> "▥";
-            case "Coordinates", "Direction" -> "⌖";
-            case "Keystrokes" -> "⌨";
-            case "Target HUD" -> "◈";
-            case "Armor HUD", "Totem Counter" -> "◇";
-            case "Potion HUD" -> "✚";
-            case "Clock" -> "◷";
-            default -> "✦";
-        };
+    /**
+     * Small vector-style module glyphs drawn from solid rectangles rather than font symbols.
+     * This avoids missing-glyph boxes on different Minecraft fonts and mobile renderers.
+     */
+    private void drawModuleIcon(DrawContext ctx, String id, int x, int y, int color) {
+        switch (id) {
+            case "fullbright" -> {
+                ctx.fill(x + 7, y + 7, x + 12, y + 12, color);
+                ctx.fill(x + 8, y + 1, x + 11, y + 5, color);
+                ctx.fill(x + 8, y + 14, x + 11, y + 18, color);
+                ctx.fill(x + 1, y + 8, x + 5, y + 11, color);
+                ctx.fill(x + 14, y + 8, x + 18, y + 11, color);
+                ctx.fill(x + 3, y + 3, x + 6, y + 6, color);
+                ctx.fill(x + 13, y + 3, x + 16, y + 6, color);
+                ctx.fill(x + 3, y + 13, x + 6, y + 16, color);
+                ctx.fill(x + 13, y + 13, x + 16, y + 16, color);
+            }
+            case "killaura", "triggerbot", "aimassist", "autoweapon", "targethud",
+                 "targetbox", "targethalo", "hitboxes", "playeresp", "mobesp", "itemesp",
+                 "nametags", "tracers" -> {
+                ctx.fill(x + 2, y + 2, x + 7, y + 3, color);
+                ctx.fill(x + 2, y + 2, x + 3, y + 7, color);
+                ctx.fill(x + 12, y + 2, x + 17, y + 3, color);
+                ctx.fill(x + 16, y + 2, x + 17, y + 7, color);
+                ctx.fill(x + 2, y + 12, x + 3, y + 17, color);
+                ctx.fill(x + 2, y + 16, x + 7, y + 17, color);
+                ctx.fill(x + 16, y + 12, x + 17, y + 17, color);
+                ctx.fill(x + 12, y + 16, x + 17, y + 17, color);
+                ctx.fill(x + 8, y + 8, x + 11, y + 11, color);
+            }
+            case "orbitcubes", "orbitsparks", "playertrail" -> {
+                ctx.fill(x + 2, y + 3, x + 7, y + 8, color);
+                ctx.fill(x + 3, y + 4, x + 6, y + 7, 0xFF111621);
+                ctx.fill(x + 12, y + 11, x + 17, y + 16, color);
+                ctx.fill(x + 13, y + 12, x + 16, y + 15, 0xFF111621);
+                ctx.fill(x + 7, y + 5, x + 13, y + 6, color);
+                ctx.fill(x + 10, y + 6, x + 11, y + 12, color);
+            }
+            case "fps", "fpsgraph", "frametimehud", "ping", "memory",
+                 "speedometer", "cps", "sessionstats", "arraylist" -> {
+                ctx.fill(x + 2, y + 15, x + 17, y + 17, color);
+                ctx.fill(x + 3, y + 10, x + 6, y + 15, color);
+                ctx.fill(x + 8, y + 6, x + 11, y + 15, color);
+                ctx.fill(x + 13, y + 2, x + 16, y + 15, color);
+            }
+            case "coordinates", "direction", "compasshud", "waypoint",
+                 "breadcrumbs", "blockfinder", "storagefinder" -> {
+                ctx.fill(x + 8, y + 1, x + 10, y + 18, color);
+                ctx.fill(x + 1, y + 8, x + 18, y + 10, color);
+                ctx.fill(x + 5, y + 4, x + 7, y + 6, color);
+                ctx.fill(x + 12, y + 12, x + 14, y + 14, color);
+                ctx.fill(x + 11, y + 2, x + 15, y + 6, color);
+            }
+            case "armorhud", "durabilityhud", "totemcounter", "lowhealthalert" -> {
+                ctx.fill(x + 4, y + 2, x + 15, y + 4, color);
+                ctx.fill(x + 3, y + 4, x + 5, y + 11, color);
+                ctx.fill(x + 14, y + 4, x + 16, y + 11, color);
+                ctx.fill(x + 5, y + 11, x + 7, y + 14, color);
+                ctx.fill(x + 12, y + 11, x + 14, y + 14, color);
+                ctx.fill(x + 7, y + 14, x + 12, y + 17, color);
+            }
+            case "potionhud", "potioncounter", "effectalert" -> {
+                ctx.fill(x + 7, y + 1, x + 12, y + 3, color);
+                ctx.fill(x + 8, y + 3, x + 11, y + 7, color);
+                ctx.fill(x + 5, y + 7, x + 14, y + 15, color);
+                ctx.fill(x + 6, y + 8, x + 13, y + 14, 0xFF111621);
+                ctx.fill(x + 6, y + 12, x + 13, y + 14, color);
+                ctx.fill(x + 7, y + 16, x + 12, y + 18, color);
+            }
+            case "healthhud", "hungerhud", "damageindicators", "goldencounter" -> {
+                ctx.fill(x + 2, y + 4, x + 8, y + 9, color);
+                ctx.fill(x + 11, y + 4, x + 17, y + 9, color);
+                ctx.fill(x + 4, y + 8, x + 15, y + 12, color);
+                ctx.fill(x + 6, y + 11, x + 13, y + 14, color);
+                ctx.fill(x + 8, y + 13, x + 11, y + 17, color);
+            }
+            case "keystrokes", "inventorymove", "inventoryhud", "pearlcounter", "arrowcounter" -> {
+                ctx.fill(x + 6, y + 1, x + 12, y + 6, color);
+                ctx.fill(x + 1, y + 7, x + 7, y + 12, color);
+                ctx.fill(x + 11, y + 7, x + 17, y + 12, color);
+                ctx.fill(x + 6, y + 13, x + 12, y + 18, color);
+                ctx.fill(x + 7, y + 2, x + 11, y + 5, 0xFF111621);
+            }
+            case "autosprint", "sprint", "fly", "autowalk", "safewalk",
+                 "eagle", "speed", "zoom" -> {
+                ctx.fill(x + 2, y + 8, x + 9, y + 11, color);
+                ctx.fill(x + 8, y + 5, x + 11, y + 14, color);
+                ctx.fill(x + 11, y + 2, x + 14, y + 6, color);
+                ctx.fill(x + 11, y + 13, x + 14, y + 17, color);
+                ctx.fill(x + 14, y + 5, x + 17, y + 8, color);
+                ctx.fill(x + 14, y + 11, x + 17, y + 14, color);
+            }
+            case "blockhighlight", "autotool", "timechanger", "worldinfo",
+                 "biome", "serverinfo", "noweather", "customcrosshair" -> {
+                ctx.fill(x + 2, y + 2, x + 17, y + 4, color);
+                ctx.fill(x + 2, y + 7, x + 17, y + 9, color);
+                ctx.fill(x + 2, y + 12, x + 17, y + 14, color);
+                ctx.fill(x + 2, y + 2, x + 4, y + 17, color);
+                ctx.fill(x + 8, y + 2, x + 10, y + 17, color);
+                ctx.fill(x + 15, y + 2, x + 17, y + 17, color);
+            }
+            default -> {
+                ctx.fill(x + 8, y + 1, x + 11, y + 4, color);
+                ctx.fill(x + 4, y + 5, x + 15, y + 7, color);
+                ctx.fill(x + 2, y + 8, x + 17, y + 11, color);
+                ctx.fill(x + 4, y + 12, x + 15, y + 14, color);
+                ctx.fill(x + 8, y + 15, x + 11, y + 18, color);
+            }
+        }
     }
 
     private String truncateToWidth(String value, int maxWidth) {
