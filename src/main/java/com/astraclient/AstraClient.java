@@ -1936,15 +1936,16 @@ public final class AstraClient implements ClientModInitializer {
         }
 
         LivingEntity bestTarget = null;
-        double bestDistance = attackRange;
+        double bestDistance = Double.MAX_VALUE;
+        String priority = AstraModuleOptions.value("killaura", "target_priority", "Closest");
         var look = client.player.getRotationVec(1.0F);
         var eye = client.player.getEyePos();
 
         for (LivingEntity candidate : client.world.getEntitiesByClass(
             LivingEntity.class, client.player.getBoundingBox().expand(attackRange),
-            entity -> isValidCombatTarget(entity, client.player))) {
+            entity -> isValidCombatTarget(entity, client.player, "killaura"))) {
             double distance = client.player.distanceTo(candidate);
-            if (distance > bestDistance || !client.player.canSee(candidate)
+            if (distance > attackRange || !client.player.canSee(candidate)
                 || !hasClearLineOfSight(client, candidate)) continue;
 
             // Prefer targets actually in front of the player, while allowing a
@@ -1953,13 +1954,26 @@ public final class AstraClient implements ClientModInitializer {
             double fovDotThreshold = Math.cos(Math.toRadians(killAuraFov / 2.0D));
             if (look.dotProduct(direction) < fovDotThreshold) continue;
 
-            bestTarget = candidate;
-            bestDistance = distance;
+            boolean better = bestTarget == null;
+            if (!better && priority.equals("Lowest Health")) {
+                better = candidate.getHealth() < bestTarget.getHealth()
+                    || (candidate.getHealth() == bestTarget.getHealth() && distance < bestDistance);
+            } else if (!better && priority.equals("Lowest Armor")) {
+                better = candidate.getArmor() < bestTarget.getArmor()
+                    || (candidate.getArmor() == bestTarget.getArmor() && distance < bestDistance);
+            } else if (!better) {
+                better = distance < bestDistance;
+            }
+            if (better) {
+                bestTarget = candidate;
+                bestDistance = distance;
+            }
         }
 
         lastCombatTarget = bestTarget;
-        // Critical-only is an optional setting, never a hidden requirement for normal attacks.
-        if (bestTarget != null && (!killAuraCriticalOnly || isCriticalHitReady(client.player))) {
+        if (bestTarget != null && !shouldWaitForCritical("killaura", client.player)) {
+            applyKillAuraRotation(client, bestTarget,
+                AstraModuleOptions.value("killaura", "rotation_mode", "None"));
             attackTarget(client, bestTarget);
         }
     }
