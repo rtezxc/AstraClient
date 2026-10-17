@@ -91,15 +91,36 @@ public final class AstraModuleOptions {
                 out.add(toggle("only_when_held", "Require Mouse Hold", "Only repeat while the left mouse button is held.", true));
                 out.add(toggle("respect_cooldown", "Respect Attack Cooldown", "Keep vanilla attack cooldown checks enabled.", true));
             }
-            case "playeresp", "mobesp", "itemesp", "tracers", "hitboxes", "targetbox", "targethalo", "nametags", "xray", "blockhighlight", "orbitsparks", "orbitcubes", "playertrail", "customcrosshair" -> {
-                out.add(slider("render_range", "Render Range", "Maximum distance for this visual module.", "64", 8, 128, 4));
-                out.add(dropdown("render_mode", "Render Mode", "Choose the supported visual style.", "Outline", RENDER_MODES));
-                out.add(color("module_color", "Module Color", "Color used by supported Astra visual elements.", "AA70FF"));
-                out.add(toggle("show_labels", "Show Labels", "Show text labels when this module supports labels.", true));
-                if (moduleId.equals("tracers")) {
-                    out.add(toggle("target_players", "Trace Players", "Draw tracer lines to players.", true));
-                    out.add(toggle("target_mobs", "Trace Mobs", "Draw tracer lines to mobs.", true));
-                }
+            case "playeresp", "mobesp", "itemesp" -> {
+                out.add(slider("render_range", "Render Range", "Maximum distance for this outline module.", "64", 8, 128, 4));
+            }
+            case "tracers" -> {
+                out.add(slider("render_range", "Tracer Range", "Maximum distance for tracer lines.", "64", 8, 128, 4));
+                out.add(color("module_color", "Tracer Color", "Color used for tracer lines.", "54E8FF"));
+                out.add(toggle("target_players", "Trace Players", "Draw tracer lines to players.", true));
+                out.add(toggle("target_mobs", "Trace Mobs", "Draw tracer lines to mobs.", true));
+            }
+            case "hitboxes", "targetbox", "targethalo", "blockhighlight" -> {
+                double defaultRange = moduleId.equals("hitboxes") ? 64 : 48;
+                out.add(slider("render_range", "Render Range", "Maximum distance for this world overlay.", Double.toString(defaultRange), 8, 128, 4));
+                out.add(color("module_color", "Overlay Color", "Color used by this world overlay.", moduleId.equals("targetbox") ? "FF6B9D" : "AA70FF"));
+                out.add(dropdown("render_mode", "Render Style", "Choose outline brightness.", "Outline", RENDER_MODES));
+            }
+            case "nametags" -> {
+                out.add(slider("render_range", "Nametag Range", "Maximum distance for on-screen name labels.", "48", 8, 128, 4));
+                out.add(color("module_color", "Nametag Color", "Color used for the label accent.", "AA70FF"));
+                out.add(toggle("show_labels", "Show Labels", "Show or hide name and distance labels.", true));
+            }
+            case "xray" -> {
+                out.add(slider("render_range", "Ore Highlight Range", "Maximum distance for cached ore outlines.", "12", 4, 16, 1));
+                out.add(color("module_color", "Ore Outline Color", "Override the ore outline color.", "AA70FF"));
+            }
+            case "customcrosshair" -> {
+                out.add(color("module_color", "Crosshair Color", "Color used by the custom crosshair.", "AA70FF"));
+            }
+            case "orbitsparks", "orbitcubes", "playertrail" -> {
+                out.add(slider("effect_density", "Effect Density", "Controls how many visual elements are emitted.", "3", 1, 8, 1));
+                out.add(color("module_color", "Effect Color", "Color used by supported effect renderers.", "AA70FF"));
             }
             case "speed", "noslow", "sprint", "autosprint", "fly", "autowalk", "safewalk", "eagle", "inventorymove" -> {
                 out.add(slider("movement_strength", "Movement Strength", "Strength factor used by supported movement logic.", "1.0", 0.5, 1.5, 0.05));
