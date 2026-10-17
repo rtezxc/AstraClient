@@ -831,6 +831,7 @@ public final class AstraScreen extends Screen {
             actions.add("crosshairThickness");
         } else if (module.id.equals("killaura")) {
             actions.add("auraFov");
+            actions.add("criticalOnly");
             actions.add("players");
             actions.add("hostile");
             actions.add("passive");
@@ -894,6 +895,7 @@ public final class AstraScreen extends Screen {
             case "crosshairGap" -> "Center gap: " + AstraClient.crosshairGap();
             case "crosshairThickness" -> "Line thickness: " + AstraClient.crosshairThickness();
             case "auraFov" -> "FOV: " + AstraClient.killAuraFov() + " degrees (scroll to adjust)";
+            case "criticalOnly" -> "Critical-only: " + (AstraClient.killAuraCriticalOnly() ? "ON" : "OFF");
             case "players" -> "Target players: " + (AstraClient.targetPlayers() ? "ON" : "OFF");
             case "hostile" -> "Target hostile: " + (AstraClient.targetHostile() ? "ON" : "OFF");
             case "passive" -> "Target passive: " + (AstraClient.targetPassive() ? "ON" : "OFF");
@@ -993,6 +995,7 @@ public final class AstraScreen extends Screen {
                 AstraClient.notifyUser("Press a key to bind " + module.name + " (Esc clears)");
             }
             case "auraFov" -> AstraClient.setKillAuraFov(AstraClient.killAuraFov() >= 180 ? 60 : Math.min(180, AstraClient.killAuraFov() + 15));
+            case "criticalOnly" -> AstraClient.toggleKillAuraCriticalOnly();
             case "players" -> AstraClient.toggleCombatTarget("players");
             case "hostile" -> AstraClient.toggleCombatTarget("hostile");
             case "passive" -> AstraClient.toggleCombatTarget("passive");
