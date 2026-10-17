@@ -55,9 +55,9 @@ public final class AstraThemeEditorScreen extends Screen {
         int hexWidth = textRenderer.getWidth(hex);
         ctx.drawText(textRenderer, hex, x + panelW - 32 - hexWidth, previewY + 16, color, true);
 
-        drawRgbSlider(ctx, x, y + 132, panelW, "RED", red, 0xFFFF6A78, mouseX, mouseY);
-        drawRgbSlider(ctx, x, y + 184, panelW, "GREEN", green, 0xFF69E6B8, mouseX, mouseY);
-        drawRgbSlider(ctx, x, y + 236, panelW, "BLUE", blue, 0xFF54E8FF, mouseX, mouseY);
+        drawRgbSlider(ctx, x, y + 132, panelW, "RED", red, 0xFFFF6A78, 0, mouseX, mouseY);
+        drawRgbSlider(ctx, x, y + 184, panelW, "GREEN", green, 0xFF69E6B8, 1, mouseX, mouseY);
+        drawRgbSlider(ctx, x, y + 236, panelW, "BLUE", blue, 0xFF54E8FF, 2, mouseX, mouseY);
 
         int buttonY = y + panelH - 42;
         drawButton(ctx, x + 20, buttonY, 132, 27, "USE PRESET", mouseX, mouseY, accent);
@@ -72,17 +72,34 @@ public final class AstraThemeEditorScreen extends Screen {
     }
 
     private void drawRgbSlider(DrawContext ctx, int panelX, int rowY, int panelW,
-                               String label, int value, int barColor, int mouseX, int mouseY) {
+                               String label, int value, int barColor, int channel, int mouseX, int mouseY) {
         int trackX = panelX + 24;
-        int trackW = panelW - 48;
+        int trackW = Math.max(1, panelW - 48);
         ctx.drawText(textRenderer, label, trackX, rowY, WHITE, true);
         String valueText = Integer.toString(value);
         ctx.drawText(textRenderer, valueText, trackX + trackW - textRenderer.getWidth(valueText), rowY, barColor, true);
         int trackY = rowY + 18;
-        ctx.fill(trackX, trackY, trackX + trackW, trackY + 7, 0xFF2B3344);
+
+        // Preview the full channel range using the other two live RGB values.
+        // A bounded segment count keeps the gradient smooth enough without hundreds of draw calls.
+        int segments = Math.min(36, Math.max(12, trackW / 10));
+        for (int segment = 0; segment < segments; segment++) {
+            int startX = trackX + segment * trackW / segments;
+            int endX = trackX + (segment + 1) * trackW / segments;
+            if (endX <= startX) continue;
+            int component = segment * 255 / Math.max(1, segments - 1);
+            int r = channel == 0 ? component : red;
+            int g = channel == 1 ? component : green;
+            int b = channel == 2 ? component : blue;
+            int segmentColor = 0xFF000000 | (r << 16) | (g << 8) | b;
+            ctx.fill(startX, trackY, endX, trackY + 7, segmentColor);
+        }
+
         int fill = value * trackW / 255;
-        ctx.fill(trackX, trackY, trackX + fill, trackY + 7, barColor);
-        ctx.fill(trackX + fill - 4, trackY - 3, trackX + fill + 4, trackY + 10, WHITE);
+        if (fill > 0) ctx.fill(trackX, trackY, trackX + fill, trackY + 1, 0xBFFFFFFF);
+        int knobX = trackX + fill;
+        ctx.fill(Math.max(trackX, knobX - 4), trackY - 3,
+            Math.min(trackX + trackW, knobX + 4), trackY + 10, WHITE);
         if (mouseX >= trackX && mouseX <= trackX + trackW && mouseY >= trackY - 6 && mouseY <= trackY + 13) {
             ctx.fill(trackX, trackY + 11, trackX + trackW, trackY + 12, 0xAAFFFFFF);
         }
