@@ -2167,12 +2167,16 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     private static boolean attackTarget(MinecraftClient client, LivingEntity target) {
+        return attackTarget(client, target, true);
+    }
+
+    private static boolean attackTarget(MinecraftClient client, LivingEntity target, boolean respectCooldown) {
         if (client.player == null || client.interactionManager == null
             || client.currentScreen != null || target == null || !target.isAlive()
             || client.player.isSpectator()
             || (isEnabled("criticals") && !isCriticalHitReady(client.player))
             || client.player.distanceTo(target) > 3.0D
-            || client.player.getAttackCooldownProgress(0.0F) < 0.9F) return false;
+            || (respectCooldown && client.player.getAttackCooldownProgress(0.0F) < 0.9F)) return false;
         client.interactionManager.attackEntity(client.player, target);
         client.player.swingHand(Hand.MAIN_HAND);
         return true;
