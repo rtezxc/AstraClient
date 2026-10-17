@@ -26,6 +26,8 @@ public final class AstraModuleOptionsScreen extends Screen {
     private String textBuffer = "";
     private String originalTextValue = "";
     private int textCursor;
+    private int textDisplayStart;
+    private int textDisplayEnd;
 
     public AstraModuleOptionsScreen(Screen parent, String moduleId, String moduleName, String category) {
         super(Text.literal("Astra Advanced Module Settings"));
@@ -145,7 +147,7 @@ public final class AstraModuleOptionsScreen extends Screen {
                 ctx.fill(controlX, ry+9, controlX+controlW, ry+34, 0xFF252D3D);
                 ctx.fill(controlX, ry+9, controlX+2, ry+34, accent);
                 String label = option.type() == AstraModuleOptions.Type.TEXT && index == editingTextIndex
-                    ? truncate(textBuffer.substring(0, textCursor) + "|" + textBuffer.substring(textCursor), 18)
+                    ? editableTextPreview(18)
                     : truncate(value, 18);
                 ctx.drawText(textRenderer, label, controlX+8, ry+17, WHITE, false);
                 ctx.drawText(textRenderer, "›", controlX+controlW-12, ry+16, accent, true);
@@ -234,10 +236,12 @@ public final class AstraModuleOptionsScreen extends Screen {
             } else {
                 int controlX = x + pw - 160;
                 int relativeX = Math.max(0, (int) mouseX - (controlX + 8));
-                int cursor = 0;
+                int prefixWidth = textDisplayStart > 0 ? textRenderer.getWidth("…") : 0;
+                int cursor = textDisplayStart;
                 int bestDistance = Integer.MAX_VALUE;
-                for (int i = 0; i <= textBuffer.length(); i++) {
-                    int atWidth = textRenderer.getWidth(textBuffer.substring(0, i));
+                for (int i = textDisplayStart; i <= textDisplayEnd; i++) {
+                    int atWidth = prefixWidth
+                        + textRenderer.getWidth(textBuffer.substring(textDisplayStart, i));
                     int distance = Math.abs(atWidth - relativeX);
                     if (distance < bestDistance) {
                         bestDistance = distance;
@@ -301,6 +305,25 @@ public final class AstraModuleOptionsScreen extends Screen {
             return true;
         }
         return super.charTyped(chr,modifiers);
+    }
+
+    private String editableTextPreview(int maxChars) {
+        int length = textBuffer.length();
+        textCursor = Math.max(0, Math.min(textCursor, length));
+        if (length <= maxChars - 1) {
+            textDisplayStart = 0;
+            textDisplayEnd = length;
+            return textBuffer.substring(0, textCursor) + "|" + textBuffer.substring(textCursor);
+        }
+
+        int visibleChars = Math.max(1, maxChars - 3);
+        textDisplayStart = Math.max(0, Math.min(length - visibleChars, textCursor - visibleChars / 2));
+        textDisplayEnd = Math.min(length, textDisplayStart + visibleChars);
+        String shown = textBuffer.substring(textDisplayStart, textCursor)
+            + "|" + textBuffer.substring(textCursor, textDisplayEnd);
+        if (textDisplayStart > 0) shown = "…" + shown;
+        if (textDisplayEnd < length) shown += "…";
+        return shown;
     }
 
     private void commitTextEdit() {
