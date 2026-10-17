@@ -2513,10 +2513,11 @@ public final class AstraClient implements ClientModInitializer {
         if (isEnabled("customcrosshair")) {
             int cx = context.getScaledWindowWidth() / 2;
             int cy = screenHeight / 2;
-            int color = client.crosshairTarget instanceof EntityHitResult entityHit
-                && entityHit.getEntity() instanceof LivingEntity ? 0xFFFF657A
-                : client.crosshairTarget != null && client.crosshairTarget.getType() == HitResult.Type.BLOCK
-                    ? 0xFF69E6B8 : accent;
+            int color = moduleColor("customcrosshair",
+                client.crosshairTarget instanceof EntityHitResult entityHit
+                    && entityHit.getEntity() instanceof LivingEntity ? 0xFFFF657A
+                    : client.crosshairTarget != null && client.crosshairTarget.getType() == HitResult.Type.BLOCK
+                        ? 0xFF69E6B8 : accent);
             int halfThickness = crosshairThickness / 2;
             int left = cx - halfThickness;
             int right = left + crosshairThickness;
@@ -3280,11 +3281,14 @@ if (isEnabled("blockfinder")) {
         }
         if (now - lastTracerScanAt < 250L) return;
         lastTracerScanAt = now;
+        double tracerRange = Math.min(128.0D, AstraModuleOptions.numberValue("tracers", "render_range", espRange));
+        boolean showPlayerTracers = AstraModuleOptions.boolValue("tracers", "target_players", tracerPlayers);
+        boolean showMobTracers = AstraModuleOptions.boolValue("tracers", "target_mobs", tracerMobs);
         List<LivingEntity> found = client.world.getEntitiesByClass(
-            LivingEntity.class, client.player.getBoundingBox().expand(espRange),
+            LivingEntity.class, client.player.getBoundingBox().expand(tracerRange),
             entity -> entity != client.player && entity.isAlive()
-                && client.player.distanceTo(entity) <= espRange
-                && (entity instanceof PlayerEntity ? tracerPlayers : tracerMobs)
+                && client.player.distanceTo(entity) <= tracerRange
+                && (entity instanceof PlayerEntity ? showPlayerTracers : showMobTracers)
         );
         found.sort((left, right) ->
             Double.compare(client.player.distanceTo(left), client.player.distanceTo(right)));
@@ -3315,15 +3319,18 @@ if (isEnabled("blockfinder")) {
 
     private static void renderNametags(MinecraftClient client, DrawContext context,
                                         int screenWidth, int screenHeight, int accent) {
-        if (!isEnabled("nametags") || client.player == null || client.world == null) return;
+        if (!isEnabled("nametags") || client.player == null || client.world == null
+            || !AstraModuleOptions.boolValue("nametags", "show_labels", true)) return;
+        accent = moduleColor("nametags", accent);
         PlayerEntity player = client.player;
+        double nameRange = Math.min(128.0D, AstraModuleOptions.numberValue("nametags", "render_range", 48.0D));
         double fov = client.options.getFov().getValue();
         if (fov < 1.0D) fov = 70.0D;
         for (Entity entity : client.world.getEntitiesByClass(Entity.class,
-            player.getBoundingBox().expand(48.0D),
+            player.getBoundingBox().expand(nameRange),
             candidate -> candidate != player && !candidate.isRemoved()
                 && (candidate instanceof PlayerEntity || candidate instanceof LivingEntity)
-                && player.distanceTo(candidate) <= 48.0D)) {
+                && player.distanceTo(candidate) <= nameRange) {
             var delta = entity.getBoundingBox().getCenter().subtract(player.getEyePos());
             double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
             if (horizontal < 0.1D) continue;
@@ -3350,6 +3357,7 @@ if (isEnabled("blockfinder")) {
     private static void renderTracers(MinecraftClient client, DrawContext context,
                                       int screenWidth, int screenHeight, int accent) {
         if (client.player == null || cachedTracerTargets.isEmpty()) return;
+        accent = moduleColor("tracers", accent);
         int originX = screenWidth / 2;
         int originY = screenHeight - 3;
         for (LivingEntity target : cachedTracerTargets) {
