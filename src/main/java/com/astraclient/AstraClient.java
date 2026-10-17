@@ -488,6 +488,17 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
+    public static int moduleColor(String moduleId, int fallback) {
+        return AstraModuleOptions.colorValue(moduleId, "module_color", fallback);
+    }
+
+    private static float moduleVisualAlpha(String moduleId, float fallback) {
+        String mode = AstraModuleOptions.value(moduleId, "render_mode", "Outline");
+        if (mode.equals("Bright Outline")) return 1.0F;
+        if (mode.equals("Soft Outline")) return Math.min(fallback, 0.45F);
+        return fallback;
+    }
+
     public static int accentColor() {
         if (customAccentEnabled) return customAccentColor;
         return switch (accentTheme) {
@@ -2401,7 +2412,7 @@ public final class AstraClient implements ClientModInitializer {
         List<Entity> candidates = new ArrayList<>();
         candidates.addAll(client.world.getPlayers());
 
-        Box nearby = client.player.getBoundingBox().expand(espRange);
+        Box nearby = client.player.getBoundingBox().expand(hitboxRange);
         // When a visual module is disabled, continue fetching nearby entities briefly so
         // their original glow flags can be restored cleanly.
         boolean restoringTrackedEntities = !ORIGINAL_ENTITY_GLOW.isEmpty();
@@ -3021,20 +3032,38 @@ if (isEnabled("blockfinder")) {
         if (!showXray && !showHitboxes && !showTargetBox && !showTargetHalo && !showBlockHighlight) return;
 
         int accent = accentColor();
-        float red = ((accent >> 16) & 255) / 255.0F;
-        float green = ((accent >> 8) & 255) / 255.0F;
-        float blue = (accent & 255) / 255.0F;
+        int blockAccent = moduleColor("blockhighlight", accent);
+        int hitboxAccent = moduleColor("hitboxes", accent);
+        int haloAccent = moduleColor("targethalo", accent);
+        int targetAccent = moduleColor("targetbox", 0xFFFF2E85);
+        float red = ((hitboxAccent >> 16) & 255) / 255.0F;
+        float green = ((hitboxAccent >> 8) & 255) / 255.0F;
+        float blue = (hitboxAccent & 255) / 255.0F;
+        float blockRed = ((blockAccent >> 16) & 255) / 255.0F;
+        float blockGreen = ((blockAccent >> 8) & 255) / 255.0F;
+        float blockBlue = (blockAccent & 255) / 255.0F;
+        float haloRed = ((haloAccent >> 16) & 255) / 255.0F;
+        float haloGreen = ((haloAccent >> 8) & 255) / 255.0F;
+        float haloBlue = (haloAccent & 255) / 255.0F;
+        float targetRed = ((targetAccent >> 16) & 255) / 255.0F;
+        float targetGreen = ((targetAccent >> 8) & 255) / 255.0F;
+        float targetBlue = (targetAccent & 255) / 255.0F;
         VertexConsumer lines = context.consumers().getBuffer(RenderLayer.getLines());
         var matrices = context.matrixStack();
         var cameraPos = context.camera().getPos();
-        double rangeSq = (double) espRange * espRange;
+        double hitboxRange = Math.min(128.0D, AstraModuleOptions.numberValue("hitboxes", "render_range", espRange));
+        double targetRange = Math.min(128.0D, Math.max(
+            AstraModuleOptions.numberValue("targetbox", "render_range", espRange),
+            AstraModuleOptions.numberValue("targethalo", "render_range", espRange)));
+        double hitboxRangeSq = hitboxRange * hitboxRange;
+        double targetRangeSq = targetRange * targetRange;
 
         matrices.push();
         matrices.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
 
         if (showBlockHighlight && client.crosshairTarget instanceof BlockHitResult blockHit) {
             VertexRendering.drawBox(matrices, lines,
-                new Box(blockHit.getBlockPos()).expand(0.002D), red, green, blue, 1.0F);
+                new Box(blockHit.getBlockPos()).expand(0.002D), blockRed, blockGreen, blockBlue, moduleVisualAlpha("blockhighlight", 1.0F));
         }
 
         // Cached ore outlines use the normal world depth buffer: they highlight loaded ore blocks
@@ -3057,7 +3086,7 @@ if (isEnabled("blockfinder")) {
             for (Entity entity : client.world.getEntitiesByClass(Entity.class, nearby,
                     candidate -> candidate != client.player && !candidate.isRemoved()
                         && (candidate instanceof LivingEntity || candidate instanceof ItemEntity))) {
-                if (client.player.squaredDistanceTo(entity) > rangeSq) continue;
+                if (client.player.squaredDistanceTo(entity) > hitboxRangeSq) continue;
                 float entityRed = red, entityGreen = green, entityBlue = blue;
                 if (entity instanceof PlayerEntity) {
                     entityRed = 0.28F; entityGreen = 0.92F; entityBlue = 0.78F;
@@ -3065,15 +3094,15 @@ if (isEnabled("blockfinder")) {
                     entityRed = 1.0F; entityGreen = 0.76F; entityBlue = 0.25F;
                 }
                 VertexRendering.drawBox(matrices, lines, entity.getBoundingBox(),
-                    entityRed, entityGreen, entityBlue, 0.9F);
+                    entityRed, entityGreen, entityBlue, moduleVisualAlpha("hitboxes", 0.9F));
             }
         }
 
-        if ((showTargetBox || showTargetHalo) && client.player.squaredDistanceTo(lastCombatTarget) <= rangeSq) {
+        if ((showTargetBox || showTargetHalo) && client.player.squaredDistanceTo(lastCombatTarget) <= targetRangeSq) {
             Box targetBounds = lastCombatTarget.getBoundingBox();
             if (showTargetBox) {
                 VertexRendering.drawBox(matrices, lines, targetBounds.expand(0.055D),
-                    1.0F, 0.18F, 0.52F, 1.0F);
+                    targetRed, targetGreen, targetBlue, moduleVisualAlpha("targetbox", 1.0F));
             }
             if (showTargetHalo) {
                 double time = System.currentTimeMillis() / 500.0D;
@@ -3094,8 +3123,8 @@ if (isEnabled("blockfinder")) {
                         matrices.translate(x, y, z);
                         VertexRendering.drawBox(matrices, lines,
                             new Box(-size, -size, -size, size, size, size),
-                            ring == 0 ? red : 1.0F, ring == 0 ? green : 0.35F,
-                            ring == 0 ? blue : 0.85F, 0.95F);
+                            ring == 0 ? haloRed : 1.0F, ring == 0 ? haloGreen : 0.35F,
+                            ring == 0 ? haloBlue : 0.85F, moduleVisualAlpha("targethalo", 0.95F));
                         matrices.pop();
                     }
                 }
