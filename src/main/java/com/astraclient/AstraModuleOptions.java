@@ -174,36 +174,11 @@ public final class AstraModuleOptions {
             case "noweather", "nopumpkinoverlay", "nofireoverlay", "noportaloverlay", "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay", "novignette", "noscoreboard" -> {
                 // These modules remove one visual effect; the module toggle is their meaningful control.
             }
-            default -> {
-                if ("HUD".equals(category)) {
-                    out.add(slider("text_scale", "Text Scale", "Scale factor for HUD elements that support individual sizing.", "1.0", 0.5, 2.0, 0.1));
-                    out.add(toggle("background", "Background", "Show a background behind this HUD element where supported.", true));
-                    out.add(color("module_color", "Module Color", "Color used by supported HUD elements.", "AA70FF"));
-                    out.add(toggle("show_in_arraylist", "Show In Array List", "List this module in the enabled-module HUD.", true));
-                } else if ("World".equals(category)) {
-                    out.add(toggle("show_hud", "Show HUD Feedback", "Show related information where supported.", true));
-                } else if ("Movement".equals(category)) {
-                    out.add(slider("movement_strength", "Movement Strength", "Strength factor for supported movement modules.", "1.0", 0.5, 1.5, 0.05));
-                    out.add(mode("movement_mode", "Movement Mode", "Choose a supported movement profile.", "Default", MOVEMENT_MODES));
-                    out.add(toggle("pause_in_menus", "Pause In Menus", "Pause this module while a screen is open.", true));
-                } else if ("Render".equals(category)) {
-                    out.add(slider("render_range", "Render Range", "Maximum distance for this visual module.", "64", 8, 128, 4));
-                    out.add(color("module_color", "Module Color", "Color used by supported visual elements.", "AA70FF"));
-                    out.add(toggle("show_labels", "Show Labels", "Show labels where this module supports them.", true));
-                } else if ("Combat".equals(category)) {
-                    out.add(dropdown("target_priority", "Target Priority", "Choose the preferred valid target.", "Closest", TARGET_PRIORITIES));
-                    out.add(slider("attack_range", "Attack Range", "Maximum supported vanilla attack distance.", "3.0", 2.0, 3.0, 0.1));
-                    out.add(toggle("critical_hits", "Critical Hits Only", "Wait for a vanilla critical when supported.", false));
-                } else if ("Inventory".equals(category) || "Player".equals(category)) {
-                    out.add(toggle("smart_mode", "Smart Mode", "Use conservative checks before acting.", true));
-                    out.add(slider("threshold", "Activation Threshold", "Threshold for modules with numeric triggers.", "10", 1, 20, 1));
-                    out.add(toggle("notify_changes", "Notify Changes", "Show a short notification when the module acts.", true));
-                } else {
-                    out.add(toggle("notify_changes", "Notify Changes", "Show a short notification when the module acts.", true));
-                    out.add(mode("behavior_mode", "Behavior Mode", "Choose the module's supported behavior profile.", "Balanced", UTILITY_MODES));
-                    out.add(text("custom_text", "Custom Text", "Custom text used by modules that support it.", ""));
-                }
+            case "healthhud", "hungerhud", "blockreachhud", "frametimehud", "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock", "cps", "worldinfo", "waypoint", "storagefinder", "blockfinder", "potioncounter", "biome", "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "armorhud", "durabilityhud", "inventoryhud", "sessionstats", "serverinfo" -> {
+                out.add(toggle("background", "HUD Background", "Show or hide this widget's panel background.", true));
+                out.add(color("module_color", "HUD Accent Color", "Color used for this widget's accent stripe.", "AA70FF"));
             }
+            default -> { }
         }
         return List.copyOf(out);
     }
