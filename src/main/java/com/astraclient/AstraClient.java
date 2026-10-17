@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.WorldRenderer;
+import net.minecraft.client.render.VertexRendering;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -2389,8 +2390,8 @@ if (isEnabled("blockfinder")) {
             matrices.translate(x - cameraPos.x, y - cameraPos.y, z - cameraPos.z);
             matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float) (time * 100.0D + i * 31.0D)));
             matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees((float) (time * 73.0D + i * 19.0D)));
-            WorldRenderer.drawBox(matrices, lines,
-                -size, -size, -size, size, size, size,
+            VertexRendering.drawBox(matrices, lines,
+                new Box(-size, -size, -size, size, size, size),
                 red, green, blue, 0.72F);
             matrices.pop();
         }
