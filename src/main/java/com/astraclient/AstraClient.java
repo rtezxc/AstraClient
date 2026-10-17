@@ -841,6 +841,7 @@ public final class AstraClient implements ClientModInitializer {
             // Validate the snapshot before replacing the active file.
             Properties validation = new Properties();
             try (InputStream input = Files.newInputStream(source)) { validation.load(input); }
+            validateConfigProperties(validation);
             MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
             MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
@@ -1006,6 +1007,7 @@ public final class AstraClient implements ClientModInitializer {
                 try {
                     Properties validation = new Properties();
                     try (InputStream input = Files.newInputStream(path)) { validation.load(input); }
+                    validateConfigProperties(validation);
                     MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
                     MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
                     KEY_WAS_DOWN.replaceAll((id, ignored) -> false);
@@ -1262,10 +1264,37 @@ public final class AstraClient implements ClientModInitializer {
         }
     }
 
+    /**
+     * Validate numeric values before applying any setting. This keeps a malformed file
+     * from partially changing the live in-memory configuration before recovery begins.
+     */
+    private static void validateConfigProperties(Properties properties) {
+        for (String key : List.of(
+            "hud.opacity", "theme.accentTheme", "gui.keybind", "hud.editorKey", "gui.scale",
+            "zoom.fov", "crosshair.size", "crosshair.gap", "crosshair.thickness",
+            "breadcrumbs.length", "waypoint.x", "waypoint.y", "waypoint.z",
+            "autoeat.hungerThreshold", "lowhealth.threshold", "effectalert.thresholdSeconds",
+            "blockfinder.range", "storagefinder.range", "esp.range", "combat.range",
+            "combat.killauraFov"
+        )) {
+            String value = properties.getProperty(key);
+            if (value != null) Integer.parseInt(value);
+        }
+        String timePreset = properties.getProperty("timechanger.preset");
+        if (timePreset != null) Long.parseLong(timePreset);
+        for (String id : HUD_WIDGET_IDS) {
+            String x = properties.getProperty("hud." + id + ".x");
+            String y = properties.getProperty("hud." + id + ".y");
+            if (x != null) Integer.parseInt(x);
+            if (y != null) Integer.parseInt(y);
+        }
+    }
+
     private static void loadConfigFile(Path sourcePath) throws Exception {
         Properties properties = new Properties();
         try (InputStream input = Files.newInputStream(sourcePath)) {
             properties.load(input);
+            validateConfigProperties(properties);
             clickSounds = Boolean.parseBoolean(properties.getProperty("ui.clickSounds", "true"));
             hudOpacity = Math.max(35, Math.min(100, Integer.parseInt(properties.getProperty("hud.opacity", "84"))));
             hudBackgrounds = Boolean.parseBoolean(properties.getProperty("hud.backgrounds", "true"));
