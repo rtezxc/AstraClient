@@ -353,9 +353,9 @@ public final class AstraScreen extends Screen {
             } else if (hover) {
                 ctx.fill(left + 7, categoryY, left + sideW - 7, categoryY + rowHeight, 0xFF1A202D);
             }
-            ctx.drawText(textRenderer, selected ? "◆" : "·", left + 16,
-                categoryY + Math.max(1, (rowHeight - 9) / 2), selected ? accent : MUTED, false);
-            ctx.drawText(textRenderer, nav, left + 31,
+            drawCategoryIcon(ctx, nav, left + 14,
+                categoryY + Math.max(1, (rowHeight - 12) / 2), selected ? accent : MUTED);
+            ctx.drawText(textRenderer, nav, left + 33,
                 categoryY + Math.max(1, (rowHeight - 9) / 2), selected ? WHITE : MUTED, selected);
             categoryY += step;
         }
@@ -526,6 +526,77 @@ public final class AstraScreen extends Screen {
     @Override
     public void close() {
         requestAnimatedClose();
+    }
+
+    /** Draw compact, font-independent glyphs for the nine workspace categories. */
+    private void drawCategoryIcon(DrawContext ctx, String category, int x, int y, int color) {
+        switch (category) {
+            case "Combat" -> {
+                ctx.fill(x + 4, y, x + 8, y + 1, color);
+                ctx.fill(x + 4, y + 11, x + 8, y + 12, color);
+                ctx.fill(x, y + 4, x + 1, y + 8, color);
+                ctx.fill(x + 11, y + 4, x + 12, y + 8, color);
+                ctx.fill(x + 3, y + 3, x + 4, y + 4, color);
+                ctx.fill(x + 8, y + 3, x + 9, y + 4, color);
+                ctx.fill(x + 3, y + 8, x + 4, y + 9, color);
+                ctx.fill(x + 8, y + 8, x + 9, y + 9, color);
+                ctx.fill(x + 5, y + 5, x + 7, y + 7, color);
+            }
+            case "Render" -> {
+                ctx.fill(x + 1, y + 5, x + 11, y + 7, color);
+                ctx.fill(x + 2, y + 4, x + 4, y + 8, color);
+                ctx.fill(x + 8, y + 4, x + 10, y + 8, color);
+                ctx.fill(x + 5, y + 3, x + 7, y + 9, color);
+            }
+            case "Movement" -> {
+                ctx.fill(x + 1, y + 5, x + 8, y + 7, color);
+                ctx.fill(x + 6, y + 2, x + 8, y + 10, color);
+                ctx.fill(x + 8, y + 1, x + 10, y + 4, color);
+                ctx.fill(x + 8, y + 8, x + 10, y + 11, color);
+                ctx.fill(x + 10, y + 3, x + 12, y + 5, color);
+                ctx.fill(x + 10, y + 7, x + 12, y + 9, color);
+            }
+            case "Player" -> {
+                ctx.fill(x + 4, y + 1, x + 8, y + 5, color);
+                ctx.fill(x + 2, y + 6, x + 10, y + 10, color);
+                ctx.fill(x + 4, y + 10, x + 5, y + 12, color);
+                ctx.fill(x + 7, y + 10, x + 8, y + 12, color);
+            }
+            case "Inventory" -> {
+                ctx.fill(x, y, x + 5, y + 5, color);
+                ctx.fill(x + 7, y, x + 12, y + 5, color);
+                ctx.fill(x, y + 7, x + 5, y + 12, color);
+                ctx.fill(x + 7, y + 7, x + 12, y + 12, color);
+                ctx.fill(x + 2, y + 2, x + 3, y + 3, 0xFF111621);
+                ctx.fill(x + 9, y + 9, x + 10, y + 10, 0xFF111621);
+            }
+            case "World" -> {
+                ctx.fill(x + 5, y, x + 7, y + 12, color);
+                ctx.fill(x, y + 5, x + 12, y + 7, color);
+                ctx.fill(x + 2, y + 2, x + 4, y + 4, color);
+                ctx.fill(x + 8, y + 8, x + 10, y + 10, color);
+            }
+            case "Utility" -> {
+                ctx.fill(x + 5, y + 1, x + 7, y + 11, color);
+                ctx.fill(x + 1, y + 5, x + 11, y + 7, color);
+                ctx.fill(x + 2, y + 2, x + 4, y + 4, color);
+                ctx.fill(x + 8, y + 8, x + 10, y + 10, color);
+            }
+            case "HUD" -> {
+                ctx.fill(x + 1, y + 2, x + 11, y + 4, color);
+                ctx.fill(x + 1, y + 5, x + 8, y + 7, color);
+                ctx.fill(x + 1, y + 8, x + 10, y + 10, color);
+            }
+            case "Settings" -> {
+                ctx.fill(x + 4, y, x + 8, y + 2, color);
+                ctx.fill(x + 4, y + 10, x + 8, y + 12, color);
+                ctx.fill(x, y + 4, x + 2, y + 8, color);
+                ctx.fill(x + 10, y + 4, x + 12, y + 8, color);
+                ctx.fill(x + 3, y + 3, x + 9, y + 9, color);
+                ctx.fill(x + 5, y + 5, x + 7, y + 7, 0xFF111621);
+            }
+            default -> ctx.fill(x + 4, y + 4, x + 8, y + 8, color);
+        }
     }
 
     /**
