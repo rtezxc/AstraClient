@@ -6,6 +6,7 @@
   "client": [
     "AstraPanoramaMixin",
     "AstraTitleButtonsMixin",
+    "AstraCircularMenuButtonMixin",
     "AstraWorldMenuBackgroundMixin",
     "AstraFastPlaceMixin",
     "AstraFastBreakMixin",
