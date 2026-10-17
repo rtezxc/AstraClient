@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.astraclient.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "AstraPanoramaMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

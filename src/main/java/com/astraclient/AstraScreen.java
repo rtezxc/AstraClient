@@ -208,6 +208,25 @@ public final class AstraScreen extends Screen {
         // Shell, glow rails and title bar
         ctx.fill(left - 1, top - 1, left + panelW + 1, top + panelH + 1, 0xFF32284A);
         ctx.fill(left, top, left + panelW, top + panelH, BG);
+        // Subtle technical texture: etched grid, diagonal data rails, and corner ticks.
+        for (int gx = left + 12; gx < left + panelW; gx += 24) {
+            ctx.fill(gx, top + 59, gx + 1, top + panelH - 1, 0x182F3B55);
+        }
+        for (int gy = top + 68; gy < top + panelH - 8; gy += 24) {
+            ctx.fill(left + 2, gy, left + panelW - 2, gy + 1, 0x142F3B55);
+        }
+        int textureBand = Math.max(44, panelW / 7);
+        ctx.fill(left + panelW - textureBand, top + 59, left + panelW - 2, top + panelH - 2, 0x0D7C62FF);
+        for (int tick = 0; tick < 5; tick++) {
+            int tx = left + panelW - 18 - tick * 9;
+            ctx.fill(tx, top + 66, tx + 3, top + 68, 0x553F4B65);
+            ctx.fill(tx, top + panelH - 13, tx + 3, top + panelH - 11, 0x553F4B65);
+        }
+        // Fine frame marks make the panel feel like a purpose-built control surface.
+        ctx.fill(left + 7, top + 62, left + 19, top + 63, 0xFF34334C);
+        ctx.fill(left + 7, top + 62, left + 8, top + 74, 0xFF34334C);
+        ctx.fill(left + panelW - 19, top + panelH - 7, left + panelW - 7, top + panelH - 6, 0xFF34334C);
+        ctx.fill(left + panelW - 8, top + panelH - 19, left + panelW - 7, top + panelH - 6, 0xFF34334C);
         ctx.fill(left, top, left + panelW, top + 3, accent);
         // Animated gloss sweeps across the accent rail; the edge glow gently pulses.
         int shineW = Math.max(12, panelW / 9);
