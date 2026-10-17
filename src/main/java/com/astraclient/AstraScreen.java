@@ -1228,7 +1228,7 @@ public final class AstraScreen extends Screen {
         switch (action) {
             case "settings" -> {
                 contextMenuModuleId = null;
-                client.setScreen(new AstraModuleSettingsScreen(this, module.id, module.name, module.description, module.implemented));
+                client.setScreen(new AstraModuleSettingsScreen(this, module.id, module.name, module.description, module.category, module.implemented));
             }
             case "accent" -> AstraClient.toggleAccent();
             case "sounds" -> AstraClient.toggleClickSounds();
