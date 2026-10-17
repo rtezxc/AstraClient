@@ -61,7 +61,9 @@ jobs:
           grep -q '^com/astraclient/mixin/AstraWorldMenuBackgroundMixin.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraFastPlaceMixin.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraFastBreakMixin.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraNoWeatherMixin.class          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
+          grep -q '^com/astraclient/mixin/AstraNoWeatherMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraOverlayRemovalMixin.class$' /tmp/jar-contents.txt
+          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
@@ -78,6 +80,7 @@ jobs:
           root = pathlib.Path("src/main/java/com/astraclient")
           client = (root / "AstraClient.java").read_text(encoding="utf-8")
           screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+
           overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
 
           overlay_ids = (
@@ -91,144 +94,6 @@ jobs:
                   sys.exit(f"ERROR: overlay module {module_id} is missing from the GUI")
               if f'isEnabled("{module_id}")' not in overlay_mixin:
                   sys.exit(f"ERROR: overlay module {module_id} has no active mixin behavior")
-
-          # The custom background must remain opt-out-able for renderer troubleshooting.
-          if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
-              sys.exit("ERROR: menu background setting is not persisted/toggleable")
-          if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
-              sys.exit("ERROR: menu background setting is missing from the GUI")
-          for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
-              mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
-              if "isCustomMenuBackgroundEnabled()" not in mixin_source:
-                  sys.exit(f"ERROR: {mixin_name} ignores the background fallback setting")
-
-          # Restrict registry parsing to the static initializer, where modules are registered.
-          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
-          if not static:
-              sys.exit("ERROR: AstraClient module registry initializer not found")
-          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
-          gui = re.findall(
-              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
-              screen,
-          )
-
-          if len(registered) != len(set(registered)):
-              duplicates = sorted({item for item in registered if registered.count(item) > 1})
-              sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
-          gui_ids = [item[0] for item in gui]
-          if len(gui_ids) != len(set(gui_ids)):
-              duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
-              sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
-
-          registered_set = set(registered)
-          gui_set = set(gui_ids)
-          implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
-          missing_registration = sorted(implemented - registered_set)
-          missing_gui = sorted(registered_set - gui_set)
-          if missing_registration:
-              sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
-          if missing_gui:
-              sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
-
-          print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
-          print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
-          PY
-
-          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v7
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraOverlayRemovalMixin.class          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
-          unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
-
-          python - <<'PY'
-          import pathlib
-          import re
-          import sys
-
-          root = pathlib.Path("src/main/java/com/astraclient")
-          client = (root / "AstraClient.java").read_text(encoding="utf-8")
-          screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
-
-          # The custom background must remain opt-out-able for renderer troubleshooting.
-          if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
-              sys.exit("ERROR: menu background setting is not persisted/toggleable")
-          if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
-              sys.exit("ERROR: menu background setting is missing from the GUI")
-          for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
-              mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
-              if "isCustomMenuBackgroundEnabled()" not in mixin_source:
-                  sys.exit(f"ERROR: {mixin_name} ignores the background fallback setting")
-
-          # Restrict registry parsing to the static initializer, where modules are registered.
-          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
-          if not static:
-              sys.exit("ERROR: AstraClient module registry initializer not found")
-          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
-          gui = re.findall(
-              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
-              screen,
-          )
-
-          if len(registered) != len(set(registered)):
-              duplicates = sorted({item for item in registered if registered.count(item) > 1})
-              sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
-          gui_ids = [item[0] for item in gui]
-          if len(gui_ids) != len(set(gui_ids)):
-              duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
-              sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
-
-          registered_set = set(registered)
-          gui_set = set(gui_ids)
-          implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
-          missing_registration = sorted(implemented - registered_set)
-          missing_gui = sorted(registered_set - gui_set)
-          if missing_registration:
-              sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
-          if missing_gui:
-              sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
-
-          print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
-          print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
-          PY
-
-          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
-
-      - name: Upload verified production JAR only
-        uses: actions/upload-artifact@v7
-        with:
-          name: AstraClient-1.21.4-JAR
-          path: ${{ steps.verify.outputs.jar_file }}
-          if-no-files-found: error
-          retention-days: 14
- /tmp/jar-contents.txt
-          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
-          unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
-          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
-
-          python - <<'PY'
-          import pathlib
-          import re
-          import sys
-
-          root = pathlib.Path("src/main/java/com/astraclient")
-          client = (root / "AstraClient.java").read_text(encoding="utf-8")
-          screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
 
           # The custom background must remain opt-out-able for renderer troubleshooting.
           if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
