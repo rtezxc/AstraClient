@@ -1261,7 +1261,7 @@ public final class AstraClient implements ClientModInitializer {
             clickSounds = Boolean.parseBoolean(properties.getProperty("ui.clickSounds", "true"));
             hudOpacity = Math.max(20, Math.min(100, Integer.parseInt(properties.getProperty("hud.opacity", "84"))));
             hudBackgrounds = Boolean.parseBoolean(properties.getProperty("hud.backgrounds", "true"));
-            autoSprintGroundOnly = Boolean.parseBoolean(properties.getProperty("autosprint.groundOnly", "false"));
+            autoSprintGroundOnly = Boolean.parseBoolean(properties.getProperty("autosprint.groundOnly", "true"));
             autoSprintDisableInMenus = Boolean.parseBoolean(properties.getProperty("autosprint.disableInMenus", "true"));
             for (String id : MODULES.keySet()) {
                 MODULES.put(id, Boolean.parseBoolean(
