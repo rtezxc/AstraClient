@@ -54,7 +54,8 @@ public final class AstraModuleOptionsScreen extends Screen {
         if (option.type() == AstraModuleOptions.Type.KEYBIND) {
             return Integer.toString(AstraClient.moduleKeybind(moduleId));
         }
-        return AstraModuleOptions.value(moduleId, option.id(), option.defaultValue());
+        return AstraModuleOptions.normalize(option,
+            AstraModuleOptions.value(moduleId, option.id(), option.defaultValue()));
     }
 
     private String displayValue(AstraModuleOptions.Option option) {
@@ -215,6 +216,10 @@ public final class AstraModuleOptionsScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
         int pw=panelWidth(), ph=panelHeight(), x=(width-pw)/2, y=(height-ph)/2;
+        if (!inside(mouseX, mouseY, x, y, pw, ph)) {
+            client.setScreen(parent);
+            return true;
+        }
         int footer=y+ph-35;
         if (inside(mouseX,mouseY,x+pw-104,footer,86,24)) {
             client.setScreen(parent);
