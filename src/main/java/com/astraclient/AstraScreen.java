@@ -109,7 +109,10 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("nofireoverlay", "No Fire Overlay", "Hide the first-person flames when on fire", "Render", true),
         new ModuleInfo("noportaloverlay", "No Portal Overlay", "Hide the purple portal distortion overlay", "Render", true),
         new ModuleInfo("nospyglassoverlay", "No Spyglass Overlay", "Hide the circular spyglass mask while zooming", "Render", true),
-        new ModuleInfo("nopowdersnowoverlay", "No Powder Snow Overlay", "Hide the powder-snow screen frost", "Render", true)
+        new ModuleInfo("nopowdersnowoverlay", "No Powder Snow Overlay", "Hide the powder-snow screen frost", "Render", true),
+        new ModuleInfo("nonauseaoverlay", "No Nausea Overlay", "Hide the wobbly view effect from nausea", "Render", true),
+        new ModuleInfo("novignette", "No Vignette", "Remove the dark border around the screen", "Render", true),
+        new ModuleInfo("noscoreboard", "No Scoreboard", "Hide the right-side scoreboard panel", "Render", true)
     );
 
     private String category = "Render";
