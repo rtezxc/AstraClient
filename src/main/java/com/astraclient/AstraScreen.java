@@ -336,9 +336,10 @@ public final class AstraScreen extends Screen {
             ctx.drawCenteredTextWithShadow(textRenderer, "×", searchX + searchW - 13,
                 searchY + 8, clearHover ? 0xFFFFB6D8 : accent);
         }
-        ctx.drawText(textRenderer, category.toUpperCase(Locale.ROOT),
+        ctx.drawText(textRenderer, searchText.isEmpty() ? category.toUpperCase(Locale.ROOT) : "SEARCH RESULTS",
             contentX, top + 17, WHITE, true);
-        ctx.drawText(textRenderer, "MODULE CONTROL CENTER  •  v1.1.0  •  "
+        ctx.drawText(textRenderer, (searchText.isEmpty() ? "MODULE CONTROL CENTER" : "SEARCHING ALL MODULES")
+            + "  •  v1.1.0  •  "
             + net.minecraft.client.MinecraftClient.getInstance().getCurrentFps() + " FPS",
             contentX, top + 36, accent, false);
         if (category.equals("HUD")) {
@@ -750,14 +751,20 @@ public final class AstraScreen extends Screen {
         for (ModuleInfo module : MODULES) {
             if (category.equals("Favorites")) {
                 if (!AstraClient.isFavorite(module.id)) continue;
-            } else if (!module.category.equals(category)) {
+            } else if (query.isEmpty() && !module.category.equals(category)) {
                 continue;
             }
             if (query.isEmpty()
                 || module.name.toLowerCase(Locale.ROOT).contains(query)
-                || module.description.toLowerCase(Locale.ROOT).contains(query)) {
+                || module.description.toLowerCase(Locale.ROOT).contains(query)
+                || module.id.toLowerCase(Locale.ROOT).contains(query)) {
                 result.add(module);
             }
+        }
+        // Pinned modules stay at the top of normal category lists and search results.
+        if (!category.equals("Favorites")) {
+            result.sort((a, b) -> Boolean.compare(
+                AstraClient.isFavorite(b.id), AstraClient.isFavorite(a.id)));
         }
         return result;
     }
