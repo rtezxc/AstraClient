@@ -713,7 +713,7 @@ public final class AstraClient implements ClientModInitializer {
 
     public static int espRange() { return espRange; }
     public static int combatRange() { return combatRange; }
-    public static int killAuraFov() { return (int)Math.round(Math.max(60.0D, Math.min(180.0D, AstraModuleOptions.numberValue("killaura", "fov", killAuraFov))); }
+    public static int killAuraFov() { return (int)Math.round(Math.max(60.0D, Math.min(180.0D, AstraModuleOptions.numberValue("killaura", "fov", killAuraFov)))); }
     public static boolean killAuraCriticalOnly() { return AstraModuleOptions.boolValue("killaura", "critical_hits", killAuraCriticalOnly); }
     public static void toggleKillAuraCriticalOnly() {
         killAuraCriticalOnly = !AstraModuleOptions.boolValue("killaura", "critical_hits", killAuraCriticalOnly);
