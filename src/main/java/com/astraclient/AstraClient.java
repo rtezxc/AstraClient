@@ -2412,7 +2412,14 @@ public final class AstraClient implements ClientModInitializer {
         List<Entity> candidates = new ArrayList<>();
         candidates.addAll(client.world.getPlayers());
 
-        Box nearby = client.player.getBoundingBox().expand(hitboxRange);
+        double playerRange = Math.min(128.0D, AstraModuleOptions.numberValue("playeresp", "render_range", espRange));
+        double mobRange = Math.min(128.0D, AstraModuleOptions.numberValue("mobesp", "render_range", espRange));
+        double itemRange = Math.min(128.0D, AstraModuleOptions.numberValue("itemesp", "render_range", espRange));
+        double maxRange = Math.max(playerRange, Math.max(mobRange, itemRange));
+        double playerRangeSq = playerRange * playerRange;
+        double mobRangeSq = mobRange * mobRange;
+        double itemRangeSq = itemRange * itemRange;
+        Box nearby = client.player.getBoundingBox().expand(maxRange);
         // When a visual module is disabled, continue fetching nearby entities briefly so
         // their original glow flags can be restored cleanly.
         boolean restoringTrackedEntities = !ORIGINAL_ENTITY_GLOW.isEmpty();
@@ -2428,10 +2435,12 @@ public final class AstraClient implements ClientModInitializer {
         Set<UUID> seen = new HashSet<>();
         for (Entity entity : candidates) {
             if (entity == client.player || entity.isRemoved()) continue;
+            double distanceSq = client.player.squaredDistanceTo(entity);
             boolean desired = entity instanceof PlayerEntity
-                ? playerEsp && client.player.squaredDistanceTo(entity) <= (double) espRange * espRange
-                : (entity instanceof LivingEntity && mobEsp)
-                    || (entity instanceof ItemEntity && itemEsp);
+                ? playerEsp && distanceSq <= playerRangeSq
+                : entity instanceof LivingEntity
+                    ? mobEsp && distanceSq <= mobRangeSq
+                    : entity instanceof ItemEntity && itemEsp && distanceSq <= itemRangeSq;
             UUID uuid = entity.getUuid();
             seen.add(uuid);
             if (desired) {
@@ -3082,7 +3091,7 @@ if (isEnabled("blockfinder")) {
         }
 
         if (showHitboxes) {
-            Box nearby = client.player.getBoundingBox().expand(espRange);
+            Box nearby = client.player.getBoundingBox().expand(hitboxRange);
             for (Entity entity : client.world.getEntitiesByClass(Entity.class, nearby,
                     candidate -> candidate != client.player && !candidate.isRemoved()
                         && (candidate instanceof LivingEntity || candidate instanceof ItemEntity))) {
