@@ -16,6 +16,7 @@ public final class AstraModuleSettingsScreen extends Screen {
     private final String moduleId;
     private final String moduleName;
     private final String description;
+    private final String category;
     private final boolean implemented;
     private boolean capturingKey;
     private boolean draggingZoomSlider;
@@ -32,12 +33,13 @@ public final class AstraModuleSettingsScreen extends Screen {
     private boolean draggingStorageFinderSlider;
 
     public AstraModuleSettingsScreen(Screen parent, String moduleId, String moduleName,
-                                     String description, boolean implemented) {
+                                     String description, String category, boolean implemented) {
         super(Text.literal("Astra Module Settings"));
         this.parent = parent;
         this.moduleId = moduleId;
         this.moduleName = moduleName;
         this.description = description;
+        this.category = category == null ? "Utility" : category;
         this.implemented = implemented;
     }
 
@@ -286,6 +288,7 @@ public final class AstraModuleSettingsScreen extends Screen {
         drawButton(ctx, x + 20, bottomY, 120, 28, "BACK", mouseX, mouseY, a);
         if (implemented) drawButton(ctx, x + 151, bottomY, 160, 28,
             AstraClient.isEnabled(moduleId) ? "DISABLE MODULE" : "ENABLE MODULE", mouseX, mouseY, a);
+        drawButton(ctx, x + 322, bottomY, 132, 28, "ADVANCED…", mouseX, mouseY, a);
         drawButton(ctx, x + panelW - 136, bottomY, 116, 28, "RESET KEY", mouseX, mouseY, a);
         // Controls are drawn manually; do not invoke the vanilla screen render path,
         // which can re-apply Minecraft menu blur over Astra.
@@ -477,6 +480,10 @@ public final class AstraModuleSettingsScreen extends Screen {
         }
         if (inside(mouseX, mouseY, x + 20, bottomY, 120, 28)) {
             client.setScreen(parent);
+            return true;
+        }
+        if (inside(mouseX, mouseY, x + 322, bottomY, 132, 28)) {
+            client.setScreen(new AstraModuleOptionsScreen(this, moduleId, moduleName, category));
             return true;
         }
         if (implemented && inside(mouseX, mouseY, x + 151, bottomY, 160, 28)) {
