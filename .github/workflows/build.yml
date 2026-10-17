@@ -62,50 +62,46 @@ jobs:
           unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
 
-          - name: Verify module registry and GUI declarations
-            shell: bash
-            run: |
-              set -euo pipefail
-              python - <<'PY'
-              import pathlib
-              import re
-              import sys
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
 
-              root = pathlib.Path("src/main/java/com/astraclient")
-              client = (root / "AstraClient.java").read_text(encoding="utf-8")
-              screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+          root = pathlib.Path("src/main/java/com/astraclient")
+          client = (root / "AstraClient.java").read_text(encoding="utf-8")
+          screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
 
-              # Restrict registry parsing to the static initializer, where modules are registered.
-              static = re.search(r"static\\s*\\{(.*?)\\n    \\}", client, re.S)
-              if not static:
-                  sys.exit("ERROR: AstraClient module registry initializer not found")
-              registered = re.findall(r'MODULES\\.put\\("([^"]+)"', static.group(1))
-              gui = re.findall(
-                  r'new ModuleInfo\\("([^"]+)",\\s*"[^"]+",\\s*"[^"]+",\\s*"([^"]+)",\\s*(true|false)\\)',
-                  screen,
-              )
+          # Restrict registry parsing to the static initializer, where modules are registered.
+          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
+          if not static:
+              sys.exit("ERROR: AstraClient module registry initializer not found")
+          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
+          gui = re.findall(
+              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
+              screen,
+          )
 
-              if len(registered) != len(set(registered)):
-                  duplicates = sorted({item for item in registered if registered.count(item) > 1})
-                  sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
-              gui_ids = [item[0] for item in gui]
-              if len(gui_ids) != len(set(gui_ids)):
-                  duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
-                  sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
+          if len(registered) != len(set(registered)):
+              duplicates = sorted({item for item in registered if registered.count(item) > 1})
+              sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
+          gui_ids = [item[0] for item in gui]
+          if len(gui_ids) != len(set(gui_ids)):
+              duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
+              sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
 
-              registered_set = set(registered)
-              gui_set = set(gui_ids)
-              implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
-              missing_registration = sorted(implemented - registered_set)
-              missing_gui = sorted(registered_set - gui_set)
-              if missing_registration:
-                  sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
-              if missing_gui:
-                  sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
+          registered_set = set(registered)
+          gui_set = set(gui_ids)
+          implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
+          missing_registration = sorted(implemented - registered_set)
+          missing_gui = sorted(registered_set - gui_set)
+          if missing_registration:
+              sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
+          if missing_gui:
+              sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
 
-              print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
-              print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
-              PY
+          print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
+          print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
+          PY
 
           echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
 
