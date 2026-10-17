@@ -17,16 +17,22 @@ public abstract class AstraTitleButtonsMixin {
     private void astra$shapeMainButtons(CallbackInfo ci) {
         TitleScreen screen = (TitleScreen) (Object) this;
         int centerX = screen.width / 2;
-        int centerY = screen.height / 2 + 4;
+        // Keep the primary actions compact: the previous 104x104 layout
+        // covered the vanilla Realms and Options buttons at common resolutions.
+        int mainY = screen.height / 2 - 48;
         for (var element : screen.children()) {
             if (!(element instanceof ButtonWidget button)) continue;
             String label = button.getMessage().getString().toLowerCase(java.util.Locale.ROOT);
             if (label.contains("singleplayer") || label.contains("single player")) {
-                button.setDimensions(104, 104);
-                button.setPosition(centerX - 116, centerY - 52);
+                button.setDimensions(164, 32);
+                button.setPosition(centerX - 170, mainY);
             } else if (label.contains("multiplayer")) {
-                button.setDimensions(104, 104);
-                button.setPosition(centerX + 12, centerY - 52);
+                button.setDimensions(164, 32);
+                button.setPosition(centerX + 6, mainY);
+            } else if (label.contains("minecraft realms") || label.equals("realms")) {
+                // Realms is a separate vanilla button on 1.21.4; give it its own row.
+                button.setDimensions(164, 24);
+                button.setPosition(centerX - 82, mainY + 40);
             }
         }
     }
