@@ -833,7 +833,13 @@ public final class AstraScreen extends Screen {
             contextMenuModuleId = null;
             if (button == 0) return true;
         }
-        if (button == 1) return openModuleContextMenu(mouseX, mouseY);
+        if (button == 1) {
+            // Right-click opens the module's settings directly. Shift-right-click
+            // retains the compact context menu for quick actions and legacy controls.
+            return hasShiftDown()
+                ? openModuleContextMenu(mouseX, mouseY)
+                : openModuleSettings(mouseX, mouseY);
+        }
 
         int panelW = panelWidth(), panelH = panelHeight();
         int left = panelLeft(panelW), top = panelTop(panelH);
@@ -1025,6 +1031,36 @@ public final class AstraScreen extends Screen {
     private void updateOpacityFromMouse(double mouseX, int x, int trackW) {
         double progress = Math.max(0.0, Math.min(1.0, (mouseX - x) / Math.max(1.0, trackW)));
         AstraClient.previewHudOpacity(35 + (int) Math.round(progress * 65.0));
+    }
+
+    private boolean openModuleSettings(double mouseX, double mouseY) {
+        if (category.equals("Settings")) return true;
+        int panelW = panelWidth(), panelH = panelHeight();
+        int left = panelLeft(panelW), top = panelTop(panelH);
+        int sideW = sidebarWidth(panelW);
+        int contentX = left + sideW + 18;
+        int contentW = panelW - sideW - 34;
+        int listTop = top + 105, listBottom = top + panelH - 43;
+        if (!inside(mouseX, mouseY, contentX, listTop, contentW, Math.max(1, listBottom - listTop))) return true;
+        List<ModuleInfo> visible = getVisibleModules();
+        int cardW = Math.max(70, (contentW - 10) / 2);
+        int stride = 76, cardH = 65;
+        int viewportH = Math.max(1, listBottom - listTop);
+        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
+        for (int i = 0; i < visible.size(); i++) {
+            ModuleInfo module = visible.get(i);
+            int x = contentX + (i % 2) * (cardW + 10);
+            int y = listTop + (i / 2) * stride - scrollOffset;
+            if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
+                contextMenuModuleId = null;
+                searchFocused = false;
+                client.setScreen(new AstraModuleSettingsScreen(
+                    this, module.id, module.name, module.description, module.category, module.implemented));
+                return true;
+            }
+        }
+        return true;
     }
 
     private boolean openModuleContextMenu(double mouseX, double mouseY) {
