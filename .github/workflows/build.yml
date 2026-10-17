@@ -130,6 +130,18 @@ jobs:
               sys.exit("ERROR: menu background setting is not persisted/toggleable")
           if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
               sys.exit("ERROR: menu background setting is missing from the GUI")
+          import_backup = client[client.index("public static void importConfigBackup()"):client.index("private static void loadConfig()")]
+          backup_writer = client[client.index("private static void backupExistingConfig("):client.index("private static void loadConfigFile(")]
+          if 'resolveSibling("astraclient.properties.bak")' not in import_backup:
+              sys.exit("ERROR: config backup import does not use the backup written by the config saver")
+          if 'resolveSibling("astraclient.properties.bak")' not in backup_writer:
+              sys.exit("ERROR: config backup saver/import paths do not match")
+          if "validateConfigProperties(validation)" not in import_backup:
+              sys.exit("ERROR: config backups are not validated before import")
+          if '"pvpmode.previous."' not in client:
+              sys.exit("ERROR: PvP Mode previous module states are not persisted")
+          if "PVP_MODE_PREVIOUS_STATES.clear()" not in client or "PVP_MODE_PREVIOUS_STATES.put(id, Boolean.parseBoolean(savedState))" not in client:
+              sys.exit("ERROR: PvP Mode previous states are not restored from config")
           if '"ui.reducedMotion"' not in client or 'isReducedMotionEnabled()' not in client:
               sys.exit("ERROR: reduced-motion preference is not persisted")
           if '"Reduced motion"' not in screen or 'toggleReducedMotion()' not in screen:

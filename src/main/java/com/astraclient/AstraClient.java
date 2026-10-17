@@ -1417,12 +1417,25 @@ public final class AstraClient implements ClientModInitializer {
 
     /** Imports the last exported backup, resetting first so absent old fields use defaults. */
     public static void importConfigBackup() {
-        Path backup = CONFIG_PATH.resolveSibling("astraclient-backup.properties");
+        // The automatic saver writes this known-good snapshot before each atomic config swap.
+        // Retain the legacy filename as a fallback for users upgrading from older builds.
+        Path backup = CONFIG_PATH.resolveSibling("astraclient.properties.bak");
+        if (!Files.isRegularFile(backup)) {
+            Path legacyBackup = CONFIG_PATH.resolveSibling("astraclient-backup.properties");
+            if (Files.isRegularFile(legacyBackup)) backup = legacyBackup;
+        }
         if (!Files.isRegularFile(backup)) {
             notifyUser("No config backup found");
             return;
         }
         try {
+            // Validate before replacing the active config, so a malformed backup cannot
+            // destroy the user's current working settings.
+            Properties validation = new Properties();
+            try (InputStream input = Files.newInputStream(backup)) {
+                validation.load(input);
+            }
+            validateConfigProperties(validation);
             Files.copy(backup, CONFIG_PATH, StandardCopyOption.REPLACE_EXISTING);
             MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("coordinates"));
             MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
