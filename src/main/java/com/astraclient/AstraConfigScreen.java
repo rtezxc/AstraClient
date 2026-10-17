@@ -24,8 +24,9 @@ public final class AstraConfigScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, BG);
-        int panelW = Math.min(620, width - 24);
-        int panelH = Math.min(430, height - 20);
+        AstraUiEffects.renderAmbientBackdrop(ctx, width, height, System.currentTimeMillis(), AstraClient.accentColor());
+        int panelW = Math.max(1, Math.min(620, width - 24));
+        int panelH = Math.max(1, Math.min(430, height - 20));
         int left = (width - panelW) / 2;
         int top = (height - panelH) / 2;
         ctx.fill(left - 2, top - 2, left + panelW + 2, top + panelH + 2, 0x774C34A3);
