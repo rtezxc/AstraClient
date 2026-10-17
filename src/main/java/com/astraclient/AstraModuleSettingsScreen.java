@@ -47,9 +47,10 @@ public final class AstraModuleSettingsScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xFF080B12);
         ctx.fill(0, 0, width, height, 0xAF080B12);
+        AstraUiEffects.renderAmbientBackdrop(ctx, width, height, System.currentTimeMillis(), accent());
 
-        int panelW = Math.min(600, width - 24);
-        int panelH = Math.min(390, height - 24);
+        int panelW = Math.max(1, Math.min(600, width - 24));
+        int panelH = Math.max(1, Math.min(390, height - 24));
         int x = (width - panelW) / 2;
         int y = (height - panelH) / 2;
         int a = accent();
