@@ -712,7 +712,23 @@ public final class AstraClient implements ClientModInitializer {
                 && !client.options.sneakKey.isPressed()) {
                 client.player.setSneaking(false);
             }
+            // Undo transient visual/input overrides immediately rather than waiting for another tick.
+            if (zoomOverrideActive && client.options != null) {
+                client.options.getFov().setValue(originalFov);
+            }
+            if (client.player != null && appliedNightVision && !hadNightVisionBeforeEnable) {
+                client.player.removeStatusEffect(StatusEffects.NIGHT_VISION);
+            }
+            for (GlowState glow : ORIGINAL_ENTITY_GLOW.values()) {
+                if (glow.entity() != null) glow.entity().setGlowing(glow.wasGlowing());
+            }
+            lastGlowWorld = client.world;
         }
+        ORIGINAL_ENTITY_GLOW.clear();
+        zoomOverrideActive = false;
+        fullBrightWasEnabled = false;
+        appliedNightVision = false;
+        hadNightVisionBeforeEnable = false;
 
         // Keep this list aligned with the startup defaults and loadConfigFile fallbacks.
         // Reset must restore the complete configuration, not just the visible GUI controls.
@@ -731,6 +747,12 @@ public final class AstraClient implements ClientModInitializer {
         hudEditKeybindCode = GLFW.GLFW_KEY_F6;
         guiKeyWasDown = false;
         hudEditKeyWasDown = false;
+        hudChatEditMode = false;
+        hudChatWasOpen = false;
+        hudMouseWasDown = false;
+        hudRightMouseWasDown = false;
+        draggedHudId = null;
+        HUD_RENDERED_BOUNDS.clear();
         guiKeybindIgnoreUntil = System.currentTimeMillis() + 400L;
 
         autoSprintGroundOnly = true;
@@ -768,8 +790,12 @@ public final class AstraClient implements ClientModInitializer {
 
         // Clear transient trackers so the next tick starts from a clean state.
         CLICK_TIMESTAMPS.clear();
+        attackMouseWasDown = false;
+        useMouseWasDown = false;
         fpsHistoryIndex = 0;
+        for (int i = 0; i < FPS_HISTORY.length; i++) FPS_HISTORY[i] = 0;
         lastFpsSampleAt = 0L;
+        targetEspParticleTick = 0;
         lastCombatTarget = null;
         damageTrackedPlayer = null;
         lastObservedHealth = -1.0F;
