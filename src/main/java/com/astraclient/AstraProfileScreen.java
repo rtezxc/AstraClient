@@ -33,8 +33,9 @@ public final class AstraProfileScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, BG);
         int accent = AstraClient.accentColor();
-        int panelW = Math.min(680, width - 28);
-        int panelH = Math.min(430, height - 24);
+        AstraUiEffects.renderAmbientBackdrop(ctx, width, height, System.currentTimeMillis(), accent);
+        int panelW = Math.max(1, Math.min(680, width - 28));
+        int panelH = Math.max(1, Math.min(430, height - 24));
         int left = (width - panelW) / 2;
         int top = (height - panelH) / 2;
         ctx.fill(left - 2, top - 2, left + panelW + 2, top + panelH + 2, 0x774C34A3);
