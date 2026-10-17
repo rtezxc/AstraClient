@@ -16,6 +16,7 @@ public abstract class AstraWorldMenuBackgroundMixin {
     @Inject(method = "renderPanoramaBackground", at = @At("HEAD"), cancellable = true)
     private void astra$renderWorldMenuBackground(DrawContext context, float delta, CallbackInfo ci) {
         Screen screen = (Screen) (Object) this;
+        if (!AstraClient.isCustomMenuBackgroundEnabled()) return;
         if (!(screen instanceof SelectWorldScreen) && !(screen instanceof MultiplayerScreen)) {
             return;
         }
