@@ -326,8 +326,18 @@ public final class AstraClient implements ClientModInitializer {
             }
             MODULES.put("pvpmode", true);
         } else {
-            for (Map.Entry<String, Boolean> entry : PVP_MODE_PREVIOUS_STATES.entrySet()) {
-                if (MODULES.containsKey(entry.getKey())) MODULES.put(entry.getKey(), entry.getValue());
+            if (PVP_MODE_PREVIOUS_STATES.isEmpty()) {
+                // Older configs did not store the previous loadout. Recover safely to the
+                // neutral defaults instead of leaving combat automation running unexpectedly.
+                for (String moduleId : loadout) {
+                    if (MODULES.containsKey(moduleId)) {
+                        MODULES.put(moduleId, moduleId.equals("fps") || moduleId.equals("watermark"));
+                    }
+                }
+            } else {
+                for (Map.Entry<String, Boolean> entry : PVP_MODE_PREVIOUS_STATES.entrySet()) {
+                    if (MODULES.containsKey(entry.getKey())) MODULES.put(entry.getKey(), entry.getValue());
+                }
             }
             PVP_MODE_PREVIOUS_STATES.clear();
             MODULES.put("pvpmode", false);
@@ -905,6 +915,7 @@ public final class AstraClient implements ClientModInitializer {
 
         // Keep this list aligned with the startup defaults and loadConfigFile fallbacks.
         // Reset must restore the complete configuration, not just the visible GUI controls.
+        PVP_MODE_PREVIOUS_STATES.clear();
         MODULES.replaceAll((id, ignored) -> id.equals("fps") || id.equals("watermark"));
         MODULE_KEYBINDS.replaceAll((id, ignored) -> GLFW.GLFW_KEY_UNKNOWN);
         AstraModuleOptions.reset();
@@ -1002,6 +1013,7 @@ public final class AstraClient implements ClientModInitializer {
             }
         };
         if (enabled == null) return;
+        PVP_MODE_PREVIOUS_STATES.clear();
         MODULES.replaceAll((id, oldValue) -> enabled.contains(id));
         notifyUser("Applied " + profile + " profile");
         saveConfig();
@@ -1544,6 +1556,17 @@ public final class AstraClient implements ClientModInitializer {
                     FAVORITE_MODULES.add(id);
                 }
             }
+            // Persist the user's pre-PvP loadout so disabling PvP Mode after a restart
+            // can restore the same states instead of leaving every preset module enabled.
+            PVP_MODE_PREVIOUS_STATES.clear();
+            if (MODULES.getOrDefault("pvpmode", false)) {
+                for (String id : MODULES.keySet()) {
+                    String savedState = properties.getProperty("pvpmode.previous." + id);
+                    if (savedState != null) {
+                        PVP_MODE_PREVIOUS_STATES.put(id, Boolean.parseBoolean(savedState));
+                    }
+                }
+            }
             timeChangerPreset = Math.max(0L, Math.min(24000L, Long.parseLong(properties.getProperty("timechanger.preset", "6000"))));
             accentTheme = Math.max(0, Math.min(3, Integer.parseInt(
                 properties.getProperty("theme.accentTheme",
@@ -1653,6 +1676,9 @@ public final class AstraClient implements ClientModInitializer {
             properties.setProperty("module." + entry.getKey(), Boolean.toString(entry.getValue()));
             properties.setProperty("favorite." + entry.getKey(),
                 Boolean.toString(FAVORITE_MODULES.contains(entry.getKey())));
+        }
+        for (Map.Entry<String, Boolean> entry : PVP_MODE_PREVIOUS_STATES.entrySet()) {
+            properties.setProperty("pvpmode.previous." + entry.getKey(), Boolean.toString(entry.getValue()));
         }
         properties.setProperty("theme.accentTheme", Integer.toString(accentTheme));
         properties.setProperty("timechanger.preset", Long.toString(timeChangerPreset));
