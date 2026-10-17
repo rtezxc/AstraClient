@@ -2333,6 +2333,7 @@ public final class AstraClient implements ClientModInitializer {
         int screenHeight = context.getScaledWindowHeight();
 
         if (isEnabled("tracers")) renderTracers(client, context, screenWidth, screenHeight, accent);
+        if (isEnabled("nametags")) renderNametags(client, context, screenWidth, screenHeight, accent);
         if (isEnabled("breadcrumbs")) renderBreadcrumbs(client, context, screenWidth, screenHeight, accent);
 
         // A subtle pulsing warning stays out of the way until health is critical.
@@ -2868,6 +2869,7 @@ if (isEnabled("blockfinder")) {
         if (client.player == null || client.world == null || context.matrixStack() == null
                 || context.consumers() == null) return;
 
+        boolean showXray = isEnabled("xray") && !XRAY_ORE_POSITIONS.isEmpty();
         boolean showHitboxes = isEnabled("hitboxes");
         boolean showTargetBox = isEnabled("targetbox") && lastCombatTarget != null
             && lastCombatTarget.isAlive() && !lastCombatTarget.isRemoved()
@@ -2878,7 +2880,7 @@ if (isEnabled("blockfinder")) {
         boolean showBlockHighlight = isEnabled("blockhighlight")
             && client.crosshairTarget instanceof BlockHitResult blockHit
             && client.crosshairTarget.getType() == HitResult.Type.BLOCK;
-        if (!showHitboxes && !showTargetBox && !showTargetHalo && !showBlockHighlight) return;
+        if (!showXray && !showHitboxes && !showTargetBox && !showTargetHalo && !showBlockHighlight) return;
 
         int accent = accentColor();
         float red = ((accent >> 16) & 255) / 255.0F;
@@ -2895,6 +2897,21 @@ if (isEnabled("blockfinder")) {
         if (showBlockHighlight && client.crosshairTarget instanceof BlockHitResult blockHit) {
             VertexRendering.drawBox(matrices, lines,
                 new Box(blockHit.getBlockPos()).expand(0.002D), red, green, blue, 1.0F);
+        }
+
+        // Cached ore outlines use the normal world depth buffer: they highlight loaded ore blocks
+        // without changing block visibility, world state, or chunk rendering.
+        if (showXray) {
+            double xrayRangeSq = 12.0D * 12.0D;
+            for (BlockPos orePos : XRAY_ORE_POSITIONS) {
+                if (client.player.squaredDistanceTo(orePos.toCenterPos()) > xrayRangeSq) continue;
+                int ore = oreColor(orePos, client);
+                float oreRed = ((ore >> 16) & 255) / 255.0F;
+                float oreGreen = ((ore >> 8) & 255) / 255.0F;
+                float oreBlue = (ore & 255) / 255.0F;
+                VertexRendering.drawBox(matrices, lines, new Box(orePos).expand(0.003D),
+                    oreRed, oreGreen, oreBlue, 0.95F);
+            }
         }
 
         if (showHitboxes) {
