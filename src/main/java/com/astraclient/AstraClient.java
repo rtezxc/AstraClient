@@ -210,6 +210,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("storagefinder", false);
         MODULES.put("effectalert", false);
         MODULES.put("orbitcubes", false);
+        MODULES.put("hitboxes", false);
+        MODULES.put("targetbox", false);
         MODULES.put("timechanger", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
@@ -313,6 +315,8 @@ public final class AstraClient implements ClientModInitializer {
         return switch (id) {
             case "fullbright" -> "FullBright";
             case "orbitcubes" -> "Orbit Cubes";
+            case "hitboxes" -> "Hitbox ESP";
+            case "targetbox" -> "Target Box";
             case "timechanger" -> "Time Changer";
             case "customcrosshair" -> "Custom Crosshair";
             case "tracers" -> "Tracers";
@@ -1436,6 +1440,7 @@ public final class AstraClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register((drawContext, tickCounter) ->
             renderHud(MinecraftClient.getInstance(), drawContext));
         WorldRenderEvents.AFTER_ENTITIES.register(AstraClient::renderOrbitCubes);
+        WorldRenderEvents.AFTER_ENTITIES.register(AstraClient::renderVisualOverlays);
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> restoreZoom(client));
 
         System.out.println("[Astra Client] Initialized for Minecraft 1.21.4");
@@ -2395,6 +2400,53 @@ if (isEnabled("blockfinder")) {
                 red, green, blue, 0.72F);
             matrices.pop();
         }
+    }
+
+    private static void renderVisualOverlays(WorldRenderContext context) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null || client.world == null || context.matrixStack() == null
+                || context.consumers() == null) return;
+
+        boolean showHitboxes = isEnabled("hitboxes");
+        boolean showTargetBox = isEnabled("targetbox") && lastCombatTarget != null
+            && lastCombatTarget.isAlive() && !lastCombatTarget.isRemoved()
+            && lastCombatTarget.getWorld() == client.world;
+        if (!showHitboxes && !showTargetBox) return;
+
+        int accent = accentColor();
+        float red = ((accent >> 16) & 255) / 255.0F;
+        float green = ((accent >> 8) & 255) / 255.0F;
+        float blue = (accent & 255) / 255.0F;
+        VertexConsumer lines = context.consumers().getBuffer(RenderLayer.getLines());
+        var matrices = context.matrixStack();
+        var cameraPos = context.camera().getPos();
+        double rangeSq = (double) espRange * espRange;
+
+        matrices.push();
+        matrices.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
+
+        if (showHitboxes) {
+            Box nearby = client.player.getBoundingBox().expand(espRange);
+            for (Entity entity : client.world.getEntitiesByClass(Entity.class, nearby,
+                    candidate -> candidate != client.player && !candidate.isRemoved()
+                        && (candidate instanceof LivingEntity || candidate instanceof ItemEntity))) {
+                if (client.player.squaredDistanceTo(entity) > rangeSq) continue;
+                float entityRed = red, entityGreen = green, entityBlue = blue;
+                if (entity instanceof PlayerEntity) {
+                    entityRed = 0.28F; entityGreen = 0.92F; entityBlue = 0.78F;
+                } else if (entity instanceof ItemEntity) {
+                    entityRed = 1.0F; entityGreen = 0.76F; entityBlue = 0.25F;
+                }
+                VertexRendering.drawBox(matrices, lines, entity.getBoundingBox(),
+                    entityRed, entityGreen, entityBlue, 0.9F);
+            }
+        }
+
+        if (showTargetBox && client.player.squaredDistanceTo(lastCombatTarget) <= rangeSq) {
+            Box targetBox = lastCombatTarget.getBoundingBox().expand(0.055D);
+            VertexRendering.drawBox(matrices, lines, targetBox, 1.0F, 0.18F, 0.52F, 1.0F);
+        }
+        matrices.pop();
     }
 
     private static void updateBreadcrumbs(MinecraftClient client) {
