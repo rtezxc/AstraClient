@@ -541,8 +541,14 @@ public final class AstraClient implements ClientModInitializer {
         guiScale = Math.max(75, Math.min(125, value));
     }
 
-    public static int autoEatHungerThreshold() { return autoEatHungerThreshold; }
-    public static void previewAutoEatHungerThreshold(int value) { autoEatHungerThreshold = Math.max(10, Math.min(19, value)); }
+    public static int autoEatHungerThreshold() {
+        return (int)Math.round(Math.max(10.0D, Math.min(19.0D,
+            AstraModuleOptions.numberValue("autoeat", "threshold", autoEatHungerThreshold))));
+    }
+    public static void previewAutoEatHungerThreshold(int value) {
+        autoEatHungerThreshold = Math.max(10, Math.min(19, value));
+        AstraModuleOptions.syncValue("autoeat", "threshold", Integer.toString(autoEatHungerThreshold));
+    }
 
     public static int lowHealthThreshold() { return lowHealthThreshold; }
     public static void previewLowHealthThreshold(int value) { lowHealthThreshold = Math.max(2, Math.min(20, value)); }
@@ -562,21 +568,28 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
-    public static String blockFinderTarget() { return blockFinderTarget; }
+    public static String blockFinderTarget() {
+        return AstraModuleOptions.value("blockfinder", "custom_value", blockFinderTarget);
+    }
     public static void cycleBlockFinderTarget() {
         int current = 0;
         for (int i = 0; i < BLOCK_FINDER_TARGETS.length; i++) {
             if (BLOCK_FINDER_TARGETS[i].equals(blockFinderTarget)) { current = i; break; }
         }
         blockFinderTarget = BLOCK_FINDER_TARGETS[(current + 1) % BLOCK_FINDER_TARGETS.length];
+        AstraModuleOptions.syncValue("blockfinder", "custom_value", blockFinderTarget);
         nearestFoundBlock = null;
         lastBlockFinderScanAt = 0L;
         notifyUser("Block Finder target: " + blockFinderTarget);
         saveConfig();
     }
-    public static int blockFinderRange() { return blockFinderRange; }
+    public static int blockFinderRange() {
+        return (int)Math.round(Math.max(8.0D, Math.min(48.0D,
+            AstraModuleOptions.numberValue("blockfinder", "scan_range", blockFinderRange))));
+    }
     public static void previewBlockFinderRange(int value) {
         blockFinderRange = Math.max(8, Math.min(48, value));
+        AstraModuleOptions.syncValue("blockfinder", "scan_range", Integer.toString(blockFinderRange));
     }
     public static void setBlockFinderRange(int value) {
         previewBlockFinderRange(value);
@@ -586,16 +599,22 @@ public final class AstraClient implements ClientModInitializer {
         saveConfig();
     }
 
-    public static boolean tracerPlayers() { return tracerPlayers; }
-    public static boolean tracerMobs() { return tracerMobs; }
+    public static boolean tracerPlayers() {
+        return AstraModuleOptions.boolValue("tracers", "target_players", tracerPlayers);
+    }
+    public static boolean tracerMobs() {
+        return AstraModuleOptions.boolValue("tracers", "target_mobs", tracerMobs);
+    }
     public static void toggleTracerPlayers() {
         tracerPlayers = !tracerPlayers;
+        AstraModuleOptions.syncValue("tracers", "target_players", Boolean.toString(tracerPlayers));
         cachedTracerTargets.clear();
         notifyUser("Player tracers " + (tracerPlayers ? "enabled" : "disabled"));
         saveConfig();
     }
     public static void toggleTracerMobs() {
         tracerMobs = !tracerMobs;
+        AstraModuleOptions.syncValue("tracers", "target_mobs", Boolean.toString(tracerMobs));
         cachedTracerTargets.clear();
         notifyUser("Mob tracers " + (tracerMobs ? "enabled" : "disabled"));
         saveConfig();
@@ -691,17 +710,19 @@ public final class AstraClient implements ClientModInitializer {
     public static boolean killAuraCriticalOnly() { return killAuraCriticalOnly; }
     public static void toggleKillAuraCriticalOnly() {
         killAuraCriticalOnly = !killAuraCriticalOnly;
+        AstraModuleOptions.syncValue("killaura", "critical_hits", Boolean.toString(killAuraCriticalOnly));
         notifyUser("Kill Aura critical-only: " + (killAuraCriticalOnly ? "ON" : "OFF"));
         saveConfig();
     }
     public static void setKillAuraFov(int value) {
         killAuraFov = Math.max(60, Math.min(180, value));
+        AstraModuleOptions.syncValue("killaura", "fov", Integer.toString(killAuraFov));
         notifyUser("Kill Aura FOV: " + killAuraFov + " degrees");
         saveConfig();
     }
-    public static boolean targetPlayers() { return targetPlayers; }
-    public static boolean targetHostile() { return targetHostile; }
-    public static boolean targetPassive() { return targetPassive; }
+    public static boolean targetPlayers() { return AstraModuleOptions.boolValue("killaura", "target_players", targetPlayers); }
+    public static boolean targetHostile() { return AstraModuleOptions.boolValue("killaura", "target_hostile", targetHostile); }
+    public static boolean targetPassive() { return AstraModuleOptions.boolValue("killaura", "target_passive", targetPassive); }
     public static void previewCombatRange(int value) { combatRange = Math.max(3, Math.min(6, value)); }
     public static void toggleCombatTarget(String kind) {
         switch (kind) {
@@ -710,18 +731,32 @@ public final class AstraClient implements ClientModInitializer {
             case "passive" -> targetPassive = !targetPassive;
             default -> { return; }
         }
+        AstraModuleOptions.syncValue("killaura", "target_players", Boolean.toString(targetPlayers));
+        AstraModuleOptions.syncValue("killaura", "target_hostile", Boolean.toString(targetHostile));
+        AstraModuleOptions.syncValue("killaura", "target_passive", Boolean.toString(targetPassive));
+        AstraModuleOptions.syncValue("triggerbot", "target_players", Boolean.toString(targetPlayers));
+        AstraModuleOptions.syncValue("triggerbot", "target_hostile", Boolean.toString(targetHostile));
+        AstraModuleOptions.syncValue("triggerbot", "target_passive", Boolean.toString(targetPassive));
         notifyUser("Kill Aura target filter updated");
         saveConfig();
     }
 
+    private static void syncEspRangeOptions() {
+        for (String id : List.of("playeresp", "mobesp", "itemesp", "tracers", "hitboxes", "targetbox", "targethalo", "nametags")) {
+            AstraModuleOptions.syncValue(id, "render_range", Integer.toString(espRange));
+        }
+    }
+
     public static void setEspRange(int value) {
         espRange = Math.max(16, Math.min(128, value));
+        syncEspRangeOptions();
         notifyUser("ESP range: " + espRange + " blocks");
         saveConfig();
     }
 
     public static void previewEspRange(int value) {
         espRange = Math.max(16, Math.min(128, value));
+        syncEspRangeOptions();
     }
 
     public static int hudOpacity() {
