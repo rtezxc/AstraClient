@@ -31,7 +31,12 @@ public final class AstraConfigScreen extends Screen {
         int top = (height - panelH) / 2;
         ctx.fill(left - 2, top - 2, left + panelW + 2, top + panelH + 2, 0x774C34A3);
         ctx.fill(left, top, left + panelW, top + panelH, 0xFF0E131E);
-        ctx.fill(left, top, left + panelW, top + 3, AstraClient.accentColor());
+        int accent = AstraClient.accentColor();
+        ctx.fill(left, top, left + panelW, top + 3, accent);
+        int badgeX = left + panelW - 116;
+        ctx.fill(badgeX, top + 15, badgeX + 96, top + 36, 0xFF152A2D);
+        ctx.fill(badgeX, top + 15, badgeX + 2, top + 36, CYAN);
+        ctx.drawText(textRenderer, "LOCAL  /  5 SLOTS", badgeX + 8, top + 22, CYAN, true);
         ctx.drawText(textRenderer, "ASTRA  /  CONFIG MANAGER", left + 20, top + 17, WHITE, true);
         ctx.drawText(textRenderer, "Save five independent snapshots and switch setups whenever you want.",
             left + 20, top + 38, MUTED, false);
@@ -47,9 +52,19 @@ public final class AstraConfigScreen extends Screen {
                 && mouseY >= y && mouseY <= y + rowH;
             ctx.fill(left + 18, y, left + panelW - 18, y + rowH, hover ? HOVER : PANEL);
             ctx.fill(left + 18, y, left + 21, y + rowH, exists ? CYAN : 0xFF3A4254);
-            ctx.drawText(textRenderer, "SLOT " + slot, left + 31, y + 8, WHITE, true);
+
+            // Tiny local-file glyph makes each save slot read like a separate profile card.
+            int fileX = left + 31;
+            int fileY = y + 12;
+            int fileColor = exists ? CYAN : 0xFF657084;
+            ctx.fill(fileX, fileY, fileX + 15, fileY + 23, exists ? 0xFF17313B : 0xFF202633);
+            ctx.fill(fileX + 4, fileY + 5, fileX + 12, fileY + 6, fileColor);
+            ctx.fill(fileX + 4, fileY + 9, fileX + 12, fileY + 10, fileColor);
+            ctx.fill(fileX + 4, fileY + 13, fileX + 10, fileY + 14, fileColor);
+            ctx.fill(fileX + 4, fileY + 17, fileX + 12, fileY + 18, fileColor);
+            ctx.drawText(textRenderer, "SLOT " + slot, left + 54, y + 8, WHITE, true);
             ctx.drawText(textRenderer, exists ? "Saved snapshot available" : "Empty — save your current setup here",
-                left + 31, y + 26, exists ? CYAN : MUTED, false);
+                left + 54, y + 26, exists ? CYAN : MUTED, false);
             int loadX = left + panelW - 158;
             int saveX = left + panelW - 82;
             drawButton(ctx, mouseX, mouseY, loadX, y + 10, 66, 28, "LOAD", PURPLE, exists);
