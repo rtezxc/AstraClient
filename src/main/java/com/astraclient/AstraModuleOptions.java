@@ -75,6 +75,10 @@ public final class AstraModuleOptions {
             case "arrows" -> {
                 out.add(slider("render_range", "Arrow Range", "Maximum distance for directional player indicators.", "64", 8, 128, 4));
             }
+            case "fastxp" -> {
+                out.add(slider("interval_ms", "Use Interval", "Minimum delay between XP bottle use requests while holding use.", "120", 80, 250, 10));
+                out.add(toggle("require_right_click", "Require Right Click", "Only use XP bottles while right mouse is held.", true));
+            }
             case "hitmarker" -> {
                 out.add(slider("duration_ms", "Hit Marker Duration", "How long the hit confirmation remains visible.", "220", 100, 500, 20));
                 out.add(color("module_color", "Hit Marker Color", "Color used by the hit confirmation indicator.", "F3F5FC"));
