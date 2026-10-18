@@ -63,12 +63,12 @@ jobs:
           options = (root / "AstraModuleOptions.java").read_text(encoding="utf-8")
           mixin_config = json.loads(pathlib.Path("src/main/resources/astraclient.mixins.json").read_text(encoding="utf-8"))
 
-          static = re.search(r"static\\s*\\{(.*?)\\n    \\}", client, re.S)
+          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
           if not static:
               sys.exit("ERROR: Astra module registry initializer not found")
-          registered = re.findall(r'MODULES\\.put\\("([^"]+)"', static.group(1))
+          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
           gui = re.findall(
-              r'new ModuleInfo\\("([^"]+)",\\s*"[^"]+",\\s*"[^"]+",\\s*"([^"]+)",\\s*(true|false)\\)',
+              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
               screen,
           )
           gui_ids = [module_id for module_id, _, _ in gui]
