@@ -21,6 +21,19 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check patch whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            git diff --check "origin/${GITHUB_BASE_REF}...HEAD"
+          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          fi
 
       - name: Set up Java 21
         uses: actions/setup-java@v5
