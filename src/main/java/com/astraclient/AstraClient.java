@@ -2241,7 +2241,12 @@ public final class AstraClient implements ClientModInitializer {
 
             // Prefer targets actually in front of the player, while allowing a
             // generous cone so ordinary mouse movement doesn't make the aura miss.
-            var direction = candidate.getBoundingBox().getCenter().subtract(eye).normalize();
+            // Test the closest point on the hitbox rather than its center. A large
+            // target can overlap the allowed FOV even when its center is just outside it.
+            Vec3d aimPoint = closestPointOnTargetBox(eye, candidate.getBoundingBox());
+            Vec3d direction = aimPoint.subtract(eye);
+            if (direction.lengthSquared() > 1.0E-7D) direction = direction.normalize();
+            else direction = candidate.getBoundingBox().getCenter().subtract(eye).normalize();
             double auraFov = Math.max(60.0D, Math.min(180.0D,
                 AstraModuleOptions.numberValue("killaura", "fov", killAuraFov)));
             double fovDotThreshold = Math.cos(Math.toRadians(auraFov / 2.0D));
@@ -2446,13 +2451,30 @@ public final class AstraClient implements ClientModInitializer {
      */
     private static boolean hasClearLineOfSight(MinecraftClient client, Entity target) {
         if (client.player == null || client.world == null || target == null) return false;
-        var start = client.player.getEyePos();
-        var end = target.getEyePos();
-        var hit = client.world.raycast(new RaycastContext(
+
+        // Checking only the target's eyes causes false negatives when a block edge
+        // covers the head but the torso or side of the hitbox is exposed. Accept a
+        // clear ray to any representative point on the actual target box.
+        Vec3d start = client.player.getEyePos();
+        Box box = target.getBoundingBox();
+        double centerX = (box.minX + box.maxX) * 0.5D;
+        double centerZ = (box.minZ + box.maxZ) * 0.5D;
+        double height = Math.max(0.1D, box.maxY - box.minY);
+        double centerY = box.minY + height * 0.5D;
+
+        return hasClearRay(client, start, target.getEyePos())
+            || hasClearRay(client, start, new Vec3d(centerX, box.minY + height * 0.72D, centerZ))
+            || hasClearRay(client, start, new Vec3d(centerX, centerY, centerZ))
+            || hasClearRay(client, start, new Vec3d(centerX, box.minY + height * 0.18D, centerZ))
+            || hasClearRay(client, start, new Vec3d(box.minX + (box.maxX - box.minX) * 0.15D, centerY, centerZ))
+            || hasClearRay(client, start, new Vec3d(box.maxX - (box.maxX - box.minX) * 0.15D, centerY, centerZ));
+    }
+
+    private static boolean hasClearRay(MinecraftClient client, Vec3d start, Vec3d end) {
+        return client.world.raycast(new RaycastContext(
             start, end, RaycastContext.ShapeType.COLLIDER,
             RaycastContext.FluidHandling.NONE, client.player
-        ));
-        return hit.getType() == HitResult.Type.MISS;
+        )).getType() == HitResult.Type.MISS;
     }
 
     private static boolean isCriticalHitReady(PlayerEntity player) {
@@ -2471,13 +2493,16 @@ public final class AstraClient implements ClientModInitializer {
      * eye position. Entity-origin distance incorrectly rejects nearby targets when
      * their feet/origin are just beyond the reach boundary.
      */
+    private static Vec3d closestPointOnTargetBox(Vec3d point, Box box) {
+        double x = Math.max(box.minX, Math.min(point.x, box.maxX));
+        double y = Math.max(box.minY, Math.min(point.y, box.maxY));
+        double z = Math.max(box.minZ, Math.min(point.z, box.maxZ));
+        return new Vec3d(x, y, z);
+    }
+
     private static double distanceToTargetBox(PlayerEntity player, Entity target) {
-        Box box = target.getBoundingBox();
         Vec3d eye = player.getEyePos();
-        double x = Math.max(box.minX, Math.min(eye.x, box.maxX));
-        double y = Math.max(box.minY, Math.min(eye.y, box.maxY));
-        double z = Math.max(box.minZ, Math.min(eye.z, box.maxZ));
-        return eye.distanceTo(new Vec3d(x, y, z));
+        return eye.distanceTo(closestPointOnTargetBox(eye, target.getBoundingBox()));
     }
 
     private static boolean attackTarget(MinecraftClient client, LivingEntity target) {
