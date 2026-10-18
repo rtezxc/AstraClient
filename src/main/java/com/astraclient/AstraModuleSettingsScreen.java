@@ -294,7 +294,7 @@ public final class AstraModuleSettingsScreen extends Screen {
                 implemented ? (AstraClient.isEnabled(moduleId) ? "DISABLE MODULE" : "ENABLE MODULE") : "LOCKED",
                 mouseX, mouseY, a);
             drawButton(ctx, x + 322, bottomY, 132, 28, "ADVANCED…", mouseX, mouseY, a);
-            drawButton(ctx, x + panelW - 136, bottomY, 116, 28, "RESET KEY", mouseX, mouseY, a);
+            drawButton(ctx, x + panelW - 136, bottomY, 116, 28, "RESET SETTINGS", mouseX, mouseY, a);
         } else {
             int buttonW = Math.max(1, (panelW - 44) / 3);
             drawButton(ctx, x + 12, bottomY, buttonW, 28, "BACK", mouseX, mouseY, a);
@@ -513,7 +513,7 @@ public final class AstraModuleSettingsScreen extends Screen {
                 return true;
             }
             if (inside(mouseX, mouseY, x + pw - 136, bottomY, 116, 28)) {
-                AstraClient.setModuleKeybind(moduleId, GLFW.GLFW_KEY_UNKNOWN);
+                AstraClient.resetModuleSettings(moduleId);
                 capturingKey = false;
                 return true;
             }
