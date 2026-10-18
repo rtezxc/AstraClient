@@ -138,6 +138,10 @@ public final class AstraModuleOptions {
                 out.add(toggle("target_players", "Trace Players", "Draw tracer lines to players.", true));
                 out.add(toggle("target_mobs", "Trace Mobs", "Draw tracer lines to mobs.", true));
             }
+            case "trajectories" -> {
+                out.add(slider("steps", "Trajectory Length", "Number of simulated projectile steps.", "32", 16, 48, 4));
+                out.add(color("module_color", "Trajectory Color", "Color used for predicted projectile paths.", "54E8FF"));
+            }
             case "wardenesp" -> {
                 out.add(slider("render_range", "Warden Range", "Maximum distance for Warden outlines.", "64", 8, 128, 4));
                 out.add(color("module_color", "Outline Color", "Color used for Warden outlines.", "54E8FF"));
