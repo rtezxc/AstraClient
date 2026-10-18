@@ -34,6 +34,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.mob.WardenEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.entity.projectile.FishingBobberEntity;
@@ -316,6 +317,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("elytraspeed", false);
         MODULES.put("highjump", false);
         MODULES.put("jumpcircle", false);
+        MODULES.put("wardenesp", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -572,6 +574,7 @@ public final class AstraClient implements ClientModInitializer {
             case "elytraspeed" -> "Elytra Speed";
             case "highjump" -> "High Jump";
             case "jumpcircle" -> "Jump Circle";
+            case "wardenesp" -> "Warden ESP";
             default -> id;
         };
     }
@@ -3972,7 +3975,9 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         boolean showBlockHighlight = isEnabled("blockhighlight")
             && client.crosshairTarget instanceof BlockHitResult blockHit
             && client.crosshairTarget.getType() == HitResult.Type.BLOCK;
-        if (!showXray && !showHitboxes && !showTargetBox && !showTargetHalo && !showBlockHighlight) return;
+        boolean showWardenEsp = isEnabled("wardenesp");
+        if (!showXray && !showHitboxes && !showTargetBox && !showTargetHalo
+            && !showBlockHighlight && !showWardenEsp) return;
 
         int accent = accentColor();
         int blockAccent = moduleColor("blockhighlight", accent);
@@ -3991,6 +3996,10 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         float targetRed = ((targetAccent >> 16) & 255) / 255.0F;
         float targetGreen = ((targetAccent >> 8) & 255) / 255.0F;
         float targetBlue = (targetAccent & 255) / 255.0F;
+        int wardenAccent = moduleColor("wardenesp", 0xFF54E8FF);
+        float wardenRed = ((wardenAccent >> 16) & 255) / 255.0F;
+        float wardenGreen = ((wardenAccent >> 8) & 255) / 255.0F;
+        float wardenBlue = (wardenAccent & 255) / 255.0F;
         VertexConsumer lines = context.consumers().getBuffer(RenderLayer.getLines());
         var matrices = context.matrixStack();
         var cameraPos = context.camera().getPos();
@@ -4000,6 +4009,8 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
             AstraModuleOptions.numberValue("targethalo", "render_range", espRange)));
         double hitboxRangeSq = hitboxRange * hitboxRange;
         double targetRangeSq = targetRange * targetRange;
+        double wardenRange = Math.max(8.0D, Math.min(128.0D, AstraModuleOptions.numberValue("wardenesp", "render_range", 64.0D)));
+        double wardenRangeSq = wardenRange * wardenRange;
 
         matrices.push();
         matrices.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
@@ -4023,6 +4034,17 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
                 float oreBlue = (ore & 255) / 255.0F;
                 VertexRendering.drawBox(matrices, lines, new Box(orePos).expand(0.003D),
                     oreRed, oreGreen, oreBlue, 0.95F);
+            }
+        }
+
+        if (showWardenEsp) {
+            Box nearbyWardens = client.player.getBoundingBox().expand(wardenRange);
+            for (WardenEntity warden : client.world.getEntitiesByClass(
+                    WardenEntity.class, nearbyWardens,
+                    candidate -> !candidate.isRemoved() && candidate.isAlive())) {
+                if (client.player.squaredDistanceTo(warden) > wardenRangeSq) continue;
+                VertexRendering.drawBox(matrices, lines, warden.getBoundingBox().expand(0.055D),
+                    wardenRed, wardenGreen, wardenBlue, moduleVisualAlpha("wardenesp", 0.95F));
             }
         }
 
