@@ -206,6 +206,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autoarmor", false);
         MODULES.put("cheststealer", false);
         MODULES.put("novelocity", false);
+        MODULES.put("nameprotect", false);
         MODULES.put("noclip", false);
         MODULES.put("autojump", false);
         MODULES.put("autofish", false);
@@ -479,6 +480,7 @@ public final class AstraClient implements ClientModInitializer {
             case "autoarmor" -> "Auto Armor";
             case "cheststealer" -> "Chest Stealer";
             case "novelocity" -> "No Velocity";
+            case "nameprotect" -> "Name Protect";
             case "noclip" -> "No Clip";
             case "autojump" -> "Auto Jump";
             case "autofish" -> "Auto Fish";
