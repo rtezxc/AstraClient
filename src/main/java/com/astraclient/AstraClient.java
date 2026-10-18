@@ -2436,12 +2436,27 @@ public final class AstraClient implements ClientModInitializer {
         float targetPitch = (float)-Math.toDegrees(Math.atan2(dy, Math.max(0.0001D, horizontal)));
         float yawDelta = net.minecraft.util.math.MathHelper.wrapDegrees(targetYaw - client.player.getYaw());
         float pitchDelta = targetPitch - client.player.getPitch();
-        if (mode.equals("Spooky Time")) {
-            // Adaptive, bounded rotation: large errors turn faster, small errors
-            // settle gently. Tiny deterministic motion avoids a perfectly linear snap.
-            float yawStep = Math.min(Math.abs(yawDelta), 5.0F + Math.min(13.0F, Math.abs(yawDelta) * 0.24F));
-            float pitchStep = Math.min(Math.abs(pitchDelta), 3.0F + Math.min(8.0F, Math.abs(pitchDelta) * 0.20F));
-            float wobble = (float)Math.sin(client.player.age * 0.31D) * 0.22F;
+        if (mode.startsWith("Spooky Time")) {
+            // The archive contains three related profiles. Keep them distinct while
+            // using Astra's existing target validation and vanilla attack checks.
+            float yawCap;
+            float pitchCap;
+            float yawGain;
+            float pitchGain;
+            float wobbleGain;
+            if (mode.equals("Spooky Time 1.16")) {
+                yawCap = 12.0F; pitchCap = 7.0F;
+                yawGain = 0.30F; pitchGain = 0.22F; wobbleGain = 0.10F;
+            } else if (mode.equals("Spooky Time Duels")) {
+                yawCap = 8.0F; pitchCap = 5.0F;
+                yawGain = 0.20F; pitchGain = 0.16F; wobbleGain = 0.04F;
+            } else {
+                yawCap = 18.0F; pitchCap = 11.0F;
+                yawGain = 0.24F; pitchGain = 0.20F; wobbleGain = 0.22F;
+            }
+            float yawStep = Math.min(Math.abs(yawDelta), 3.0F + Math.min(yawCap, Math.abs(yawDelta) * yawGain));
+            float pitchStep = Math.min(Math.abs(pitchDelta), 2.0F + Math.min(pitchCap, Math.abs(pitchDelta) * pitchGain));
+            float wobble = (float)Math.sin(client.player.age * 0.31D) * wobbleGain;
             client.player.setYaw(client.player.getYaw() + Math.copySign(yawStep, yawDelta) + wobble);
             client.player.setPitch(Math.max(-90.0F, Math.min(90.0F,
                 client.player.getPitch() + Math.copySign(pitchStep, pitchDelta))));
