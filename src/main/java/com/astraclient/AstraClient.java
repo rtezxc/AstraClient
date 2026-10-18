@@ -211,6 +211,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("step", false);
         MODULES.put("spider", false);
         MODULES.put("seeinvisibles", false);
+        MODULES.put("totempopalert", false);
         MODULES.put("noclip", false);
         MODULES.put("autojump", false);
         MODULES.put("autofish", false);
@@ -489,6 +490,7 @@ public final class AstraClient implements ClientModInitializer {
             case "step" -> "Step";
             case "spider" -> "Spider";
             case "seeinvisibles" -> "See Invisibles";
+            case "totempopalert" -> "Totem Pop Alert";
             case "noclip" -> "No Clip";
             case "autojump" -> "Auto Jump";
             case "autofish" -> "Auto Fish";
