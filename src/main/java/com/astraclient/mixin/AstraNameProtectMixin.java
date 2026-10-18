@@ -8,6 +8,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
@@ -26,6 +27,20 @@ public abstract class AstraNameProtectMixin {
         argsOnly = true
     )
     private Text astra$protectOwnName(Text message) {
+        return astra$rewriteName(message);
+    }
+
+    @ModifyVariable(
+        method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V",
+        at = @At("HEAD"),
+        argsOnly = true
+    )
+    private Text astra$protectSignedOwnName(Text message) {
+        return astra$rewriteName(message);
+    }
+
+    @Unique
+    private static Text astra$rewriteName(Text message) {
         if (message == null || !AstraClient.isEnabled("nameprotect")) return message;
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return message;
@@ -39,13 +54,14 @@ public abstract class AstraNameProtectMixin {
 
         MutableText rebuilt = Text.empty();
         message.visit((style, segment) -> {
-            appendReplacement(rebuilt, segment, style, username, alias);
+            astra$astra$appendReplacement(rebuilt, segment, style, username, alias);
             return Optional.empty();
         }, Style.EMPTY);
         return rebuilt;
     }
 
-    private static void appendReplacement(MutableText output, String segment, Style style,
+    @Unique
+    private static void astra$appendReplacement(MutableText output, String segment, Style style,
                                          String username, String alias) {
         int from = 0;
         int found;
