@@ -19,6 +19,7 @@
     "AstraStepMixin",
     "AstraSeeInvisiblesMixin",
     "AstraTotemPopAlertMixin",
+    "AstraAspectRatioMixin",
     "AstraOverlayRemovalMixin",
     "AstraFireOverlayMixin"
   ],
