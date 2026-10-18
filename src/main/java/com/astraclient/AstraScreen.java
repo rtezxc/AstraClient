@@ -1471,13 +1471,6 @@ public final class AstraScreen extends Screen {
             windowOffsetY = Math.max(-top, Math.min(height - panelHeight() - top, windowOffsetY));
             return true;
         }
-        if (button == 0 && searchFocused && category.equals("Settings")) {
-            int panelW = panelWidth(), sideW = sidebarWidth(panelW);
-            int x = panelLeft(panelW) + sideW + 18;
-            int w = panelW - sideW - 34;
-            updateScaleFromMouse(mouseX, x, w);
-            return true;
-        }
         return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
@@ -1512,7 +1505,9 @@ public final class AstraScreen extends Screen {
         }
         if (category.equals("Settings")) {
             int panelH = panelHeight();
-            int maxSettingsScroll = Math.max(0, 604 - Math.max(90, panelH - 130));
+            // Last row ends at top + 596; keep it inside the same bottom inset
+            // used by the module list instead of allowing almost one extra row of blank scroll.
+            int maxSettingsScroll = Math.max(0, 639 - panelH);
             settingsScrollOffset = Math.max(0, Math.min(maxSettingsScroll,
                 settingsScrollOffset - (int) Math.round(verticalAmount * 32.0)));
             return true;
