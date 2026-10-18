@@ -498,39 +498,26 @@ public final class AstraModuleSettingsScreen extends Screen {
                 return true;
             }
         }
-        if (pw >= 600) {
-            if (inside(mouseX, mouseY, x + 20, bottomY, 120, 28)) {
-                client.setScreen(parent);
-                return true;
-            }
-            if (inside(mouseX, mouseY, x + 322, bottomY, 132, 28)) {
-                client.setScreen(new AstraModuleOptionsScreen(this, moduleId, moduleName, category));
-                return true;
-            }
-            if (implemented && inside(mouseX, mouseY, x + 151, bottomY, 160, 28)) {
-                AstraClient.toggle(moduleId);
-                return true;
-            }
-            if (inside(mouseX, mouseY, x + pw - 136, bottomY, 116, 28)) {
-                AstraClient.resetModuleSettings(moduleId);
-                capturingKey = false;
-                return true;
-            }
-        } else {
-            int buttonW = Math.max(1, (pw - 44) / 3);
-            if (inside(mouseX, mouseY, x + 12, bottomY, buttonW, 28)) {
-                client.setScreen(parent);
-                return true;
-            }
-            if (implemented && inside(mouseX, mouseY, x + 22 + buttonW, bottomY, buttonW, 28)) {
-                AstraClient.toggle(moduleId);
-                return true;
-            }
-            if (inside(mouseX, mouseY, x + 32 + buttonW * 2, bottomY, buttonW, 28)) {
-                AstraClient.resetModuleSettings(moduleId);
-                capturingKey = false;
-                return true;
-            }
+        int footerGap = 8;
+        int footerLeft = x + 12;
+        int footerRight = x + pw - 12;
+        int footerAvailable = Math.max(3, footerRight - footerLeft - footerGap * 2);
+        int buttonW = footerAvailable / 3;
+        int secondButtonX = footerLeft + buttonW + footerGap;
+        int thirdButtonX = footerLeft + (buttonW + footerGap) * 2;
+        int thirdButtonW = Math.max(1, footerRight - thirdButtonX);
+        if (inside(mouseX, mouseY, footerLeft, bottomY, buttonW, 28)) {
+            client.setScreen(parent);
+            return true;
+        }
+        if (implemented && inside(mouseX, mouseY, secondButtonX, bottomY, buttonW, 28)) {
+            AstraClient.toggle(moduleId);
+            return true;
+        }
+        if (inside(mouseX, mouseY, thirdButtonX, bottomY, thirdButtonW, 28)) {
+            AstraClient.resetModuleSettings(moduleId);
+            capturingKey = false;
+            return true;
         }
         return true;
     }
