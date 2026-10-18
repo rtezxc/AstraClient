@@ -3,6 +3,7 @@ package com.astraclient;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.text.Text;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -248,6 +249,21 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("scaffold", false);
         MODULES.put("aimassist", false);
         MODULES.put("autototem", false);
+        MODULES.put("autoarmor", false);
+        MODULES.put("autofish", false);
+        MODULES.put("cheststealer", false);
+        MODULES.put("clickpearl", false);
+        MODULES.put("fireworkesp", false);
+        MODULES.put("wardenesp", false);
+        MODULES.put("autoswap", false);
+        MODULES.put("elytraboost", false);
+        MODULES.put("elytraswap", false);
+        MODULES.put("autoaccept", false);
+        MODULES.put("autoleave", false);
+        MODULES.put("autoexplosion", false);
+        MODULES.put("autotrap", false);
+        MODULES.put("elytramotion", false);
+        MODULES.put("elytratarget", false);
         MODULES.put("antiknockback", false);
         MODULES.put("autoclicker", false);
         MODULES.put("criticals", false);
@@ -454,6 +470,21 @@ public final class AstraClient implements ClientModInitializer {
             case "pvpmode" -> "PvP Mode";
             case "triggerbot" -> "TriggerBot";
             case "autotool" -> "Auto Tool";
+            case "autoarmor" -> "Auto Armor";
+            case "autofish" -> "Auto Fish";
+            case "cheststealer" -> "Chest Stealer";
+            case "clickpearl" -> "Click Pearl";
+            case "fireworkesp" -> "Firework ESP";
+            case "wardenesp" -> "Warden ESP";
+            case "autoswap" -> "Auto Swap";
+            case "elytraboost" -> "Elytra Boost";
+            case "elytraswap" -> "Elytra Swap";
+            case "autoaccept" -> "Auto Accept";
+            case "autoleave" -> "Auto Leave";
+            case "autoexplosion" -> "Auto Explosion";
+            case "autotrap" -> "Auto Trap";
+            case "elytramotion" -> "Elytra Motion";
+            case "elytratarget" -> "Elytra Target";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -1929,6 +1960,11 @@ public final class AstraClient implements ClientModInitializer {
             return true;
         });
 
+        ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
+            if (message != null) handleAutoChatAutomation(message.getString());
+            return true;
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             long guiWindow = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             updateChatHudEditor(client);
@@ -1956,6 +1992,17 @@ public final class AstraClient implements ClientModInitializer {
             updateCombatModules(client);
             updateAimAssist(client);
             updateAutoTotem(client);
+            updateAutoArmor(client);
+            updateAutoFish(client);
+            updateChestStealer(client);
+            updateClickPearl(client);
+            updateAutoSwap(client);
+            updateElytraBoost(client);
+            updateElytraSwap(client);
+            updateAutoExplosion(client);
+            updateAutoTrap(client);
+            updateElytraMotion(client);
+            updateElytraTarget(client);
             updateNoSlow(client);
             updateSpeed(client);
             updateScaffold(client);
@@ -2103,6 +2150,299 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     /** Client-side movement helpers; they never change packet handling or anti-cheat behavior. */
+
+    /** Equips armor from the main inventory into empty armor slots. */
+    private static void updateAutoArmor(MinecraftClient client) {
+        if (!isEnabled("autoarmor") || client.player == null || client.world == null || client.interactionManager == null
+            || client.currentScreen != null || client.player.isSpectator() || client.player.age % 8 != 0) return;
+        var handler = client.player.currentScreenHandler;
+        for (int armorSlot = 5; armorSlot <= 8; armorSlot++) {
+            if (!handler.getSlot(armorSlot).getStack().isEmpty()) continue;
+            for (int slot = 9; slot < Math.min(36, handler.slots.size()); slot++) {
+                ItemStack stack = handler.getSlot(slot).getStack();
+                if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.item.ArmorItem)) continue;
+                client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, client.player);
+                return;
+            }
+        }
+    }
+
+    private static long lastAutoFishAt;
+    private static long lastChestStealAt;
+    private static boolean clickPearlWasDown;
+    private static long lastClickPearlAt;
+
+    /** Reels in when the bobber dips; vanilla handles the catch and fishing loot. */
+    private static void updateAutoFish(MinecraftClient client) {
+        if (!isEnabled("autofish") || client.player == null || client.world == null || client.interactionManager == null
+            || client.currentScreen != null || client.player.fishHook == null) return;
+        var bobber = client.player.fishHook;
+        long now = System.currentTimeMillis();
+        if (bobber.isTouchingWater() && bobber.getVelocity().y < -0.08D && now - lastAutoFishAt > 900L) {
+            client.interactionManager.interactItem(client.player, Hand.MAIN_HAND);
+            lastAutoFishAt = now;
+        }
+    }
+
+    /** Quick-moves container stacks into the player's inventory, one stack per short interval. */
+    private static void updateChestStealer(MinecraftClient client) {
+        if (!isEnabled("cheststealer") || client.player == null || client.interactionManager == null
+            || !(client.currentScreen instanceof net.minecraft.client.gui.screen.ingame.GenericContainerScreen<?>)
+            || client.player.age % 3 != 0) return;
+        var handler = client.player.currentScreenHandler;
+        int containerSlots = Math.max(0, handler.slots.size() - 36);
+        long now = System.currentTimeMillis();
+        if (now - lastChestStealAt < 45L) return;
+        for (int slot = 0; slot < containerSlots; slot++) {
+            if (handler.getSlot(slot).hasStack()) {
+                client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, client.player);
+                lastChestStealAt = now;
+                return;
+            }
+        }
+    }
+
+    /** Uses an ender pearl on a middle-click edge, avoiding repeated use while held. */
+    private static void updateClickPearl(MinecraftClient client) {
+        if (client.player == null || client.world == null || client.interactionManager == null || client.currentScreen != null
+            || client.getWindow() == null) { clickPearlWasDown = false; return; }
+        long window = client.getWindow().getHandle();
+        boolean down = isEnabled("clickpearl") && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window,
+            org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        if (down && !clickPearlWasDown && System.currentTimeMillis() - lastClickPearlAt > 350L) {
+            int selected = client.player.getInventory().selectedSlot;
+            for (int i = 0; i < 9; i++) {
+                if (!client.player.getInventory().getStack(i).isOf(Items.ENDER_PEARL)) continue;
+                client.player.getInventory().selectedSlot = i;
+                client.interactionManager.interactItem(client.player, Hand.MAIN_HAND);
+                client.player.getInventory().selectedSlot = selected;
+                lastClickPearlAt = System.currentTimeMillis();
+                break;
+            }
+        }
+        clickPearlWasDown = down;
+    }
+
+
+    private static int autoSwapOriginalSlot = -1;
+    private static boolean autoSwapWasActive;
+    private static long lastElytraBoostAt;
+    private static long lastElytraSwapAt;
+
+    /** Switches to a golden apple at low health, then restores the prior hotbar slot. */
+    private static void updateAutoSwap(MinecraftClient client) {
+        if (client.player == null || client.world == null || client.currentScreen != null) {
+            autoSwapWasActive = false;
+            autoSwapOriginalSlot = -1;
+            return;
+        }
+        var player = client.player;
+        boolean needsHeal = isEnabled("autoswap") && player.getHealth() <= 8.0F;
+        if (needsHeal && !autoSwapWasActive) {
+            int foodSlot = -1;
+            for (int i = 0; i < 9; i++) {
+                ItemStack stack = player.getInventory().getStack(i);
+                if (stack.isOf(Items.GOLDEN_APPLE) || stack.isOf(Items.ENCHANTED_GOLDEN_APPLE)) {
+                    foodSlot = i;
+                    if (stack.isOf(Items.ENCHANTED_GOLDEN_APPLE)) break;
+                }
+            }
+            if (foodSlot >= 0) {
+                autoSwapOriginalSlot = player.getInventory().selectedSlot;
+                player.getInventory().selectedSlot = foodSlot;
+                autoSwapWasActive = true;
+            }
+        } else if (!needsHeal && autoSwapWasActive) {
+            if (autoSwapOriginalSlot >= 0) player.getInventory().selectedSlot = autoSwapOriginalSlot;
+            autoSwapOriginalSlot = -1;
+            autoSwapWasActive = false;
+        }
+    }
+
+    /** Uses a hotbar firework while gliding, only while the player holds the use-item key. */
+    private static void updateElytraBoost(MinecraftClient client) {
+        if (!isEnabled("elytraboost") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null || client.options == null
+            || !client.player.isGliding() || !client.options.useKey.isPressed()
+            || System.currentTimeMillis() - lastElytraBoostAt < 1200L) return;
+        int selected = client.player.getInventory().selectedSlot;
+        for (int i = 0; i < 9; i++) {
+            if (!client.player.getInventory().getStack(i).isOf(Items.FIREWORK_ROCKET)) continue;
+            client.player.getInventory().selectedSlot = i;
+            client.interactionManager.interactItem(client.player, Hand.MAIN_HAND);
+            client.player.getInventory().selectedSlot = selected;
+            lastElytraBoostAt = System.currentTimeMillis();
+            return;
+        }
+    }
+
+    /** Automatically swaps an elytra into the chest slot while airborne and restores chest armor on landing. */
+    private static void updateElytraSwap(MinecraftClient client) {
+        if (!isEnabled("elytraswap") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.age % 10 != 0 || System.currentTimeMillis() - lastElytraSwapAt < 500L) return;
+        var player = client.player;
+        var handler = player.currentScreenHandler;
+        ItemStack chest = handler.getSlot(6).getStack();
+        boolean airborne = !player.isOnGround() && player.getVelocity().y < -0.05D;
+        if (airborne && !(chest.getItem() instanceof net.minecraft.item.ElytraItem)) {
+            for (int slot = 9; slot < Math.min(36, handler.slots.size()); slot++) {
+                if (handler.getSlot(slot).getStack().getItem() instanceof net.minecraft.item.ElytraItem) {
+                    client.interactionManager.clickSlot(handler.syncId, 6, 0, SlotActionType.PICKUP, player);
+                    client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, player);
+                    client.interactionManager.clickSlot(handler.syncId, 6, 0, SlotActionType.PICKUP, player);
+                    lastElytraSwapAt = System.currentTimeMillis();
+                    return;
+                }
+            }
+        } else if (!airborne && chest.getItem() instanceof net.minecraft.item.ElytraItem) {
+            for (int slot = 9; slot < Math.min(36, handler.slots.size()); slot++) {
+                ItemStack candidate = handler.getSlot(slot).getStack();
+                if (candidate.getItem() instanceof net.minecraft.item.ArmorItem
+                    && !(candidate.getItem() instanceof net.minecraft.item.ElytraItem)) {
+                    client.interactionManager.clickSlot(handler.syncId, 6, 0, SlotActionType.PICKUP, player);
+                    client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, player);
+                    client.interactionManager.clickSlot(handler.syncId, 6, 0, SlotActionType.PICKUP, player);
+                    lastElytraSwapAt = System.currentTimeMillis();
+                    return;
+                }
+            }
+        }
+    }
+
+
+    private static long lastAutoAcceptMessageAt;
+    private static long lastAutoLeaveMessageAt;
+
+    /** Optional server-specific chat triggers. Commands and trigger phrases are user-configurable. */
+    private static void handleAutoChatAutomation(String message) {
+        String normalized = message.toLowerCase(Locale.ROOT);
+        long now = System.currentTimeMillis();
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.getNetworkHandler() == null) return;
+        if (isEnabled("autoaccept") && now - lastAutoAcceptMessageAt > 5000L) {
+            String phrase = AstraModuleOptions.value("autoaccept", "trigger_phrase", "wants to duel").trim().toLowerCase(Locale.ROOT);
+            String command = AstraModuleOptions.value("autoaccept", "command", "accept").trim();
+            if (!phrase.isEmpty() && !command.isEmpty() && normalized.contains(phrase)) {
+                client.getNetworkHandler().sendChatCommand(command.startsWith("/") ? command.substring(1) : command);
+                lastAutoAcceptMessageAt = now;
+            }
+        }
+        if (isEnabled("autoleave") && now - lastAutoLeaveMessageAt > 10000L) {
+            String phrase = AstraModuleOptions.value("autoleave", "trigger_phrase", "moderator joined").trim().toLowerCase(Locale.ROOT);
+            String command = AstraModuleOptions.value("autoleave", "command", "hub").trim();
+            if (!phrase.isEmpty() && !command.isEmpty() && normalized.contains(phrase)) {
+                client.getNetworkHandler().sendChatCommand(command.startsWith("/") ? command.substring(1) : command);
+                lastAutoLeaveMessageAt = now;
+            }
+        }
+    }
+
+
+    private static long lastAutoExplosionAt;
+
+    /** Automatically detonates a targeted end crystal while the attack button is held. */
+    private static void updateAutoExplosion(MinecraftClient client) {
+        if (!isEnabled("autoexplosion") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null || client.options == null
+            || !client.options.attackKey.isPressed()
+            || !(client.crosshairTarget instanceof EntityHitResult hit)
+            || !(hit.getEntity() instanceof net.minecraft.entity.decoration.EndCrystalEntity crystal)
+            || client.player.distanceTo(crystal) > 4.0F
+            || System.currentTimeMillis() - lastAutoExplosionAt < 180L) return;
+        client.interactionManager.attackEntity(client.player, crystal);
+        client.player.swingHand(Hand.MAIN_HAND);
+        lastAutoExplosionAt = System.currentTimeMillis();
+    }
+
+    /** Adds a small forward velocity correction while gliding and actively moving forward. */
+    private static void updateElytraMotion(MinecraftClient client) {
+        if (!isEnabled("elytramotion") || client.player == null || client.world == null
+            || client.currentScreen != null || !client.player.isGliding()
+            || client.player.forwardSpeed <= 0.01F) return;
+        Vec3d velocity = client.player.getVelocity();
+        Vec3d look = client.player.getRotationVector();
+        double strength = Math.max(0.005D, Math.min(0.035D,
+            AstraModuleOptions.numberValue("elytramotion", "strength", 0.015D)));
+        client.player.setVelocity(velocity.x + look.x * strength, velocity.y, velocity.z + look.z * strength);
+    }
+
+
+    private static long lastAutoTrapPlaceAt;
+
+    /** Builds a small two-block-high ring around the nearest nearby player using hotbar blocks only. */
+    private static void updateAutoTrap(MinecraftClient client) {
+        if (!isEnabled("autotrap") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.isSpectator() || System.currentTimeMillis() - lastAutoTrapPlaceAt < 180L) return;
+        PlayerEntity target = null;
+        double range = Math.max(2.0D, Math.min(5.0D,
+            AstraModuleOptions.numberValue("autotrap", "range", 4.0D)));
+        double bestDistance = range * range;
+        for (PlayerEntity candidate : client.world.getPlayers()) {
+            if (candidate == client.player || candidate.isSpectator() || !candidate.isAlive()) continue;
+            double distance = client.player.squaredDistanceTo(candidate);
+            if (distance < bestDistance) { target = candidate; bestDistance = distance; }
+        }
+        if (target == null) return;
+        String mode = AstraModuleOptions.value("autotrap", "block", "Obsidian");
+        int blockSlot = -1;
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = client.player.getInventory().getStack(i);
+            if ((mode.equalsIgnoreCase("Cobweb") && stack.isOf(Items.COBWEB))
+                || (!mode.equalsIgnoreCase("Cobweb") && stack.isOf(Items.OBSIDIAN))) {
+                blockSlot = i; break;
+            }
+        }
+        if (blockSlot < 0) return;
+        BlockPos base = target.getBlockPos();
+        Direction[] sides = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
+        for (int height = 0; height <= 1; height++) {
+            for (Direction side : sides) {
+                BlockPos placePos = base.offset(side).up(height);
+                if (!client.world.getBlockState(placePos).isAir()) continue;
+                BlockPos support = placePos.down();
+                if (client.world.getBlockState(support).isAir()) continue;
+                int oldSlot = client.player.getInventory().selectedSlot;
+                client.player.getInventory().selectedSlot = blockSlot;
+                Vec3d hitPos = Vec3d.ofCenter(support).add(0.0D, 0.5D, 0.0D);
+                BlockHitResult hit = new BlockHitResult(hitPos, Direction.UP, support, false);
+                client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, hit);
+                client.player.swingHand(Hand.MAIN_HAND);
+                client.player.getInventory().selectedSlot = oldSlot;
+                lastAutoTrapPlaceAt = System.currentTimeMillis();
+                return;
+            }
+        }
+    }
+
+
+    /** Gently turns toward the nearest visible player while gliding. */
+    private static void updateElytraTarget(MinecraftClient client) {
+        if (!isEnabled("elytratarget") || client.player == null || client.world == null
+            || client.currentScreen != null || !client.player.isGliding()) return;
+        PlayerEntity target = null;
+        double best = 32.0D * 32.0D;
+        for (PlayerEntity candidate : client.world.getPlayers()) {
+            if (candidate == client.player || candidate.isSpectator() || !candidate.isAlive()
+                || !client.player.canSee(candidate)) continue;
+            double distance = client.player.squaredDistanceTo(candidate);
+            if (distance < best) { best = distance; target = candidate; }
+        }
+        if (target == null) return;
+        double dx = target.getX() - client.player.getX();
+        double dy = target.getEyeY() - client.player.getEyeY();
+        double dz = target.getZ() - client.player.getZ();
+        double horizontal = Math.sqrt(dx * dx + dz * dz);
+        float desiredYaw = (float)(Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
+        float desiredPitch = (float)(-Math.atan2(dy, Math.max(0.001D, horizontal)) * 180.0D / Math.PI);
+        float strength = 0.12F;
+        float yawDelta = net.minecraft.util.math.MathHelper.wrapDegrees(desiredYaw - client.player.getYaw());
+        float pitchDelta = net.minecraft.util.math.MathHelper.wrapDegrees(desiredPitch - client.player.getPitch());
+        client.player.setYaw(client.player.getYaw() + yawDelta * strength);
+        client.player.setPitch(Math.max(-90.0F, Math.min(90.0F, client.player.getPitch() + pitchDelta * strength)));
+    }
+
     private static void updateNoSlow(MinecraftClient client) {
         if (!isEnabled("noslow") || client.player == null || client.world == null
             || (client.currentScreen != null && AstraModuleOptions.boolValue("noslow", "pause_in_menus", true))
@@ -2695,7 +3035,9 @@ public final class AstraClient implements ClientModInitializer {
         boolean playerEsp = isEnabled("playeresp");
         boolean mobEsp = isEnabled("mobesp");
         boolean itemEsp = isEnabled("itemesp");
-        if (!playerEsp && !mobEsp && !itemEsp && ORIGINAL_ENTITY_GLOW.isEmpty()) return;
+        boolean fireworkEsp = isEnabled("fireworkesp");
+        boolean wardenEsp = isEnabled("wardenesp");
+        if (!playerEsp && !mobEsp && !itemEsp && !fireworkEsp && !wardenEsp && ORIGINAL_ENTITY_GLOW.isEmpty()) return;
 
         List<Entity> candidates = new ArrayList<>();
         candidates.addAll(client.world.getPlayers());
@@ -2711,11 +3053,11 @@ public final class AstraClient implements ClientModInitializer {
         // When a visual module is disabled, continue fetching nearby entities briefly so
         // their original glow flags can be restored cleanly.
         boolean restoringTrackedEntities = !ORIGINAL_ENTITY_GLOW.isEmpty();
-        if (mobEsp || restoringTrackedEntities) {
+        if (mobEsp || wardenEsp || restoringTrackedEntities) {
             candidates.addAll(client.world.getEntitiesByClass(LivingEntity.class, nearby,
                 entity -> entity.isAlive() && !(entity instanceof PlayerEntity)));
         }
-        if (itemEsp || restoringTrackedEntities) {
+        if (itemEsp || fireworkEsp || restoringTrackedEntities) {
             candidates.addAll(client.world.getEntitiesByClass(ItemEntity.class, nearby,
                 entity -> !entity.isRemoved()));
         }
@@ -2726,9 +3068,13 @@ public final class AstraClient implements ClientModInitializer {
             double distanceSq = client.player.squaredDistanceTo(entity);
             boolean desired = entity instanceof PlayerEntity
                 ? playerEsp && distanceSq <= playerRangeSq
+                : entity instanceof net.minecraft.entity.mob.WardenEntity
+                    ? wardenEsp && distanceSq <= mobRangeSq
                 : entity instanceof LivingEntity
                     ? mobEsp && distanceSq <= mobRangeSq
-                    : entity instanceof ItemEntity && itemEsp && distanceSq <= itemRangeSq;
+                    : entity instanceof ItemEntity itemEntity
+                        && (itemEsp || (fireworkEsp && itemEntity.getStack().isOf(Items.FIREWORK_ROCKET)))
+                        && distanceSq <= itemRangeSq;
             UUID uuid = entity.getUuid();
             seen.add(uuid);
             if (desired) {
