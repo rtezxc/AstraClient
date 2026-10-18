@@ -22,6 +22,11 @@ public final class AstraScreen extends Screen {
     private static final int GREEN = 0xFF69E6B8;
     private static final int AMBER = 0xFFFFC66E;
 
+    // Monotonic elapsed-time tokens keep transitions stable if the system clock changes.
+    private static final long OPEN_DURATION_NANOS = 260_000_000L;
+    private static final long CLOSE_DURATION_NANOS = 220_000_000L;
+    private static final float OPEN_TRAVEL_PIXELS = 14.0f;
+
     private static final String[] CATEGORIES = {
         "Favorites", "Combat", "Render", "Movement", "Player", "Inventory", "World", "Utility", "HUD", "Settings"
     };
@@ -137,7 +142,7 @@ public final class AstraScreen extends Screen {
     private int dragOffsetX, dragOffsetY, resizeStartX, resizeStartScale;
     private int windowOffsetX, windowOffsetY;
     private int renderOffsetY;
-    private final long openedAt = System.currentTimeMillis();
+    private final long openedAt = System.nanoTime();
     private long closingAt;
     private boolean closing;
 
@@ -169,6 +174,11 @@ public final class AstraScreen extends Screen {
                 break;
             }
         }
+    }
+
+    private static float clamp01(float value) {
+        if (!Float.isFinite(value)) return 0.0f;
+        return Math.max(0.0f, Math.min(1.0f, value));
     }
 
     private int panelWidth() {
@@ -203,14 +213,14 @@ public final class AstraScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         // Fully opaque canvas: never expose Minecraft's blurred world behind Astra.
         // This also avoids translucent compositing on mobile OpenGL renderers.
-        long clockNow = System.currentTimeMillis();
+        long clockNow = System.nanoTime();
         boolean reducedMotion = AstraClient.isReducedMotionEnabled();
         long now = reducedMotion ? 0L : clockNow;
         float progress = reducedMotion ? 1.0f : closing
-            ? Math.max(0.0f, 1.0f - (clockNow - closingAt) / 220.0f)
-            : Math.min(1.0f, Math.max(0.0f, (clockNow - openedAt) / 260.0f));
+            ? clamp01(1.0f - (float) (clockNow - closingAt) / CLOSE_DURATION_NANOS)
+            : clamp01((float) (clockNow - openedAt) / OPEN_DURATION_NANOS);
         float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0);
-        renderOffsetY = Math.round((1.0f - eased) * 14.0f);
+        renderOffsetY = Math.round((1.0f - eased) * OPEN_TRAVEL_PIXELS);
         int shade = Math.round(8 + 3 * eased);
         ctx.fill(0, 0, width, height, 0xFF000000 | (shade << 16) | (shade << 8) | (shade + 4));
         int panelW = panelWidth();
@@ -555,7 +565,7 @@ public final class AstraScreen extends Screen {
         ctx.fill(gx + 3, gy + 7, gx + 10, gy + 10, accent);
         ctx.fill(gx + 6, gy + 3, gx + 10, gy + 6, accent);
         // Reverse the opening motion for a short, smooth close transition.
-        if (closing && clockNow - closingAt >= 220L) {
+        if (closing && clockNow - closingAt >= CLOSE_DURATION_NANOS) {
             if (client != null && client.currentScreen == this) client.setScreen(null);
             return;
         }
@@ -566,11 +576,11 @@ public final class AstraScreen extends Screen {
     public void requestAnimatedClose() {
         if (closing) return;
         closing = true;
-        closingAt = System.currentTimeMillis();
+        closingAt = System.nanoTime();
         searchFocused = false;
         contextMenuModuleId = null;
         // Reduced motion closes immediately rather than running a fade/slide.
-        if (AstraClient.isReducedMotionEnabled()) closingAt -= 220L;
+        if (AstraClient.isReducedMotionEnabled()) closingAt -= CLOSE_DURATION_NANOS;
     }
 
     @Override
