@@ -127,10 +127,10 @@ jobs:
 
           # Closing animation must freeze interactive mutations until the screen exits.
           for handler in ("mouseDragged", "mouseScrolled", "charTyped", "keyPressed"):
-              match = re.search(r"public boolean " + handler + r"\\s*\\([^)]*\\)\\s*\\{(.*?)\\n    \\}", screen, re.S)
+              match = re.search(r"public boolean " + handler + r"\s*\([^)]*\)\s*\{(.*?)\n    \}", screen, re.S)
               if not match or "if (closing) return true;" not in match.group(1):
                   sys.exit(f"ERROR: {handler} does not guard input while the GUI is closing")
-          release = re.search(r"public boolean mouseReleased\\s*\\([^)]*\\)\\s*\\{(.*?)\\n    \\}", screen, re.S)
+          release = re.search(r"public boolean mouseReleased\s*\([^)]*\)\s*\{(.*?)\n    \}", screen, re.S)
           if not release or "if (closing)" not in release.group(1) or "draggingListScrollbar = false;" not in release.group(1):
               sys.exit("ERROR: mouse release does not safely clear drag state during close animation")
           if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
