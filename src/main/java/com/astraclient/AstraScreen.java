@@ -60,6 +60,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("fly", "Fly", "Lets you fly in your own world when supported.", "Movement", true),
         new ModuleInfo("autowalk", "Auto Walk", "Keeps moving forward for you.", "Movement", true),
         new ModuleInfo("autojump", "Auto Jump", "Jumps automatically while you keep moving.", "Movement", true),
+        new ModuleInfo("nojumpdelay", "No Jump Delay", "Removes the vanilla jump cooldown for the local player.", "Movement", true),
         new ModuleInfo("noclip", "No Clip", "Lets your local player move through block collision.", "Movement", true),
         new ModuleInfo("aimassist", "Aim Assist", "Gently helps aim at a visible target.", "Combat", true),
         new ModuleInfo("autoclicker", "Auto Clicker", "Clicks repeatedly while you hold attack.", "Combat", true),
