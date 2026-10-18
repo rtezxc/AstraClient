@@ -1440,6 +1440,7 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (closing) return true;
         if (button == 0 && draggingListScrollbar) {
             int panelH = panelHeight();
             int top = panelTop(panelH) + renderOffsetY;
@@ -1476,6 +1477,14 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (closing) {
+            draggingWindow = false;
+            resizingWindow = false;
+            draggingScale = false;
+            draggingOpacity = false;
+            draggingListScrollbar = false;
+            return true;
+        }
         if (resizingWindow || draggingScale || draggingOpacity) AstraClient.saveConfig();
         draggingWindow = false;
         resizingWindow = false;
@@ -1487,6 +1496,7 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (closing) return true;
         // Scroll over the FOV row in Kill Aura's right-click menu for five-degree steps.
         if (contextMenuModuleId != null && contextMenuModuleId.equals("killaura") && verticalAmount != 0.0D) {
             ModuleInfo module = findModule(contextMenuModuleId);
@@ -1533,6 +1543,7 @@ public final class AstraScreen extends Screen {
 
     @Override
     public boolean charTyped(char chr, int modifiers) {
+        if (closing) return true;
         if (searchFocused && !Character.isISOControl(chr) && searchText.length() < 30) {
             searchText = searchText.substring(0, searchCursor) + chr + searchText.substring(searchCursor);
             searchCursor++;
