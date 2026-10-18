@@ -1,5 +1,5 @@
 name: Build Astra Client
-# Build and inspect the distributable mod JAR on every main-branch update.
+# Build and inspect the distributable mod JAR on main and active feature branches.
 
 on:
   push:
