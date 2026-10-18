@@ -93,6 +93,9 @@ public final class AstraModuleOptions {
             case "elytraspeed" -> {
                 out.add(slider("strength", "Speed Strength", "Bounded local horizontal multiplier while gliding.", "1.08", 1.0, 1.25, 0.01));
             }
+            case "jumpcircle" -> {
+                out.add(slider("particle_count", "Particle Count", "Number of particles in the jump ring.", "16", 8, 32, 4));
+            }
             case "highjump" -> {
                 out.add(slider("height_multiplier", "Jump Multiplier", "Bounded multiplier for a normal jump impulse.", "1.45", 1.1, 1.8, 0.05));
             }
