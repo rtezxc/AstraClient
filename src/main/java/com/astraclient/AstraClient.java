@@ -2134,7 +2134,15 @@ public final class AstraClient implements ClientModInitializer {
             if (!handler.getSlot(slot).getStack().isEmpty()) continue;
             for (int inventorySlot = 9; inventorySlot < 45; inventorySlot++) {
                 ItemStack stack = handler.getSlot(inventorySlot).getStack();
-                if (stack.isEmpty() || !stack.getItem().getName().getString().toLowerCase(Locale.ROOT).matches(".*(helmet|chestplate|leggings|boots|elytra).*")) continue;
+                if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.item.ArmorItem armor)) continue;
+                int targetSlot = switch (armor.getSlotType()) {
+                    case HEAD -> 5;
+                    case CHEST -> 6;
+                    case LEGS -> 7;
+                    case FEET -> 8;
+                    default -> -1;
+                };
+                if (targetSlot != slot) continue;
                 client.interactionManager.clickSlot(handler.syncId, inventorySlot, 0, SlotActionType.QUICK_MOVE, player);
                 break;
             }
@@ -2144,7 +2152,7 @@ public final class AstraClient implements ClientModInitializer {
     /** Loots container slots using vanilla quick-move actions, with a small tick delay. */
     private static void updateChestStealer(MinecraftClient client) {
         if (!isEnabled("cheststealer") || client.player == null || client.world == null
-            || client.interactionManager == null || !(client.currentScreen instanceof GenericContainerScreen<?>)
+            || client.interactionManager == null || !(client.currentScreen instanceof GenericContainerScreen)
             || client.player.age % 4 != 0) return;
         var handler = client.player.currentScreenHandler;
         int containerSlots = Math.max(0, handler.slots.size() - 36);
