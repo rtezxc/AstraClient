@@ -248,6 +248,12 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("scaffold", false);
         MODULES.put("aimassist", false);
         MODULES.put("autototem", false);
+        MODULES.put("autoarmor", false);
+        MODULES.put("autofish", false);
+        MODULES.put("cheststealer", false);
+        MODULES.put("clickpearl", false);
+        MODULES.put("fireworkesp", false);
+        MODULES.put("wardenesp", false);
         MODULES.put("antiknockback", false);
         MODULES.put("autoclicker", false);
         MODULES.put("criticals", false);
@@ -454,6 +460,12 @@ public final class AstraClient implements ClientModInitializer {
             case "pvpmode" -> "PvP Mode";
             case "triggerbot" -> "TriggerBot";
             case "autotool" -> "Auto Tool";
+            case "autoarmor" -> "Auto Armor";
+            case "autofish" -> "Auto Fish";
+            case "cheststealer" -> "Chest Stealer";
+            case "clickpearl" -> "Click Pearl";
+            case "fireworkesp" -> "Firework ESP";
+            case "wardenesp" -> "Warden ESP";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -1956,6 +1968,10 @@ public final class AstraClient implements ClientModInitializer {
             updateCombatModules(client);
             updateAimAssist(client);
             updateAutoTotem(client);
+            updateAutoArmor(client);
+            updateAutoFish(client);
+            updateChestStealer(client);
+            updateClickPearl(client);
             updateNoSlow(client);
             updateSpeed(client);
             updateScaffold(client);
@@ -2103,6 +2119,79 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     /** Client-side movement helpers; they never change packet handling or anti-cheat behavior. */
+
+    /** Equips armor from the main inventory into empty armor slots. */
+    private static void updateAutoArmor(MinecraftClient client) {
+        if (!isEnabled("autoarmor") || client.player == null || client.world == null || client.interactionManager == null
+            || client.currentScreen != null || client.player.isSpectator() || client.player.age % 8 != 0) return;
+        var handler = client.player.currentScreenHandler;
+        for (int armorSlot = 5; armorSlot <= 8; armorSlot++) {
+            if (!handler.getSlot(armorSlot).getStack().isEmpty()) continue;
+            for (int slot = 9; slot < Math.min(36, handler.slots.size()); slot++) {
+                ItemStack stack = handler.getSlot(slot).getStack();
+                if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.item.ArmorItem)) continue;
+                client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, client.player);
+                return;
+            }
+        }
+    }
+
+    private static long lastAutoFishAt;
+    private static long lastChestStealAt;
+    private static boolean clickPearlWasDown;
+    private static long lastClickPearlAt;
+
+    /** Reels in when the bobber dips; vanilla handles the catch and fishing loot. */
+    private static void updateAutoFish(MinecraftClient client) {
+        if (!isEnabled("autofish") || client.player == null || client.world == null || client.interactionManager == null
+            || client.currentScreen != null || client.player.fishHook == null) return;
+        var bobber = client.player.fishHook;
+        long now = System.currentTimeMillis();
+        if (bobber.isTouchingWater() && bobber.getVelocity().y < -0.08D && now - lastAutoFishAt > 900L) {
+            client.interactionManager.interactItem(client.player, Hand.MAIN_HAND);
+            lastAutoFishAt = now;
+        }
+    }
+
+    /** Quick-moves container stacks into the player's inventory, one stack per short interval. */
+    private static void updateChestStealer(MinecraftClient client) {
+        if (!isEnabled("cheststealer") || client.player == null || client.interactionManager == null
+            || !(client.currentScreen instanceof net.minecraft.client.gui.screen.ingame.GenericContainerScreen<?>)
+            || client.player.age % 3 != 0) return;
+        var handler = client.player.currentScreenHandler;
+        int containerSlots = Math.max(0, handler.slots.size() - 36);
+        long now = System.currentTimeMillis();
+        if (now - lastChestStealAt < 45L) return;
+        for (int slot = 0; slot < containerSlots; slot++) {
+            if (handler.getSlot(slot).hasStack()) {
+                client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, client.player);
+                lastChestStealAt = now;
+                return;
+            }
+        }
+    }
+
+    /** Uses an ender pearl on a middle-click edge, avoiding repeated use while held. */
+    private static void updateClickPearl(MinecraftClient client) {
+        if (client.player == null || client.world == null || client.interactionManager == null || client.currentScreen != null
+            || client.getWindow() == null) { clickPearlWasDown = false; return; }
+        long window = client.getWindow().getHandle();
+        boolean down = isEnabled("clickpearl") && org.lwjgl.glfw.GLFW.glfwGetMouseButton(window,
+            org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        if (down && !clickPearlWasDown && System.currentTimeMillis() - lastClickPearlAt > 350L) {
+            int selected = client.player.getInventory().selectedSlot;
+            for (int i = 0; i < 9; i++) {
+                if (!client.player.getInventory().getStack(i).isOf(Items.ENDER_PEARL)) continue;
+                client.player.getInventory().selectedSlot = i;
+                client.interactionManager.interactItem(client.player, Hand.MAIN_HAND);
+                client.player.getInventory().selectedSlot = selected;
+                lastClickPearlAt = System.currentTimeMillis();
+                break;
+            }
+        }
+        clickPearlWasDown = down;
+    }
+
     private static void updateNoSlow(MinecraftClient client) {
         if (!isEnabled("noslow") || client.player == null || client.world == null
             || (client.currentScreen != null && AstraModuleOptions.boolValue("noslow", "pause_in_menus", true))
@@ -2695,7 +2784,9 @@ public final class AstraClient implements ClientModInitializer {
         boolean playerEsp = isEnabled("playeresp");
         boolean mobEsp = isEnabled("mobesp");
         boolean itemEsp = isEnabled("itemesp");
-        if (!playerEsp && !mobEsp && !itemEsp && ORIGINAL_ENTITY_GLOW.isEmpty()) return;
+        boolean fireworkEsp = isEnabled("fireworkesp");
+        boolean wardenEsp = isEnabled("wardenesp");
+        if (!playerEsp && !mobEsp && !itemEsp && !fireworkEsp && !wardenEsp && ORIGINAL_ENTITY_GLOW.isEmpty()) return;
 
         List<Entity> candidates = new ArrayList<>();
         candidates.addAll(client.world.getPlayers());
@@ -2711,11 +2802,11 @@ public final class AstraClient implements ClientModInitializer {
         // When a visual module is disabled, continue fetching nearby entities briefly so
         // their original glow flags can be restored cleanly.
         boolean restoringTrackedEntities = !ORIGINAL_ENTITY_GLOW.isEmpty();
-        if (mobEsp || restoringTrackedEntities) {
+        if (mobEsp || wardenEsp || restoringTrackedEntities) {
             candidates.addAll(client.world.getEntitiesByClass(LivingEntity.class, nearby,
                 entity -> entity.isAlive() && !(entity instanceof PlayerEntity)));
         }
-        if (itemEsp || restoringTrackedEntities) {
+        if (itemEsp || fireworkEsp || restoringTrackedEntities) {
             candidates.addAll(client.world.getEntitiesByClass(ItemEntity.class, nearby,
                 entity -> !entity.isRemoved()));
         }
@@ -2726,9 +2817,13 @@ public final class AstraClient implements ClientModInitializer {
             double distanceSq = client.player.squaredDistanceTo(entity);
             boolean desired = entity instanceof PlayerEntity
                 ? playerEsp && distanceSq <= playerRangeSq
+                : entity instanceof net.minecraft.entity.mob.WardenEntity
+                    ? wardenEsp && distanceSq <= mobRangeSq
                 : entity instanceof LivingEntity
                     ? mobEsp && distanceSq <= mobRangeSq
-                    : entity instanceof ItemEntity && itemEsp && distanceSq <= itemRangeSq;
+                    : entity instanceof ItemEntity itemEntity
+                        && (itemEsp || (fireworkEsp && itemEntity.getStack().isOf(Items.FIREWORK_ROCKET)))
+                        && distanceSq <= itemRangeSq;
             UUID uuid = entity.getUuid();
             seen.add(uuid);
             if (desired) {
