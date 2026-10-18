@@ -175,6 +175,9 @@ public final class AstraModuleOptions {
             case "nameprotect" -> {
                 out.add(text("alias", "Display Alias", "Name to display instead of your own username in local chat.", "Astra"));
             }
+            case "antibot" -> {
+                out.add(toggle("require_tab_entry", "Require Tab List Entry", "Ignore player entities missing from the server player list. Some servers hide this list.", true));
+            }
             case "novelocity", "noweb", "nopush", "noclip", "nojumpdelay" -> { }
             case "autoeat" -> {
                 out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
