@@ -73,8 +73,9 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("autoaccept", "Auto Accept", "Runs a configurable command when server chat contains a configured phrase.", "Utility", true),
         new ModuleInfo("autoleave", "Auto Leave", "Runs a configurable leave command when server chat contains a configured phrase.", "Utility", true),
         new ModuleInfo("autoexplosion", "Auto Explosion", "Detonates a targeted end crystal while you hold attack.", "Combat", true),
+        new ModuleInfo("autotrap", "Auto Trap", "Builds a small two-block ring around a nearby player using hotbar blocks.", "Combat", true),
         new ModuleInfo("elytramotion", "Elytra Motion", "Adds a small forward velocity correction while gliding.", "Movement", true),
-        new ModuleInfo("autotrap", "Auto Trap", "Pending port from Obsidian; unavailable until its placement logic is verified.", "Combat", false),
+
         new ModuleInfo("elytratarget", "Elytra Target", "Pending port from Obsidian; unavailable until targeting behavior is verified.", "Movement", false),
         new ModuleInfo("chams", "Chams", "Pending renderer mixin port; unavailable until wall-depth rendering is verified.", "Render", false),
         new ModuleInfo("antiknockback", "Anti Knockback", "Reduces horizontal knockback.", "Combat", true),
