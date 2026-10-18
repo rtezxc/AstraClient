@@ -254,6 +254,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autofish", false);
         MODULES.put("elytraboost", false);
         MODULES.put("elytraswap", false);
+        MODULES.put("clickpearl", false);
         MODULES.put("wardensesp", false);
         MODULES.put("fireworkesp", false);
         MODULES.put("antiknockback", false);
@@ -467,6 +468,7 @@ public final class AstraClient implements ClientModInitializer {
             case "autofish" -> "Auto Fish";
             case "elytraboost" -> "Elytra Boost";
             case "elytraswap" -> "Elytra Swap";
+            case "clickpearl" -> "Click Pearl";
             case "wardensesp" -> "Warden ESP";
             case "fireworkesp" -> "Firework ESP";
             case "autoweapon" -> "Auto Weapon";
@@ -1976,6 +1978,7 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoFish(client);
             updateElytraBoost(client);
             updateElytraSwap(client);
+            updateClickPearl(client);
             updateNoSlow(client);
             updateSpeed(client);
             updateScaffold(client);
@@ -2235,6 +2238,38 @@ public final class AstraClient implements ClientModInitializer {
                 }
             }
         }
+    }
+
+    private static boolean clickPearlMouseWasDown;
+    private static long lastClickPearlAt;
+
+    /** Uses an ender pearl on a fresh right-click, restoring the selected hotbar slot afterward. */
+    private static void updateClickPearl(MinecraftClient client) {
+        long window = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+        boolean down = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        boolean pressed = down && !clickPearlMouseWasDown;
+        clickPearlMouseWasDown = down;
+        if (!isEnabled("clickpearl") || !pressed || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null) return;
+        long now = System.currentTimeMillis();
+        if (now - lastClickPearlAt < 500L) return;
+        var player = client.player;
+        int pearlSlot = -1;
+        for (int slot = 0; slot < 9; slot++) {
+            if (player.getInventory().getStack(slot).isOf(Items.ENDER_PEARL)) {
+                pearlSlot = slot;
+                break;
+            }
+        }
+        if (pearlSlot < 0) {
+            notifyUser("Click Pearl: no pearls in hotbar");
+            return;
+        }
+        int previousSlot = player.getInventory().selectedSlot;
+        player.getInventory().selectedSlot = pearlSlot;
+        client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+        player.getInventory().selectedSlot = previousSlot;
+        lastClickPearlAt = now;
     }
 
     private static void updateNoSlow(MinecraftClient client) {
