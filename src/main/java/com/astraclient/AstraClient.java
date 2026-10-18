@@ -2134,14 +2134,12 @@ public final class AstraClient implements ClientModInitializer {
             if (!handler.getSlot(slot).getStack().isEmpty()) continue;
             for (int inventorySlot = 9; inventorySlot < 45; inventorySlot++) {
                 ItemStack stack = handler.getSlot(inventorySlot).getStack();
-                if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.item.ArmorItem armor)) continue;
-                int targetSlot = switch (armor.getSlotType()) {
-                    case HEAD -> 5;
-                    case CHEST -> 6;
-                    case LEGS -> 7;
-                    case FEET -> 8;
-                    default -> -1;
-                };
+                if (stack.isEmpty()) continue;
+                String itemPath = Registries.ITEM.getId(stack.getItem()).getPath();
+                int targetSlot = itemPath.endsWith("_helmet") || itemPath.equals("turtle_helmet") ? 5
+                    : itemPath.endsWith("_chestplate") || itemPath.equals("elytra") ? 6
+                    : itemPath.endsWith("_leggings") ? 7
+                    : itemPath.endsWith("_boots") ? 8 : -1;
                 if (targetSlot != slot) continue;
                 client.interactionManager.clickSlot(handler.syncId, inventorySlot, 0, SlotActionType.QUICK_MOVE, player);
                 break;
