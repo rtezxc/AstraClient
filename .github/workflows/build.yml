@@ -81,7 +81,7 @@ jobs:
 
           imported_modules = (
               "autoarmor", "autofish", "cheststealer", "novelocity", "noweb",
-              "nopush", "fireworkesp", "autojump", "noclip", "nojumpdelay", "nameprotect", "antibot", "step", "spider", "seeinvisibles",
+              "nopush", "fireworkesp", "autojump", "noclip", "nojumpdelay", "nameprotect", "antibot", "step", "spider", "seeinvisibles", "totempopalert",
           )
           for module_id in imported_modules:
               if f'MODULES.put("{module_id}"' not in client:
