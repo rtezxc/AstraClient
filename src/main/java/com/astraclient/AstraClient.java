@@ -253,6 +253,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("cheststealer", false);
         MODULES.put("autofish", false);
         MODULES.put("elytraboost", false);
+        MODULES.put("elytraswap", false);
         MODULES.put("wardensesp", false);
         MODULES.put("fireworkesp", false);
         MODULES.put("antiknockback", false);
@@ -465,6 +466,7 @@ public final class AstraClient implements ClientModInitializer {
             case "cheststealer" -> "Chest Stealer";
             case "autofish" -> "Auto Fish";
             case "elytraboost" -> "Elytra Boost";
+            case "elytraswap" -> "Elytra Swap";
             case "wardensesp" -> "Warden ESP";
             case "fireworkesp" -> "Firework ESP";
             case "autoweapon" -> "Auto Weapon";
@@ -1973,6 +1975,7 @@ public final class AstraClient implements ClientModInitializer {
             updateChestStealer(client);
             updateAutoFish(client);
             updateElytraBoost(client);
+            updateElytraSwap(client);
             updateNoSlow(client);
             updateSpeed(client);
             updateScaffold(client);
@@ -2202,6 +2205,36 @@ public final class AstraClient implements ClientModInitializer {
         client.interactionManager.interactItem(player, Hand.MAIN_HAND);
         player.getInventory().selectedSlot = previousSlot;
         lastElytraBoostAt = now;
+    }
+
+    /** Swaps between an elytra while gliding and a chestplate when grounded. */
+    private static void updateElytraSwap(MinecraftClient client) {
+        if (!isEnabled("elytraswap") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.age % 10 != 0) return;
+        var player = client.player;
+        var handler = player.currentScreenHandler;
+        ItemStack chest = handler.getSlot(6).getStack();
+        String chestPath = chest.isEmpty() ? "" : Registries.ITEM.getId(chest.getItem()).getPath();
+        boolean gliding = player.isGliding();
+        if (gliding && !chestPath.equals("elytra")) {
+            for (int slot = 9; slot < 45; slot++) {
+                ItemStack candidate = handler.getSlot(slot).getStack();
+                if (candidate.isOf(Items.ELYTRA)) {
+                    client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, player);
+                    return;
+                }
+            }
+        } else if (!gliding && chestPath.equals("elytra")) {
+            for (int slot = 9; slot < 45; slot++) {
+                ItemStack candidate = handler.getSlot(slot).getStack();
+                String path = candidate.isEmpty() ? "" : Registries.ITEM.getId(candidate.getItem()).getPath();
+                if (path.endsWith("_chestplate")) {
+                    client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, player);
+                    return;
+                }
+            }
+        }
     }
 
     private static void updateNoSlow(MinecraftClient client) {
