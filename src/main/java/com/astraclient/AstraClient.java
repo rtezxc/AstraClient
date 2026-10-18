@@ -36,6 +36,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.projectile.FireworkRocketEntity;
+import net.minecraft.entity.projectile.FishingBobberEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
@@ -55,6 +56,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.SwordItem;
 import net.minecraft.item.ArmorItem;
+import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.Items;
 import net.minecraft.sound.SoundEvents;
@@ -180,6 +182,10 @@ public final class AstraClient implements ClientModInitializer {
     private static PlayerEntity noClipPlayer;
     private static boolean noClipOriginalValue;
     private static boolean noClipOverridden;
+    private static long autoFishSplashAt;
+    private static long autoFishRecastAt;
+    private static boolean autoFishSplashPending;
+    private static boolean autoFishRecastPending;
 
     static {
         MODULES.put("fullbright", false);
@@ -202,6 +208,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("novelocity", false);
         MODULES.put("noclip", false);
         MODULES.put("autojump", false);
+        MODULES.put("autofish", false);
         MODULES.put("noweb", false);
         MODULES.put("nopush", false);
         MODULES.put("fireworkesp", false);
@@ -473,6 +480,7 @@ public final class AstraClient implements ClientModInitializer {
             case "novelocity" -> "No Velocity";
             case "noclip" -> "No Clip";
             case "autojump" -> "Auto Jump";
+            case "autofish" -> "Auto Fish";
             case "noweb" -> "No Web";
             case "nopush" -> "No Push";
             case "fireworkesp" -> "Firework ESP";
@@ -957,6 +965,7 @@ public final class AstraClient implements ClientModInitializer {
             case "autoarmor" -> lastAutoArmorAt = 0L;
             case "cheststealer" -> lastChestStealerAt = 0L;
             case "autojump" -> lastAutoJumpAge = Integer.MIN_VALUE;
+            case "autofish" -> resetAutoFish();
             case "noclip" -> restoreNoClip();
             case "fireworkesp" -> espRange = 64;
             case "lowhealthalert" -> lowHealthThreshold = 6;
@@ -1987,6 +1996,7 @@ public final class AstraClient implements ClientModInitializer {
             updateChestStealer(client);
             updateNoClip(client);
             updateAutoJump(client);
+            updateAutoFish(client);
             updateAutoWalk(client);
             updateCombatModules(client);
             updateAimAssist(client);
@@ -2647,6 +2657,65 @@ public final class AstraClient implements ClientModInitializer {
             player.jump();
             lastAutoJumpAge = player.age;
         }
+    }
+
+    /**
+     * Called by the sound packet mixin. Only accepts the fishing splash near an owned local
+     * bobber while the user is holding a rod; other players' fishing sounds are ignored.
+     */
+    public static void onAutoFishSplash(double x, double y, double z) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        PlayerEntity player = client.player;
+        if (!isEnabled("autofish") || player == null || client.world == null
+            || client.currentScreen != null || !(player.getMainHandStack().getItem() instanceof FishingRodItem)) return;
+        if (player.squaredDistanceTo(x, y, z) > 36.0D) return;
+        boolean ownsBobber = !client.world.getEntitiesByClass(FishingBobberEntity.class,
+            player.getBoundingBox().expand(6.0D),
+            bobber -> !bobber.isRemoved() && bobber.getPlayerOwner() == player).isEmpty();
+        if (!ownsBobber) return;
+        autoFishSplashAt = System.currentTimeMillis();
+        autoFishSplashPending = true;
+    }
+
+    private static void updateAutoFish(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (!isEnabled("autofish") || player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || !(player.getMainHandStack().getItem() instanceof FishingRodItem)) {
+            resetAutoFish();
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long reelDelay = (long)Math.max(80.0D, Math.min(600.0D,
+            AstraModuleOptions.numberValue("autofish", "reel_delay_ms", 160.0D)));
+        long recastDelay = (long)Math.max(180.0D, Math.min(1000.0D,
+            AstraModuleOptions.numberValue("autofish", "recast_delay_ms", 350.0D)));
+
+        if (autoFishSplashPending && now - autoFishSplashAt >= reelDelay) {
+            client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+            player.swingHand(Hand.MAIN_HAND);
+            autoFishSplashPending = false;
+            autoFishRecastPending = true;
+            autoFishRecastAt = now + recastDelay;
+            return;
+        }
+        if (autoFishRecastPending && now >= autoFishRecastAt) {
+            boolean bobberStillOwned = !client.world.getEntitiesByClass(FishingBobberEntity.class,
+                player.getBoundingBox().expand(6.0D),
+                bobber -> !bobber.isRemoved() && bobber.getPlayerOwner() == player).isEmpty();
+            if (!bobberStillOwned) {
+                client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+                player.swingHand(Hand.MAIN_HAND);
+            }
+            autoFishRecastPending = false;
+        }
+    }
+
+    private static void resetAutoFish() {
+        autoFishSplashPending = false;
+        autoFishRecastPending = false;
+        autoFishSplashAt = 0L;
+        autoFishRecastAt = 0L;
     }
 
     /**
