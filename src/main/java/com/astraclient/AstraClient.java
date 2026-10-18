@@ -176,6 +176,10 @@ public final class AstraClient implements ClientModInitializer {
     private static long lastAutoClickAt;
     private static long lastAutoArmorAt;
     private static long lastChestStealerAt;
+    private static int lastAutoJumpAge = Integer.MIN_VALUE;
+    private static PlayerEntity noClipPlayer;
+    private static boolean noClipOriginalValue;
+    private static boolean noClipOverridden;
 
     static {
         MODULES.put("fullbright", false);
@@ -196,6 +200,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autoarmor", false);
         MODULES.put("cheststealer", false);
         MODULES.put("novelocity", false);
+        MODULES.put("noclip", false);
+        MODULES.put("autojump", false);
         MODULES.put("noweb", false);
         MODULES.put("nopush", false);
         MODULES.put("fireworkesp", false);
@@ -465,6 +471,8 @@ public final class AstraClient implements ClientModInitializer {
             case "autoarmor" -> "Auto Armor";
             case "cheststealer" -> "Chest Stealer";
             case "novelocity" -> "No Velocity";
+            case "noclip" -> "No Clip";
+            case "autojump" -> "Auto Jump";
             case "noweb" -> "No Web";
             case "nopush" -> "No Push";
             case "fireworkesp" -> "Firework ESP";
@@ -948,6 +956,8 @@ public final class AstraClient implements ClientModInitializer {
             case "autoeat" -> autoEatHungerThreshold = 16;
             case "autoarmor" -> lastAutoArmorAt = 0L;
             case "cheststealer" -> lastChestStealerAt = 0L;
+            case "autojump" -> lastAutoJumpAge = Integer.MIN_VALUE;
+            case "noclip" -> restoreNoClip();
             case "fireworkesp" -> espRange = 64;
             case "lowhealthalert" -> lowHealthThreshold = 6;
             case "effectalert" -> effectAlertThresholdSeconds = 10;
@@ -1975,6 +1985,8 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoEat(client);
             updateAutoArmor(client);
             updateChestStealer(client);
+            updateNoClip(client);
+            updateAutoJump(client);
             updateAutoWalk(client);
             updateCombatModules(client);
             updateAimAssist(client);
@@ -2595,6 +2607,48 @@ public final class AstraClient implements ClientModInitializer {
      * Uses food from the hotbar when hunger is low. It stops when the player
      * changes slots, opens a screen, or has enough food, and restores the old slot.
      */
+    /**
+     * NoClip is a local movement override. Restore the exact previous flag when disabled,
+     * on world/player changes, and when Astra loses the active player.
+     */
+    private static void updateNoClip(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (noClipPlayer != player) {
+            restoreNoClip();
+            noClipPlayer = player;
+        }
+        if (player == null || client.world == null || !isEnabled("noclip")) {
+            restoreNoClip();
+            return;
+        }
+        if (!noClipOverridden) {
+            noClipOriginalValue = player.noClip;
+            noClipOverridden = true;
+        }
+        player.noClip = true;
+    }
+
+    private static void restoreNoClip() {
+        if (noClipOverridden && noClipPlayer != null) noClipPlayer.noClip = noClipOriginalValue;
+        noClipOverridden = false;
+        noClipPlayer = null;
+    }
+
+    /** Automatically jump while actively moving, with a bounded tick delay and no menu input. */
+    private static void updateAutoJump(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (!isEnabled("autojump") || player == null || client.world == null
+            || client.currentScreen != null || player.isSpectator() || player.isSneaking()
+            || !player.isOnGround()
+            || (Math.abs(player.forwardSpeed) < 0.01F && Math.abs(player.sidewaysSpeed) < 0.01F)) return;
+        int delay = (int)Math.max(8.0D, Math.min(40.0D,
+            AstraModuleOptions.numberValue("autojump", "jump_delay_ticks", 12.0D)));
+        if (lastAutoJumpAge == Integer.MIN_VALUE || player.age - lastAutoJumpAge >= delay) {
+            player.jump();
+            lastAutoJumpAge = player.age;
+        }
+    }
+
     /**
      * Equips strictly better armor from the player's own inventory. It never opens containers,
      * drops items, or runs while another screen is active. The small delay leaves time for the
