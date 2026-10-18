@@ -41,6 +41,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("itemesp", "Item ESP", "Outlines items lying on the ground.", "Render", true),
         new ModuleInfo("nameprotect", "Name Protect", "Masks your own username in locally displayed chat.", "Utility", true),
         new ModuleInfo("fireworkesp", "Firework ESP", "Highlights nearby firework rockets.", "Render", true),
+        new ModuleInfo("seeinvisibles", "See Invisibles", "Renders invisible living entities for your local view.", "Render", true),
         new ModuleInfo("tracers", "Tracers", "Draws lines toward nearby creatures and players.", "Render", true),
         new ModuleInfo("xray", "X-Ray", "Highlights ores already visible to the game. It does not see through walls.", "Render", true),
         new ModuleInfo("nametags", "Nametags", "Shows names and distances above entities.", "Render", true),
