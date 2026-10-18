@@ -11,6 +11,8 @@
     "AstraFastBreakMixin",
     "AstraNoWeatherMixin",
     "AstraNoVelocityMixin",
+    "AstraNoWebMixin",
+    "AstraNoPushMixin",
     "AstraOverlayRemovalMixin",
     "AstraFireOverlayMixin"
   ],
