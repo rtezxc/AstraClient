@@ -18,6 +18,7 @@
     "AstraNameProtectMixin",
     "AstraStepMixin",
     "AstraSeeInvisiblesMixin",
+    "AstraTotemPopAlertMixin",
     "AstraOverlayRemovalMixin",
     "AstraFireOverlayMixin"
   ],
