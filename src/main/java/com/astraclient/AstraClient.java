@@ -210,7 +210,6 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("antibot", false);
         MODULES.put("step", false);
         MODULES.put("spider", false);
-        MODULES.put("nofall", false);
         MODULES.put("noclip", false);
         MODULES.put("autojump", false);
         MODULES.put("autofish", false);
@@ -488,7 +487,6 @@ public final class AstraClient implements ClientModInitializer {
             case "antibot" -> "Anti Bot";
             case "step" -> "Step";
             case "spider" -> "Spider";
-            case "nofall" -> "No Fall";
             case "noclip" -> "No Clip";
             case "autojump" -> "Auto Jump";
             case "autofish" -> "Auto Fish";
