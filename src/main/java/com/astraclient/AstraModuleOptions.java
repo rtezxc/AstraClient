@@ -22,7 +22,7 @@ public final class AstraModuleOptions {
     private static final Map<String, String> VALUES = new LinkedHashMap<>();
     private static final List<String> COLORS = List.of("AA70FF", "54E8FF", "69E6B8", "FF6B9D", "FFC66E", "F3F5FC");
     private static final List<String> ATTACK_MODES = List.of("Normal", "Critical Hits Only", "Mixed");
-    private static final List<String> ROTATION_MODES = List.of("None", "Assist", "Visible");
+    private static final List<String> ROTATION_MODES = List.of("None", "Assist", "Visible", "Smooth", "Snap", "Spooky Time", "Spooky Time 1.16", "Spooky Time Duels");
     private static final List<String> TARGET_PRIORITIES = List.of("Closest", "Lowest Health", "Lowest Armor");
     private static final List<String> RENDER_MODES = List.of("Outline", "Bright Outline", "Soft Outline");
     private static final List<String> MOVEMENT_MODES = List.of("Default", "Gentle", "Aggressive");
@@ -72,6 +72,36 @@ public final class AstraModuleOptions {
             out.add(color("module_color", "HUD Accent Color", "Color used for this widget's accent stripe.", "AA70FF"));
         }
         switch (moduleId) {
+            case "arrows" -> {
+                out.add(slider("render_range", "Arrow Range", "Maximum distance for directional player indicators.", "64", 8, 128, 4));
+            }
+            case "fastxp" -> {
+                out.add(slider("interval_ms", "Use Interval", "Minimum delay between XP bottle use requests while holding use.", "120", 80, 250, 10));
+                out.add(toggle("require_right_click", "Require Right Click", "Only use XP bottles while right mouse is held.", true));
+            }
+            case "hitmarker" -> {
+                out.add(slider("duration_ms", "Hit Marker Duration", "How long the hit confirmation remains visible.", "220", 100, 500, 20));
+                out.add(color("module_color", "Hit Marker Color", "Color used by the hit confirmation indicator.", "F3F5FC"));
+            }
+            case "deathcoord" -> {
+                out.add(toggle("chat_notice", "Chat Notification", "Print your last known position when you die.", true));
+            }
+            case "elytraboost" -> {
+                out.add(slider("interval_ms", "Rocket Interval", "Minimum delay between firework use requests while gliding and holding use.", "180", 120, 400, 20));
+                out.add(toggle("require_right_click", "Require Right Click", "Only use rockets while right mouse is held.", true));
+            }
+            case "elytraspeed" -> {
+                out.add(slider("strength", "Speed Strength", "Bounded local horizontal multiplier while gliding.", "1.08", 1.0, 1.25, 0.01));
+            }
+            case "jumpcircle" -> {
+                out.add(slider("particle_count", "Particle Count", "Number of particles in the jump ring.", "16", 8, 32, 4));
+            }
+            case "highjump" -> {
+                out.add(slider("height_multiplier", "Jump Multiplier", "Bounded multiplier for a normal jump impulse.", "1.45", 1.1, 1.8, 0.05));
+            }
+            case "clickpearl", "elytraswap" -> {
+                // Action modules execute once when enabled, then turn themselves off.
+            }
             case "killaura" -> {
                 out.add(dropdown("attack_mode", "Attack Mode", "Choose how Kill Aura waits to attack.", "Normal", ATTACK_MODES));
                 out.add(toggle("critical_hits", "Critical Hits", "Only attack when a vanilla critical hit is available.", false));
@@ -79,7 +109,7 @@ public final class AstraModuleOptions {
                 out.add(toggle("target_hostile", "Target Hostile Mobs", "Allow hostile mobs as targets.", true));
                 out.add(toggle("target_passive", "Target Passive Mobs", "Allow passive mobs as targets.", false));
                 out.add(slider("attack_range", "Attack Range", "Vanilla melee range only; this never extends reach.", "3.0", 2.0, 3.0, 0.1));
-                out.add(slider("fov", "Target FOV", "Angle around the view direction in which targets can be selected.", "180", 60, 180, 5));
+                out.add(slider("fov", "Target FOV", "Maximum view angle for target selection, from 60° to 180°.", "180", 60, 180, 5));
                 out.add(dropdown("rotation_mode", "Rotation Mode", "Choose whether target rotation is applied.", "Visible", ROTATION_MODES));
                 out.add(dropdown("target_priority", "Target Priority", "Choose which valid target is preferred.", "Closest", TARGET_PRIORITIES));
                 out.add(toggle("show_target", "Show Target", "Show target feedback while Kill Aura is active.", true));
@@ -99,7 +129,7 @@ public final class AstraModuleOptions {
                 out.add(toggle("only_when_held", "Require Mouse Hold", "Only repeat while the left mouse button is held.", true));
                 out.add(toggle("respect_cooldown", "Respect Attack Cooldown", "Keep vanilla attack cooldown checks enabled.", true));
             }
-            case "playeresp", "mobesp", "itemesp" -> {
+            case "playeresp", "mobesp", "itemesp", "fireworkesp" -> {
                 out.add(slider("render_range", "Render Range", "Maximum distance for this outline module.", "64", 8, 128, 4));
             }
             case "tracers" -> {
@@ -107,6 +137,24 @@ public final class AstraModuleOptions {
                 out.add(color("module_color", "Tracer Color", "Color used for tracer lines.", "54E8FF"));
                 out.add(toggle("target_players", "Trace Players", "Draw tracer lines to players.", true));
                 out.add(toggle("target_mobs", "Trace Mobs", "Draw tracer lines to mobs.", true));
+            }
+            case "leavetracker" -> {
+                out.add(toggle("chat_notice", "Chat Notification", "Print a message when a player leaves the server player list.", true));
+            }
+            case "lightning" -> {
+                out.add(slider("render_range", "Alert Range", "Maximum distance for lightning alerts.", "96", 16, 128, 8));
+                out.add(toggle("chat_notice", "Chat Notification", "Print lightning coordinates to chat.", true));
+            }
+            case "lockslot" -> {
+                // Locks the hotbar slot that is selected when the module is enabled.
+            }
+            case "trajectories" -> {
+                out.add(slider("steps", "Trajectory Length", "Number of simulated projectile steps.", "32", 16, 48, 4));
+                out.add(color("module_color", "Trajectory Color", "Color used for predicted projectile paths.", "54E8FF"));
+            }
+            case "wardenesp" -> {
+                out.add(slider("render_range", "Warden Range", "Maximum distance for Warden outlines.", "64", 8, 128, 4));
+                out.add(color("module_color", "Outline Color", "Color used for Warden outlines.", "54E8FF"));
             }
             case "hitboxes", "targetbox", "targethalo" -> {
                 double defaultRange = moduleId.equals("hitboxes") ? 64 : 48;
@@ -159,6 +207,32 @@ public final class AstraModuleOptions {
                 out.add(toggle("pause_in_menus", "Pause In Menus", "Release forced forward movement while a screen is open.", true));
             }
             case "safewalk", "eagle", "inventorymove" -> { }
+            case "autojump" -> {
+                out.add(slider("jump_delay_ticks", "Jump Delay", "Minimum tick interval between automatic jumps.", "12", 8, 40, 2));
+            }
+            case "step" -> {
+                out.add(slider("height", "Step Height", "Maximum local step height, clamped to 0.6–1.5 blocks.", "1.0", 0.6, 1.5, 0.1));
+            }
+            case "aspectratio" -> {
+                out.add(slider("ratio", "Aspect Ratio", "Projection ratio from 1.0 (square) to 2.5 (ultrawide).", "1.777", 1.0, 2.5, 0.05));
+            }
+            case "autofish" -> {
+                out.add(slider("reel_delay_ms", "Reel Delay", "Delay after the owned fishing bobber splashes before reeling.", "160", 80, 600, 20));
+                out.add(slider("recast_delay_ms", "Recast Delay", "Delay before casting again after a catch.", "350", 180, 1000, 25));
+            }
+            case "autoarmor" -> {
+                out.add(slider("upgrade_delay_ms", "Upgrade Check Delay", "Milliseconds between armor inventory transactions.", "250", 150, 1000, 50));
+            }
+            case "cheststealer" -> {
+                out.add(slider("delay_ms", "Loot Delay", "Milliseconds between moved container slots.", "140", 80, 500, 20));
+            }
+            case "nameprotect" -> {
+                out.add(text("alias", "Display Alias", "Name to display instead of your own username in local chat.", "Astra"));
+            }
+            case "antibot" -> {
+                out.add(toggle("require_tab_entry", "Require Tab List Entry", "Ignore player entities missing from the server player list. Some servers hide this list.", true));
+            }
+            case "novelocity", "noweb", "nopush", "noclip", "nojumpdelay" -> { }
             case "autoeat" -> {
                 out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
             }
@@ -274,7 +348,10 @@ public final class AstraModuleOptions {
                     int key = Integer.parseInt(raw);
                     yield Integer.toString(key >= -1 && key <= 348 ? key : -1);
                 }
-                case TEXT -> raw.length() > 64 ? raw.substring(0, 64) : raw;
+                case TEXT -> {
+                    int maxLength = (int)Math.max(1, Math.min(64, option.max()));
+                    yield raw.length() > maxLength ? raw.substring(0, maxLength) : raw;
+                }
                 case COLOR -> {
                     String hex = raw.trim().replace("#", "").toUpperCase(Locale.ROOT);
                     yield COLORS.contains(hex) ? hex : option.defaultValue();

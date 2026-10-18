@@ -39,6 +39,11 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("playeresp", "Player ESP", "Makes nearby players easier to spot.", "Render", true),
         new ModuleInfo("mobesp", "Mob ESP", "Outlines nearby creatures.", "Render", true),
         new ModuleInfo("itemesp", "Item ESP", "Outlines items lying on the ground.", "Render", true),
+        new ModuleInfo("nameprotect", "Name Protect", "Masks your own username in locally displayed chat.", "Utility", true),
+        new ModuleInfo("fireworkesp", "Firework ESP", "Highlights nearby firework rockets.", "Render", true),
+        new ModuleInfo("seeinvisibles", "See Invisibles", "Renders invisible living entities for your local view.", "Render", true),
+        new ModuleInfo("aspectratio", "Aspect Ratio", "Adjusts the local projection ratio for a wider or narrower view.", "Render", true),
+        new ModuleInfo("totempopalert", "Totem Pop Alert", "Notifies you when another player pops a totem.", "HUD", true),
         new ModuleInfo("tracers", "Tracers", "Draws lines toward nearby creatures and players.", "Render", true),
         new ModuleInfo("xray", "X-Ray", "Highlights ores already visible to the game. It does not see through walls.", "Render", true),
         new ModuleInfo("nametags", "Nametags", "Shows names and distances above entities.", "Render", true),
@@ -50,18 +55,30 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("safewalk", "Safe Walk", "Helps stop you walking off block edges.", "Movement", true),
         new ModuleInfo("eagle", "Eagle", "Sneaks near edges to help prevent falling.", "Movement", true),
         new ModuleInfo("inventorymove", "Inventory Move", "Lets you move while your inventory is open.", "Movement", true),
+        new ModuleInfo("noweb", "No Web", "Removes cobweb slowdown for your local player.", "Movement", true),
+        new ModuleInfo("nopush", "No Push", "Prevents entity collision from pushing your local player.", "Movement", true),
         new ModuleInfo("autoeat", "Auto Eat", "Eats food from your hotbar when you get hungry.", "Inventory", true),
+        new ModuleInfo("autoarmor", "Auto Armor", "Equips improved armor from your inventory.", "Inventory", true),
+        new ModuleInfo("autofish", "Auto Fish", "Reels and recasts when your own bobber gets a bite.", "Inventory", true),
+        new ModuleInfo("cheststealer", "Chest Stealer", "Moves container items into your inventory at a controlled pace.", "Inventory", true),
         new ModuleInfo("fly", "Fly", "Lets you fly in your own world when supported.", "Movement", true),
         new ModuleInfo("autowalk", "Auto Walk", "Keeps moving forward for you.", "Movement", true),
+        new ModuleInfo("autojump", "Auto Jump", "Jumps automatically while you keep moving.", "Movement", true),
+        new ModuleInfo("nojumpdelay", "No Jump Delay", "Removes the vanilla jump cooldown for the local player.", "Movement", true),
+        new ModuleInfo("noclip", "No Clip", "Lets your local player move through block collision.", "Movement", true),
+        new ModuleInfo("step", "Step", "Raises the local step-height limit with safe reset behavior.", "Movement", true),
+        new ModuleInfo("spider", "Spider", "Allows climbing while moving into a wall.", "Movement", true),
         new ModuleInfo("aimassist", "Aim Assist", "Gently helps aim at a visible target.", "Combat", true),
         new ModuleInfo("autoclicker", "Auto Clicker", "Clicks repeatedly while you hold attack.", "Combat", true),
         new ModuleInfo("criticals", "Criticals", "Only attacks when a normal critical hit is possible.", "Combat", true),
         new ModuleInfo("reach", "Reach Info", "Shows how far away your target is.", "Combat", true),
         new ModuleInfo("triggerbot", "TriggerBot", "Attacks when a valid target is under your crosshair.", "Combat", true),
+        new ModuleInfo("antibot", "Anti Bot", "Optionally ignores player entities missing from the server player list.", "Combat", true),
         new ModuleInfo("killaura", "Kill Aura", "Automatically attacks nearby valid targets.", "Combat", true),
         new ModuleInfo("pvpmode", "PvP Mode", "Turns on useful fight tools and on-screen info together. Turn it off to restore your old settings.", "Combat", true),
         new ModuleInfo("autototem", "Auto Totem", "Puts a totem in your offhand when you have one.", "Combat", true),
         new ModuleInfo("antiknockback", "Anti Knockback", "Reduces horizontal knockback.", "Combat", true),
+        new ModuleInfo("novelocity", "No Velocity", "Ignores server velocity updates addressed to you.", "Combat", true),
         new ModuleInfo("targethud", "Target HUD", "Shows your target's name and distance.", "HUD", true),
         new ModuleInfo("damageindicators", "Damage Indicators", "Flashes a warning when you take damage.", "Player", true),
         new ModuleInfo("cps", "CPS Counter", "Shows your clicks per second.", "HUD", true),
@@ -114,7 +131,22 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("nopowdersnowoverlay", "No Powder Snow Overlay", "Hides the powder-snow screen effect.", "Render", true),
         new ModuleInfo("nonauseaoverlay", "No Nausea Overlay", "Hides the nausea screen effect.", "Render", true),
         new ModuleInfo("novignette", "No Vignette", "Removes the dark edges around your screen.", "Render", true),
-        new ModuleInfo("noscoreboard", "No Scoreboard", "Hides the scoreboard on the right.", "Render", true)
+        new ModuleInfo("noscoreboard", "No Scoreboard", "Hides the scoreboard on the right.", "Render", true),
+        new ModuleInfo("arrows", "Player Arrows", "Shows yaw-relative arrows toward nearby players.", "Render", true),
+        new ModuleInfo("hitmarker", "Hit Marker", "Shows a brief visual confirmation when Astra attacks a target.", "HUD", true),
+        new ModuleInfo("deathcoord", "Death Coordinates", "Reports your last known position when you die.", "Utility", true),
+        new ModuleInfo("clickpearl", "Click Pearl", "Throws one Ender Pearl from your hotbar when activated.", "Inventory", true),
+        new ModuleInfo("elytraswap", "Elytra Swap", "Swaps an Elytra with a chestplate in your hotbar when activated.", "Inventory", true),
+        new ModuleInfo("fastxp", "Fast XP", "Repeats vanilla XP bottle use while you hold right click.", "Inventory", true),
+        new ModuleInfo("elytraboost", "Elytra Boost", "Repeats vanilla firework use while gliding and holding right click.", "Movement", true),
+        new ModuleInfo("elytraspeed", "Elytra Speed", "Applies a bounded local speed boost while gliding.", "Movement", true),
+        new ModuleInfo("highjump", "High Jump", "Adds a bounded boost to a normal jump.", "Movement", true),
+        new ModuleInfo("jumpcircle", "Jump Circle", "Emits a compact particle ring when you jump.", "Render", true),
+        new ModuleInfo("wardenesp", "Warden ESP", "Outlines nearby Warden entities.", "Render", true),
+        new ModuleInfo("trajectories", "Trajectories", "Shows a short predicted path for held throwable projectiles.", "Render", true),
+        new ModuleInfo("leavetracker", "Leave Tracker", "Notifies you when a player disappears from the server player list.", "Utility", true),
+        new ModuleInfo("lightning", "Lightning Detector", "Alerts when lightning spawns near you.", "World", true),
+        new ModuleInfo("lockslot", "Lock Slot", "Locks the currently selected hotbar slot while enabled.", "Player", true)
     );
 
     private String category = "Render";
@@ -210,7 +242,9 @@ public final class AstraScreen extends Screen {
             ? Math.max(0.0f, 1.0f - (clockNow - closingAt) / 220.0f)
             : Math.min(1.0f, Math.max(0.0f, (clockNow - openedAt) / 260.0f));
         float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0);
-        renderOffsetY = Math.round((1.0f - eased) * 14.0f);
+        // Keep drawing coordinates identical to mouse hitboxes; the old animated Y offset
+        // shifted every custom-drawn button away from its click target during opening/closing.
+        renderOffsetY = 0;
         int shade = Math.round(8 + 3 * eased);
         ctx.fill(0, 0, width, height, 0xFF000000 | (shade << 16) | (shade << 8) | (shade + 4));
         int panelW = panelWidth();
@@ -423,17 +457,18 @@ public final class AstraScreen extends Screen {
                     : "No matching modules found.", contentX, listTop + 10, MUTED, false);
             } else {
                 int gap = 10;
-                int cardW = Math.max(70, (contentW - gap) / 2);
+                int columns = contentW >= 260 ? 2 : 1;
+                int cardW = columns == 2 ? Math.max(70, (contentW - gap) / 2) : Math.max(1, contentW);
                 int cardH = 65;
                 int stride = 76;
-                int rows = (visible.size() + 1) / 2;
+                int rows = (visible.size() + columns - 1) / columns;
                 int maxScroll = Math.max(0, rows * stride - viewportH);
                 scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
                 ctx.enableScissor(contentX, listTop, contentX + contentW, listBottom);
 
                 for (int i = 0; i < visible.size(); i++) {
                     ModuleInfo module = visible.get(i);
-                    int col = i % 2, row = i / 2;
+                    int col = i % columns, row = i / columns;
                     int x = contentX + col * (cardW + gap);
                     int y = listTop + row * stride - scrollOffset;
                     if (y + cardH < listTop || y > listBottom) continue;
@@ -1045,7 +1080,8 @@ public final class AstraScreen extends Screen {
         if (mouseY < listTop || mouseY > listBottom) return true;
         List<ModuleInfo> visible = getVisibleModules();
         int viewportH = Math.max(1, listBottom - listTop);
-        int rows = (visible.size() + 1) / 2;
+        int columns = contentW >= 260 ? 2 : 1;
+        int rows = (visible.size() + columns - 1) / columns;
         int maxScroll = Math.max(0, rows * 76 - viewportH);
         int scrollbarX = contentX + contentW - 7;
         if (maxScroll > 0 && mouseX >= scrollbarX && mouseX <= contentX + contentW + 1) {
@@ -1053,13 +1089,14 @@ public final class AstraScreen extends Screen {
             updateListScrollFromMouse(mouseY, listTop, listBottom, rows, maxScroll);
             return true;
         }
-        int gap = 10, cardW = Math.max(70, (contentW - gap) / 2);
+        int gap = 10;
+        int cardW = columns == 2 ? Math.max(70, (contentW - gap) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int x = contentX + (i % 2) * (cardW + gap);
-            int y = listTop + (i / 2) * stride - scrollOffset;
+            int x = contentX + (i % columns) * (cardW + gap);
+            int y = listTop + (i / columns) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 // The star is a one-tap shortcut for pinning frequently used modules.
                 if (mouseX >= x + cardW - 21 && mouseX <= x + cardW - 4
@@ -1127,15 +1164,16 @@ public final class AstraScreen extends Screen {
         int listTop = top + 105, listBottom = top + panelH - 43;
         if (!inside(mouseX, mouseY, contentX, listTop, contentW, Math.max(1, listBottom - listTop))) return true;
         List<ModuleInfo> visible = getVisibleModules();
-        int cardW = Math.max(70, (contentW - 10) / 2);
+        int columns = contentW >= 260 ? 2 : 1;
+        int cardW = columns == 2 ? Math.max(70, (contentW - 10) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         int viewportH = Math.max(1, listBottom - listTop);
-        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        int maxScroll = Math.max(0, ((visible.size() + columns - 1) / columns) * stride - viewportH);
         scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int x = contentX + (i % 2) * (cardW + 10);
-            int y = listTop + (i / 2) * stride - scrollOffset;
+            int x = contentX + (i % columns) * (cardW + 10);
+            int y = listTop + (i / columns) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 contextMenuModuleId = null;
                 searchFocused = false;
@@ -1163,15 +1201,16 @@ public final class AstraScreen extends Screen {
             return true;
         }
         List<ModuleInfo> visible = getVisibleModules();
-        int cardW = Math.max(70, (contentW - 10) / 2);
+        int columns = contentW >= 260 ? 2 : 1;
+        int cardW = columns == 2 ? Math.max(70, (contentW - 10) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         int viewportH = Math.max(1, listBottom - listTop);
-        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        int maxScroll = Math.max(0, ((visible.size() + columns - 1) / columns) * stride - viewportH);
         scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int x = contentX + (i % 2) * (cardW + 10);
-            int y = listTop + (i / 2) * stride - scrollOffset;
+            int x = contentX + (i % columns) * (cardW + 10);
+            int y = listTop + (i / columns) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 contextMenuModuleId = module.id;
                 contextMenuX = (int) mouseX;
@@ -1417,15 +1456,16 @@ public final class AstraScreen extends Screen {
         int listTop = top + 105, listBottom = top + panelH - 43;
         if (mouseY < listTop || mouseY > listBottom) return true;
         List<ModuleInfo> visible = getVisibleModules();
-        int cardW = Math.max(70, (contentW - 10) / 2);
+        int columns = contentW >= 260 ? 2 : 1;
+        int cardW = columns == 2 ? Math.max(70, (contentW - 10) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         int viewportH = Math.max(1, listBottom - listTop);
-        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        int maxScroll = Math.max(0, ((visible.size() + columns - 1) / columns) * stride - viewportH);
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int x = contentX + (i % 2) * (cardW + 10);
-            int y = listTop + (i / 2) * stride - scrollOffset;
+            int x = contentX + (i % columns) * (cardW + 10);
+            int y = listTop + (i / columns) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 if (module.implemented) {
                     captureKeybindId = module.id;
@@ -1441,11 +1481,13 @@ public final class AstraScreen extends Screen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (button == 0 && draggingListScrollbar) {
-            int panelH = panelHeight();
+            int panelW = panelWidth(), panelH = panelHeight();
+            int sideW = sidebarWidth(panelW), contentW = panelW - sideW - 34;
+            int columns = contentW >= 260 ? 2 : 1;
             int top = panelTop(panelH) + renderOffsetY;
             int listTop = top + 105, listBottom = top + panelH - 43;
             List<ModuleInfo> visible = getVisibleModules();
-            int rows = (visible.size() + 1) / 2;
+            int rows = (visible.size() + columns - 1) / columns;
             int maxScroll = Math.max(0, rows * 76 - Math.max(1, listBottom - listTop));
             if (maxScroll > 0) updateListScrollFromMouse(mouseY, listTop, listBottom, rows, maxScroll);
             return true;
@@ -1523,7 +1565,8 @@ public final class AstraScreen extends Screen {
             }
             int viewportH = Math.max(1, listBottom - listTop);
             List<ModuleInfo> visible = getVisibleModules();
-            int rows = (visible.size() + 1) / 2;
+            int columns = contentW >= 260 ? 2 : 1;
+            int rows = (visible.size() + columns - 1) / columns;
             int maxScroll = Math.max(0, rows * 76 - viewportH);
             scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset - (int) (verticalAmount * 38)));
             return true;

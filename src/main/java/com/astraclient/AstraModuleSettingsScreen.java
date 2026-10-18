@@ -65,7 +65,10 @@ public final class AstraModuleSettingsScreen extends Screen {
         ctx.fill(x + 15, y + 13, x + 45, y + 43, 0xFF29213F);
         ctx.fill(x + 15, y + 13, x + 18, y + 43, a);
         ctx.drawCenteredTextWithShadow(textRenderer, "A", x + 30, y + 24, WHITE);
-        ctx.drawText(textRenderer, moduleName, x + 55, y + 14, WHITE, true);
+        // Reserve a safe gap before the Advanced button on compact panels so long module
+        // names never paint underneath another control.
+        int moduleTitleWidth = Math.max(40, panelW < 600 ? panelW - 180 : panelW - 80);
+        ctx.drawText(textRenderer, textRenderer.trimToWidth(moduleName, moduleTitleWidth), x + 55, y + 14, WHITE, true);
         ctx.drawText(textRenderer, "ASTRA  /  MODULE SETTINGS", x + 55, y + 33, a, false);
         if (panelW < 600) drawButton(ctx, x + panelW - 118, y + 12, 102, 24,
             "ADVANCED…", mouseX, mouseY, a);
@@ -288,20 +291,35 @@ public final class AstraModuleSettingsScreen extends Screen {
         }
 
         int bottomY = y + panelH - 44;
+        // Draw and click code share the same gap and bounds; the wide layout keeps all
+        // four actions visible, while compact layouts keep Advanced in the header.
+        int footerGap = 8;
+        int footerLeft = x + 12;
+        int footerRight = x + panelW - 12;
         if (panelW >= 600) {
-            drawButton(ctx, x + 20, bottomY, 120, 28, "BACK", mouseX, mouseY, a);
-            drawButton(ctx, x + 151, bottomY, 160, 28,
+            int footerAvailable = Math.max(4, footerRight - footerLeft - footerGap * 3);
+            int buttonW = footerAvailable / 4;
+            int backX = footerLeft;
+            int toggleX = backX + buttonW + footerGap;
+            int advancedX = toggleX + buttonW + footerGap;
+            int resetX = advancedX + buttonW + footerGap;
+            drawButton(ctx, backX, bottomY, buttonW, 28, "BACK", mouseX, mouseY, a);
+            drawButton(ctx, toggleX, bottomY, buttonW, 28,
                 implemented ? (AstraClient.isEnabled(moduleId) ? "DISABLE MODULE" : "ENABLE MODULE") : "LOCKED",
                 mouseX, mouseY, a);
-            drawButton(ctx, x + 322, bottomY, 132, 28, "ADVANCED…", mouseX, mouseY, a);
-            drawButton(ctx, x + panelW - 136, bottomY, 116, 28, "RESET SETTINGS", mouseX, mouseY, a);
+            drawButton(ctx, advancedX, bottomY, buttonW, 28, "ADVANCED…", mouseX, mouseY, a);
+            drawButton(ctx, resetX, bottomY, Math.max(1, footerRight - resetX), 28, "RESET SETTINGS", mouseX, mouseY, a);
         } else {
-            int buttonW = Math.max(1, (panelW - 44) / 3);
-            drawButton(ctx, x + 12, bottomY, buttonW, 28, "BACK", mouseX, mouseY, a);
-            drawButton(ctx, x + 22 + buttonW, bottomY, buttonW, 28,
+            int footerAvailable = Math.max(3, footerRight - footerLeft - footerGap * 2);
+            int buttonW = footerAvailable / 3;
+            int backX = footerLeft;
+            int toggleX = backX + buttonW + footerGap;
+            int resetX = toggleX + buttonW + footerGap;
+            drawButton(ctx, backX, bottomY, buttonW, 28, "BACK", mouseX, mouseY, a);
+            drawButton(ctx, toggleX, bottomY, buttonW, 28,
                 implemented ? (AstraClient.isEnabled(moduleId) ? "DISABLE" : "ENABLE") : "LOCKED",
                 mouseX, mouseY, a);
-            drawButton(ctx, x + 32 + buttonW * 2, bottomY, buttonW, 28, "RESET SETTINGS", mouseX, mouseY, a);
+            drawButton(ctx, resetX, bottomY, Math.max(1, footerRight - resetX), 28, "RESET", mouseX, mouseY, a);
         }
         // Controls are drawn manually; do not invoke the vanilla screen render path,
         // which can re-apply Minecraft menu blur over Astra.
@@ -499,35 +517,48 @@ public final class AstraModuleSettingsScreen extends Screen {
                 return true;
             }
         }
+        int footerGap = 8;
+        int footerLeft = x + 12;
+        int footerRight = x + pw - 12;
         if (pw >= 600) {
-            if (inside(mouseX, mouseY, x + 20, bottomY, 120, 28)) {
+            int footerAvailable = Math.max(4, footerRight - footerLeft - footerGap * 3);
+            int buttonW = footerAvailable / 4;
+            int backX = footerLeft;
+            int toggleX = backX + buttonW + footerGap;
+            int advancedX = toggleX + buttonW + footerGap;
+            int resetX = advancedX + buttonW + footerGap;
+            if (inside(mouseX, mouseY, backX, bottomY, buttonW, 28)) {
                 client.setScreen(parent);
                 return true;
             }
-            if (inside(mouseX, mouseY, x + 322, bottomY, 132, 28)) {
-                client.setScreen(new AstraModuleOptionsScreen(this, moduleId, moduleName, category));
-                return true;
-            }
-            if (implemented && inside(mouseX, mouseY, x + 151, bottomY, 160, 28)) {
+            if (implemented && inside(mouseX, mouseY, toggleX, bottomY, buttonW, 28)) {
                 AstraClient.toggle(moduleId);
                 return true;
             }
-            if (inside(mouseX, mouseY, x + pw - 136, bottomY, 116, 28)) {
+            if (inside(mouseX, mouseY, advancedX, bottomY, buttonW, 28)) {
+                client.setScreen(new AstraModuleOptionsScreen(this, moduleId, moduleName, category));
+                return true;
+            }
+            if (inside(mouseX, mouseY, resetX, bottomY, Math.max(1, footerRight - resetX), 28)) {
                 AstraClient.resetModuleSettings(moduleId);
                 capturingKey = false;
                 return true;
             }
         } else {
-            int buttonW = Math.max(1, (pw - 44) / 3);
-            if (inside(mouseX, mouseY, x + 12, bottomY, buttonW, 28)) {
+            int footerAvailable = Math.max(3, footerRight - footerLeft - footerGap * 2);
+            int buttonW = footerAvailable / 3;
+            int backX = footerLeft;
+            int toggleX = backX + buttonW + footerGap;
+            int resetX = toggleX + buttonW + footerGap;
+            if (inside(mouseX, mouseY, backX, bottomY, buttonW, 28)) {
                 client.setScreen(parent);
                 return true;
             }
-            if (implemented && inside(mouseX, mouseY, x + 22 + buttonW, bottomY, buttonW, 28)) {
+            if (implemented && inside(mouseX, mouseY, toggleX, bottomY, buttonW, 28)) {
                 AstraClient.toggle(moduleId);
                 return true;
             }
-            if (inside(mouseX, mouseY, x + 32 + buttonW * 2, bottomY, buttonW, 28)) {
+            if (inside(mouseX, mouseY, resetX, bottomY, Math.max(1, footerRight - resetX), 28)) {
                 AstraClient.resetModuleSettings(moduleId);
                 capturingKey = false;
                 return true;
