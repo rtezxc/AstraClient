@@ -318,6 +318,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("highjump", false);
         MODULES.put("jumpcircle", false);
         MODULES.put("wardenesp", false);
+        MODULES.put("trajectories", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -575,6 +576,7 @@ public final class AstraClient implements ClientModInitializer {
             case "highjump" -> "High Jump";
             case "jumpcircle" -> "Jump Circle";
             case "wardenesp" -> "Warden ESP";
+            case "trajectories" -> "Trajectories";
             default -> id;
         };
     }
@@ -3958,6 +3960,50 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         }
     }
 
+    private static boolean isTrajectoryItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        String itemPath = Registries.ITEM.getId(stack.getItem()).getPath();
+        return switch (itemPath) {
+            case "ender_pearl", "snowball", "egg", "experience_bottle",
+                 "splash_potion", "lingering_potion", "bow", "crossbow", "trident" -> true;
+            default -> false;
+        };
+    }
+
+    /** Draw a bounded, approximate projectile path with block-collision stopping. */
+    private static void drawProjectileTrajectory(MinecraftClient client,
+            net.minecraft.client.util.math.MatrixStack matrices, VertexConsumer lines) {
+        PlayerEntity player = client.player;
+        if (player == null || client.world == null || !isTrajectoryItem(player.getMainHandStack())) return;
+        String path = Registries.ITEM.getId(player.getMainHandStack().getItem()).getPath();
+        boolean arrowLike = path.equals("bow") || path.equals("crossbow") || path.equals("trident");
+        double speed = arrowLike ? 2.8D : 1.5D;
+        double gravity = arrowLike ? 0.05D : 0.03D;
+        Vec3d direction = player.getRotationVec(1.0F).normalize();
+        Vec3d position = player.getEyePos().add(direction.multiply(0.35D));
+        Vec3d velocity = direction.multiply(speed).add(player.getVelocity().multiply(0.5D));
+        int steps = (int)Math.max(16.0D, Math.min(48.0D,
+            AstraModuleOptions.numberValue("trajectories", "steps", 32.0D)));
+        int tint = moduleColor("trajectories", 0xFF54E8FF);
+        float red = ((tint >> 16) & 255) / 255.0F;
+        float green = ((tint >> 8) & 255) / 255.0F;
+        float blue = (tint & 255) / 255.0F;
+        for (int step = 0; step < steps; step++) {
+            Vec3d next = position.add(velocity);
+            HitResult hit = client.world.raycast(new RaycastContext(position, next,
+                RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, player));
+            if (hit.getType() == HitResult.Type.BLOCK) next = hit.getPos();
+            double size = 0.025D;
+            VertexRendering.drawBox(matrices, lines,
+                new Box(next.x - size, next.y - size, next.z - size,
+                    next.x + size, next.y + size, next.z + size),
+                red, green, blue, 0.9F);
+            if (hit.getType() == HitResult.Type.BLOCK) break;
+            position = next;
+            velocity = velocity.multiply(0.99D).add(0.0D, -gravity, 0.0D);
+        }
+    }
+
     private static void renderVisualOverlays(WorldRenderContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null || context.matrixStack() == null
@@ -3976,8 +4022,9 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
             && client.crosshairTarget instanceof BlockHitResult blockHit
             && client.crosshairTarget.getType() == HitResult.Type.BLOCK;
         boolean showWardenEsp = isEnabled("wardenesp");
+        boolean showTrajectories = isEnabled("trajectories") && isTrajectoryItem(client.player.getMainHandStack());
         if (!showXray && !showHitboxes && !showTargetBox && !showTargetHalo
-            && !showBlockHighlight && !showWardenEsp) return;
+            && !showBlockHighlight && !showWardenEsp && !showTrajectories) return;
 
         int accent = accentColor();
         int blockAccent = moduleColor("blockhighlight", accent);
@@ -4018,6 +4065,10 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         if (showBlockHighlight && client.crosshairTarget instanceof BlockHitResult blockHit) {
             VertexRendering.drawBox(matrices, lines,
                 new Box(blockHit.getBlockPos()).expand(0.002D), blockRed, blockGreen, blockBlue, moduleVisualAlpha("blockhighlight", 1.0F));
+        }
+
+        if (showTrajectories) {
+            drawProjectileTrajectory(client, matrices, lines);
         }
 
         // Cached ore outlines use the normal world depth buffer: they highlight loaded ore blocks
