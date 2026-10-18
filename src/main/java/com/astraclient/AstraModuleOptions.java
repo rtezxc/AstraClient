@@ -166,6 +166,10 @@ public final class AstraModuleOptions {
                 out.add(text("trigger_phrase", "Trigger Phrase", "Chat text that should trigger the accept command.", "wants to duel"));
                 out.add(text("command", "Command", "Server command to run, without needing a leading slash.", "accept"));
             }
+            case "autotrap" -> {
+                out.add(slider("range", "Target Range", "Maximum range for a nearby player target.", "4", 2, 5, 0.5));
+                out.add(dropdown("block", "Block Type", "Choose which hotbar block to use.", "Obsidian", List.of("Obsidian", "Cobweb")));
+            }
             case "elytramotion" -> {
                 out.add(slider("strength", "Glide Correction", "Small forward correction applied while gliding.", "0.015", 0.005, 0.035, 0.005));
             }
