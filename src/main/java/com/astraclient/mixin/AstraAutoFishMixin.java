@@ -15,7 +15,7 @@ public abstract class AstraAutoFishMixin {
     @Inject(method = "onPlaySound", at = @At("HEAD"))
     private void astra$detectFishingSplash(PlaySoundS2CPacket packet, CallbackInfo ci) {
         if (AstraClient.isEnabled("autofish")
-            && packet.getSound() == SoundEvents.ENTITY_FISHING_BOBBER_SPLASH) {
+            && packet.getSound().value() == SoundEvents.ENTITY_FISHING_BOBBER_SPLASH.value()) {
             AstraClient.onAutoFishSplash(packet.getX(), packet.getY(), packet.getZ());
         }
     }
