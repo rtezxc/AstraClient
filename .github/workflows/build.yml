@@ -54,19 +54,19 @@ jobs:
           jar tf "$JAR" | tee /tmp/jar-contents.txt
           grep -q '^fabric.mod.json$' /tmp/jar-contents.txt
           grep -q '^astraclient.mixins.json$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraClient.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraScreen.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraModuleSettingsScreen.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraModuleOptions.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraModuleOptionsScreen.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraHudEditorScreen.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/AstraBackgroundRenderer.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraPanoramaMixin.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraWorldMenuBackgroundMixin.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraFastPlaceMixin.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraFastBreakMixin.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraNoWeatherMixin.class$.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraOverlayRemovalMixin.class$.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraClient.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraModuleSettingsScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraModuleOptions.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraModuleOptionsScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraHudEditorScreen.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/AstraBackgroundRenderer.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraPanoramaMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraWorldMenuBackgroundMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraFastPlaceMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraFastBreakMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraNoWeatherMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraOverlayRemovalMixin.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraFireOverlayMixin.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraNoJumpDelayMixin.class$' /tmp/jar-contents.txt
           unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
