@@ -22,7 +22,7 @@ public final class AstraModuleOptions {
     private static final Map<String, String> VALUES = new LinkedHashMap<>();
     private static final List<String> COLORS = List.of("AA70FF", "54E8FF", "69E6B8", "FF6B9D", "FFC66E", "F3F5FC");
     private static final List<String> ATTACK_MODES = List.of("Normal", "Critical Hits Only", "Mixed");
-    private static final List<String> ROTATION_MODES = List.of("None", "Assist", "Visible", "Spooky Time", "Spooky Time 1.16", "Spooky Time Duels");
+    private static final List<String> ROTATION_MODES = List.of("None", "Assist", "Visible", "Smooth", "Snap", "Spooky Time", "Spooky Time 1.16", "Spooky Time Duels");
     private static final List<String> TARGET_PRIORITIES = List.of("Closest", "Lowest Health", "Lowest Armor");
     private static final List<String> RENDER_MODES = List.of("Outline", "Bright Outline", "Soft Outline");
     private static final List<String> MOVEMENT_MODES = List.of("Default", "Gentle", "Aggressive");
@@ -79,7 +79,7 @@ public final class AstraModuleOptions {
                 out.add(toggle("target_hostile", "Target Hostile Mobs", "Allow hostile mobs as targets.", true));
                 out.add(toggle("target_passive", "Target Passive Mobs", "Allow passive mobs as targets.", false));
                 out.add(slider("attack_range", "Attack Range", "Vanilla melee range only; this never extends reach.", "3.0", 2.0, 3.0, 0.1));
-                out.add(slider("fov", "Target FOV", "Angle around the view direction in which targets can be selected.", "180", 60, 180, 5));
+                out.add(slider("fov", "Target FOV", "Maximum view angle for target selection, from 60° to 180°.", "180", 60, 180, 5));
                 out.add(dropdown("rotation_mode", "Rotation Mode", "Choose whether target rotation is applied.", "Visible", ROTATION_MODES));
                 out.add(dropdown("target_priority", "Target Priority", "Choose which valid target is preferred.", "Closest", TARGET_PRIORITIES));
                 out.add(toggle("show_target", "Show Target", "Show target feedback while Kill Aura is active.", true));
