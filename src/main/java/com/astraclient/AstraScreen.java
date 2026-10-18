@@ -136,7 +136,8 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("hitmarker", "Hit Marker", "Shows a brief visual confirmation when Astra attacks a target.", "HUD", true),
         new ModuleInfo("deathcoord", "Death Coordinates", "Reports your last known position when you die.", "Utility", true),
         new ModuleInfo("clickpearl", "Click Pearl", "Throws one Ender Pearl from your hotbar when activated.", "Inventory", true),
-        new ModuleInfo("elytraswap", "Elytra Swap", "Swaps an Elytra with a chestplate in your hotbar when activated.", "Inventory", true)
+        new ModuleInfo("elytraswap", "Elytra Swap", "Swaps an Elytra with a chestplate in your hotbar when activated.", "Inventory", true),
+        new ModuleInfo("fastxp", "Fast XP", "Repeats vanilla XP bottle use while you hold right click.", "Inventory", true)
     );
 
     private String category = "Render";
