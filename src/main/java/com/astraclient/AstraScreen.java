@@ -68,6 +68,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("criticals", "Criticals", "Only attacks when a normal critical hit is possible.", "Combat", true),
         new ModuleInfo("reach", "Reach Info", "Shows how far away your target is.", "Combat", true),
         new ModuleInfo("triggerbot", "TriggerBot", "Attacks when a valid target is under your crosshair.", "Combat", true),
+        new ModuleInfo("antibot", "Anti Bot", "Optionally ignores player entities missing from the server player list.", "Combat", true),
         new ModuleInfo("killaura", "Kill Aura", "Automatically attacks nearby valid targets.", "Combat", true),
         new ModuleInfo("pvpmode", "PvP Mode", "Turns on useful fight tools and on-screen info together. Turn it off to restore your old settings.", "Combat", true),
         new ModuleInfo("autototem", "Auto Totem", "Puts a totem in your offhand when you have one.", "Combat", true),
