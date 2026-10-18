@@ -178,6 +178,9 @@ public final class AstraClient implements ClientModInitializer {
     private static long lastAutoClickAt;
     private static long lastAutoArmorAt;
     private static long lastChestStealerAt;
+    private static PlayerEntity stepHeightPlayer;
+    private static float originalStepHeight = Float.NaN;
+    private static boolean stepHeightOverridden;
     private static int lastAutoJumpAge = Integer.MIN_VALUE;
     private static PlayerEntity noClipPlayer;
     private static boolean noClipOriginalValue;
@@ -208,6 +211,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("novelocity", false);
         MODULES.put("nameprotect", false);
         MODULES.put("antibot", false);
+        MODULES.put("step", false);
+        MODULES.put("spider", false);
         MODULES.put("noclip", false);
         MODULES.put("autojump", false);
         MODULES.put("autofish", false);
@@ -483,6 +488,8 @@ public final class AstraClient implements ClientModInitializer {
             case "novelocity" -> "No Velocity";
             case "nameprotect" -> "Name Protect";
             case "antibot" -> "Anti Bot";
+            case "step" -> "Step";
+            case "spider" -> "Spider";
             case "noclip" -> "No Clip";
             case "autojump" -> "Auto Jump";
             case "autofish" -> "Auto Fish";
@@ -2003,6 +2010,8 @@ public final class AstraClient implements ClientModInitializer {
             updateNoClip(client);
             updateAutoJump(client);
             updateAutoFish(client);
+            updateStep(client);
+            updateSpider(client);
             updateAutoWalk(client);
             updateCombatModules(client);
             updateAimAssist(client);
@@ -2408,6 +2417,48 @@ public final class AstraClient implements ClientModInitializer {
         }
         autoToolOriginalSlot = -1;
         autoToolSelectedSlot = -1;
+    }
+
+    /**
+     * Adjusts only the local player's step height and restores the original value when disabled
+     * or after the player/world changes. Range is deliberately capped to limit movement surprises.
+     */
+    private static void updateStep(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (player == null || client.world == null || !isEnabled("step")) {
+            restoreStepHeight();
+            return;
+        }
+        if (stepHeightPlayer != player) {
+            restoreStepHeight();
+            stepHeightPlayer = player;
+        }
+        if (!stepHeightOverridden) {
+            originalStepHeight = player.getStepHeight();
+            stepHeightOverridden = true;
+        }
+        float requested = (float)AstraModuleOptions.numberValue("step", "height", 1.0D);
+        player.setStepHeight(Math.max(0.6F, Math.min(1.5F, requested)));
+    }
+
+    private static void restoreStepHeight() {
+        if (stepHeightOverridden && stepHeightPlayer != null && Float.isFinite(originalStepHeight)) {
+            stepHeightPlayer.setStepHeight(originalStepHeight);
+        }
+        stepHeightOverridden = false;
+        originalStepHeight = Float.NaN;
+        stepHeightPlayer = null;
+    }
+
+    /** Lets the local player climb a wall while actively pressing movement, without menu input. */
+    private static void updateSpider(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (!isEnabled("spider") || player == null || client.world == null
+            || client.currentScreen != null || player.isSpectator() || player.isSneaking()
+            || !player.horizontalCollision
+            || (Math.abs(player.forwardSpeed) < 0.01F && Math.abs(player.sidewaysSpeed) < 0.01F)) return;
+        var velocity = player.getVelocity();
+        player.setVelocity(velocity.x, Math.max(velocity.y, 0.20D), velocity.z);
     }
 
     /**
