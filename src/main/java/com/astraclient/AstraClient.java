@@ -2436,6 +2436,18 @@ public final class AstraClient implements ClientModInitializer {
         float targetPitch = (float)-Math.toDegrees(Math.atan2(dy, Math.max(0.0001D, horizontal)));
         float yawDelta = net.minecraft.util.math.MathHelper.wrapDegrees(targetYaw - client.player.getYaw());
         float pitchDelta = targetPitch - client.player.getPitch();
+        if (mode.equals("Snap")) {
+            client.player.setYaw(client.player.getYaw() + yawDelta);
+            client.player.setPitch(Math.max(-90.0F, Math.min(90.0F, client.player.getPitch() + pitchDelta)));
+            return;
+        }
+        if (mode.equals("Smooth")) {
+            float smoothYaw = Math.max(-6.0F, Math.min(6.0F, yawDelta * 0.28F));
+            float smoothPitch = Math.max(-4.0F, Math.min(4.0F, pitchDelta * 0.24F));
+            client.player.setYaw(client.player.getYaw() + smoothYaw);
+            client.player.setPitch(Math.max(-90.0F, Math.min(90.0F, client.player.getPitch() + smoothPitch)));
+            return;
+        }
         if (mode.startsWith("Spooky Time")) {
             // The archive contains three related profiles. Keep them distinct while
             // using Astra's existing target validation and vanilla attack checks.
