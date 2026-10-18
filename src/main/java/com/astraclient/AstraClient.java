@@ -209,6 +209,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("noclip", false);
         MODULES.put("autojump", false);
         MODULES.put("autofish", false);
+        MODULES.put("nojumpdelay", false);
         MODULES.put("noweb", false);
         MODULES.put("nopush", false);
         MODULES.put("fireworkesp", false);
@@ -481,6 +482,7 @@ public final class AstraClient implements ClientModInitializer {
             case "noclip" -> "No Clip";
             case "autojump" -> "Auto Jump";
             case "autofish" -> "Auto Fish";
+            case "nojumpdelay" -> "No Jump Delay";
             case "noweb" -> "No Web";
             case "nopush" -> "No Push";
             case "fireworkesp" -> "Firework ESP";
