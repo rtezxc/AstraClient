@@ -189,6 +189,10 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean autoFishRecastPending;
     private static long lastHitMarkerAt;
     private static long lastFastXpAt;
+    private static long lastElytraBoostAt;
+    private static PlayerEntity highJumpPlayer;
+    private static boolean highJumpWasGrounded;
+    private static int lastHighJumpAge = Integer.MIN_VALUE;
     private static BlockPos lastKnownDeathPosition;
     private static Object deathCoordinateWorld;
     private static boolean deathCoordinateWasAlive;
@@ -305,6 +309,9 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("clickpearl", false);
         MODULES.put("elytraswap", false);
         MODULES.put("fastxp", false);
+        MODULES.put("elytraboost", false);
+        MODULES.put("elytraspeed", false);
+        MODULES.put("highjump", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -557,6 +564,9 @@ public final class AstraClient implements ClientModInitializer {
             case "clickpearl" -> "Click Pearl";
             case "elytraswap" -> "Elytra Swap";
             case "fastxp" -> "Fast XP";
+            case "elytraboost" -> "Elytra Boost";
+            case "elytraspeed" -> "Elytra Speed";
+            case "highjump" -> "High Jump";
             default -> id;
         };
     }
@@ -2050,6 +2060,9 @@ public final class AstraClient implements ClientModInitializer {
             updateElytraSwap(client);
             updateDeathCoordinates(client);
             updateFastXp(client);
+            updateElytraBoost(client);
+            updateElytraSpeed(client);
+            updateHighJump(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -2244,6 +2257,71 @@ public final class AstraClient implements ClientModInitializer {
         client.interactionManager.interactItem(player, Hand.MAIN_HAND);
         player.swingHand(Hand.MAIN_HAND);
         lastFastXpAt = now;
+    }
+
+    /** Repeat ordinary firework use while gliding, only when the user holds right click. */
+    private static void updateElytraBoost(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (!isEnabled("elytraboost") || player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null || player.isSpectator()
+            || !player.isGliding() || !player.getMainHandStack().isOf(Items.FIREWORK_ROCKET)) return;
+        boolean requireUse = AstraModuleOptions.boolValue("elytraboost", "require_right_click", true);
+        if (requireUse && (client.getWindow() == null || org.lwjgl.glfw.GLFW.glfwGetMouseButton(
+            client.getWindow().getHandle(), org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)
+            != org.lwjgl.glfw.GLFW.GLFW_PRESS)) return;
+        long interval = (long)Math.max(120.0D, Math.min(400.0D,
+            AstraModuleOptions.numberValue("elytraboost", "interval_ms", 180.0D)));
+        long now = System.currentTimeMillis();
+        if (now - lastElytraBoostAt < interval) return;
+        client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+        player.swingHand(Hand.MAIN_HAND);
+        lastElytraBoostAt = now;
+    }
+
+    /** A bounded local horizontal velocity adjustment during Elytra glide; no packet bypasses. */
+    private static void updateElytraSpeed(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (!isEnabled("elytraspeed") || player == null || client.world == null
+            || client.currentScreen != null || !player.isGliding()) return;
+        var velocity = player.getVelocity();
+        double horizontal = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+        if (!Double.isFinite(horizontal) || horizontal < 0.05D || horizontal >= 1.35D) return;
+        double strength = Math.max(1.0D, Math.min(1.25D,
+            AstraModuleOptions.numberValue("elytraspeed", "strength", 1.08D)));
+        double targetSpeed = Math.min(1.35D, horizontal * strength);
+        if (targetSpeed <= horizontal + 0.001D) return;
+        double factor = targetSpeed / horizontal;
+        player.setVelocity(velocity.x * factor, velocity.y, velocity.z * factor);
+    }
+
+    /** Boost only a newly initiated vanilla jump, with a bounded configurable multiplier. */
+    private static void updateHighJump(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (player == null || client.world == null) {
+            highJumpPlayer = null;
+            highJumpWasGrounded = false;
+            return;
+        }
+        if (highJumpPlayer != player) {
+            highJumpPlayer = player;
+            highJumpWasGrounded = player.isOnGround();
+            return;
+        }
+        if (!isEnabled("highjump") || client.currentScreen != null || player.isSpectator()) {
+            highJumpWasGrounded = player.isOnGround();
+            return;
+        }
+        boolean jumpStarted = highJumpWasGrounded && !player.isOnGround()
+            && client.options.jumpKey.isPressed() && player.getVelocity().y > 0.35D
+            && player.age != lastHighJumpAge;
+        if (jumpStarted) {
+            double multiplier = Math.max(1.1D, Math.min(1.8D,
+                AstraModuleOptions.numberValue("highjump", "height_multiplier", 1.45D)));
+            var velocity = player.getVelocity();
+            player.setVelocity(velocity.x, Math.min(0.78D, velocity.y * multiplier), velocity.z);
+            lastHighJumpAge = player.age;
+        }
+        highJumpWasGrounded = player.isOnGround();
     }
 
     /** Captures the last live position and reports it once on death while Death Coordinates is enabled. */
