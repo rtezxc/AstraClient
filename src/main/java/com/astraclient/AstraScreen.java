@@ -210,7 +210,9 @@ public final class AstraScreen extends Screen {
             ? Math.max(0.0f, 1.0f - (clockNow - closingAt) / 220.0f)
             : Math.min(1.0f, Math.max(0.0f, (clockNow - openedAt) / 260.0f));
         float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0);
-        renderOffsetY = Math.round((1.0f - eased) * 14.0f);
+        // Keep drawing coordinates identical to mouse hitboxes; the old animated Y offset
+        // shifted every custom-drawn button away from its click target during opening/closing.
+        renderOffsetY = 0;
         int shade = Math.round(8 + 3 * eased);
         ctx.fill(0, 0, width, height, 0xFF000000 | (shade << 16) | (shade << 8) | (shade + 4));
         int panelW = panelWidth();
