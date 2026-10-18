@@ -140,6 +140,8 @@ jobs:
                   sys.exit(f"ERROR: GUI animation safety token {token} is missing")
           if "System.currentTimeMillis()" in screen:
               sys.exit("ERROR: GUI transition timing still depends on the wall clock")
+          if "clockNow / 1_000_000L" not in screen:
+              sys.exit("ERROR: ambient GUI effects must retain millisecond timing after switching to nanoTime")
           if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
               sys.exit("ERROR: long advanced text settings do not keep the caret visible")
           if "AstraModuleOptions.resetModule(moduleId)" not in client:
