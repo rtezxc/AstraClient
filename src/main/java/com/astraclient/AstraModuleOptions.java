@@ -64,6 +64,13 @@ public final class AstraModuleOptions {
     public static List<Option> definitions(String moduleId, String category) {
         List<Option> out = new ArrayList<>();
         out.add(new Option("keybind", "Module Keybind", "Press a key to toggle this module.", Type.KEYBIND, "-1", 0, 348, 1, List.of()));
+        // These widgets are drawn through drawHudLineAt, which already consumes
+        // per-widget background and accent settings. Expose those controls for
+        // every compatible widget instead of only an arbitrary subset.
+        if (usesLineHud(moduleId)) {
+            out.add(toggle("background", "HUD Background", "Show or hide this widget's panel background.", true));
+            out.add(color("module_color", "HUD Accent Color", "Color used for this widget's accent stripe.", "AA70FF"));
+        }
         switch (moduleId) {
             case "killaura" -> {
                 out.add(dropdown("attack_mode", "Attack Mode", "Choose how Kill Aura waits to attack.", "Normal", ATTACK_MODES));
@@ -167,7 +174,6 @@ public final class AstraModuleOptions {
             }
             case "waypoint" -> {
                 out.add(toggle("show_hud", "Show Waypoint HUD", "Show waypoint distance and direction.", true));
-                out.add(color("module_color", "Waypoint Color", "Color used by waypoint markers.", "54E8FF"));
             }
             case "breadcrumbs" -> {
                 out.add(slider("trail_length", "Trail Length", "Number of recent positions kept in the breadcrumb trail.", "48", 12, 120, 12));
@@ -180,8 +186,7 @@ public final class AstraModuleOptions {
                 // These modules remove one visual effect; the module toggle is their meaningful control.
             }
             case "healthhud", "hungerhud", "potioncounter", "durabilityhud", "inventoryhud", "armorhud", "blockreachhud", "frametimehud", "fps", "coordinates", "direction", "ping", "memory", "speedometer", "clock", "cps", "worldinfo", "biome", "totemcounter", "pearlcounter", "arrowcounter", "goldencounter", "sessionstats", "serverinfo" -> {
-                out.add(toggle("background", "HUD Background", "Show or hide this widget's panel background.", true));
-                out.add(color("module_color", "HUD Accent Color", "Color used for this widget's accent stripe.", "AA70FF"));
+                // Shared HUD styling controls were added above for all line widgets.
             }
             default -> { }
         }
@@ -325,6 +330,18 @@ public final class AstraModuleOptions {
         if (moduleId == null || moduleId.isBlank()) return;
         String prefix = moduleId + ".";
         VALUES.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
+    private static boolean usesLineHud(String moduleId) {
+        return switch (moduleId) {
+            case "fps", "coordinates", "direction", "ping", "memory", "speedometer",
+                 "clock", "totemcounter", "pearlcounter", "arrowcounter", "goldencounter",
+                 "armorhud", "blockfinder", "sessionstats", "biome", "cps", "worldinfo",
+                 "serverinfo", "potioncounter", "durabilityhud", "inventoryhud", "healthhud",
+                 "hungerhud", "blockreachhud", "frametimehud", "waypoint", "storagefinder",
+                 "effectalert" -> true;
+            default -> false;
+        };
     }
 
     private static String key(String moduleId, String optionId) {
