@@ -3,7 +3,7 @@ name: Build Astra Client
 
 on:
   push:
-    branches: [main]
+    branches: [main, "feature/obsidian-port"]
   workflow_dispatch:
 
 permissions:
