@@ -72,6 +72,19 @@ public final class AstraModuleOptions {
             out.add(color("module_color", "HUD Accent Color", "Color used for this widget's accent stripe.", "AA70FF"));
         }
         switch (moduleId) {
+            case "arrows" -> {
+                out.add(slider("render_range", "Arrow Range", "Maximum distance for directional player indicators.", "64", 8, 128, 4));
+            }
+            case "hitmarker" -> {
+                out.add(slider("duration_ms", "Hit Marker Duration", "How long the hit confirmation remains visible.", "220", 100, 500, 20));
+                out.add(color("module_color", "Hit Marker Color", "Color used by the hit confirmation indicator.", "F3F5FC"));
+            }
+            case "deathcoord" -> {
+                out.add(toggle("chat_notice", "Chat Notification", "Print your last known position when you die.", true));
+            }
+            case "clickpearl", "elytraswap" -> {
+                // Action modules execute once when enabled, then turn themselves off.
+            }
             case "killaura" -> {
                 out.add(dropdown("attack_mode", "Attack Mode", "Choose how Kill Aura waits to attack.", "Normal", ATTACK_MODES));
                 out.add(toggle("critical_hits", "Critical Hits", "Only attack when a vanilla critical hit is available.", false));
