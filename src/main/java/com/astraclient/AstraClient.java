@@ -2427,12 +2427,26 @@ public final class AstraClient implements ClientModInitializer {
         if (client.player == null || target == null || mode.equals("None")) return;
         double dx = target.getX() - client.player.getX();
         double dz = target.getZ() - client.player.getZ();
-        double dy = target.getEyeY() - client.player.getEyeY();
+        // Aim at the upper torso instead of the eye line; this is more stable on
+        // targets with different heights and while they jump or fall.
+        double targetY = target.getBoundingBox().minY + target.getBoundingBox().getLengthY() * 0.72D;
+        double dy = targetY - client.player.getEyeY();
         double horizontal = Math.sqrt(dx * dx + dz * dz);
         float targetYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0D);
         float targetPitch = (float)-Math.toDegrees(Math.atan2(dy, Math.max(0.0001D, horizontal)));
         float yawDelta = net.minecraft.util.math.MathHelper.wrapDegrees(targetYaw - client.player.getYaw());
         float pitchDelta = targetPitch - client.player.getPitch();
+        if (mode.equals("Spooky Time")) {
+            // Adaptive, bounded rotation: large errors turn faster, small errors
+            // settle gently. Tiny deterministic motion avoids a perfectly linear snap.
+            float yawStep = Math.min(Math.abs(yawDelta), 5.0F + Math.min(13.0F, Math.abs(yawDelta) * 0.24F));
+            float pitchStep = Math.min(Math.abs(pitchDelta), 3.0F + Math.min(8.0F, Math.abs(pitchDelta) * 0.20F));
+            float wobble = (float)Math.sin(client.player.age * 0.31D) * 0.22F;
+            client.player.setYaw(client.player.getYaw() + Math.copySign(yawStep, yawDelta) + wobble);
+            client.player.setPitch(Math.max(-90.0F, Math.min(90.0F,
+                client.player.getPitch() + Math.copySign(pitchStep, pitchDelta))));
+            return;
+        }
         float factor = mode.equals("Visible") ? 1.0F : 0.22F;
         client.player.setYaw(client.player.getYaw() + yawDelta * factor);
         client.player.setPitch(Math.max(-90.0F, Math.min(90.0F,
