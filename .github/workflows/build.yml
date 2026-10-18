@@ -4,6 +4,8 @@ name: Build Astra Client
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -105,6 +107,12 @@ jobs:
           for runtime_hook in ("shouldWaitForCritical", "applyKillAuraRotation", "selectedTargets"):
               if runtime_hook not in client:
                   sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
+          if "closestPointOnTargetBox(eye, candidate.getBoundingBox())" not in client:
+              sys.exit("ERROR: Kill Aura FOV does not account for the nearest point on the target hitbox")
+          if "private static boolean hasClearRay(" not in client:
+              sys.exit("ERROR: Kill Aura multi-point line-of-sight helper is missing")
+          if "box.minY + height * 0.18D" not in client or "box.maxX - (box.maxX - box.minX) * 0.15D" not in client:
+              sys.exit("ERROR: Kill Aura line-of-sight checks do not sample lower and side hitbox points")
           if "AstraModuleOptions.previewValue" not in options_screen:
               sys.exit("ERROR: slider/text preview controls are not wired")
           if "searchCursor" not in screen or "GLFW_KEY_DELETE" not in screen or "GLFW_KEY_HOME" not in screen:
