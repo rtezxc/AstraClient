@@ -143,7 +143,10 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("highjump", "High Jump", "Adds a bounded boost to a normal jump.", "Movement", true),
         new ModuleInfo("jumpcircle", "Jump Circle", "Emits a compact particle ring when you jump.", "Render", true),
         new ModuleInfo("wardenesp", "Warden ESP", "Outlines nearby Warden entities.", "Render", true),
-        new ModuleInfo("trajectories", "Trajectories", "Shows a short predicted path for held throwable projectiles.", "Render", true)
+        new ModuleInfo("trajectories", "Trajectories", "Shows a short predicted path for held throwable projectiles.", "Render", true),
+        new ModuleInfo("leavetracker", "Leave Tracker", "Notifies you when a player disappears from the server player list.", "Utility", true),
+        new ModuleInfo("lightning", "Lightning Detector", "Alerts when lightning spawns near you.", "World", true),
+        new ModuleInfo("lockslot", "Lock Slot", "Locks the currently selected hotbar slot while enabled.", "Player", true)
     );
 
     private String category = "Render";
