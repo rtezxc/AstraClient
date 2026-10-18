@@ -2614,10 +2614,6 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean tracerMobs = true;
     private static boolean autoWalkWasForcing;
     /**
-     * Uses food from the hotbar when hunger is low. It stops when the player
-     * changes slots, opens a screen, or has enough food, and restores the old slot.
-     */
-    /**
      * NoClip is a local movement override. Restore the exact previous flag when disabled,
      * on world/player changes, and when Astra loses the active player.
      */
@@ -2668,11 +2664,9 @@ public final class AstraClient implements ClientModInitializer {
         PlayerEntity player = client.player;
         if (!isEnabled("autofish") || player == null || client.world == null
             || client.currentScreen != null || !(player.getMainHandStack().getItem() instanceof FishingRodItem)) return;
-        if (player.squaredDistanceTo(x, y, z) > 36.0D) return;
-        boolean ownsBobber = !client.world.getEntitiesByClass(FishingBobberEntity.class,
-            player.getBoundingBox().expand(6.0D),
-            bobber -> !bobber.isRemoved() && bobber.getPlayerOwner() == player).isEmpty();
-        if (!ownsBobber) return;
+        FishingBobberEntity bobber = findOwnedFishingBobber(client, player);
+        // Attribute the sound to the actual local bobber, not merely any splash nearby.
+        if (bobber == null || bobber.squaredDistanceTo(x, y, z) > 25.0D) return;
         autoFishSplashAt = System.currentTimeMillis();
         autoFishSplashPending = true;
     }
@@ -2700,15 +2694,21 @@ public final class AstraClient implements ClientModInitializer {
             return;
         }
         if (autoFishRecastPending && now >= autoFishRecastAt) {
-            boolean bobberStillOwned = !client.world.getEntitiesByClass(FishingBobberEntity.class,
-                player.getBoundingBox().expand(6.0D),
-                bobber -> !bobber.isRemoved() && bobber.getPlayerOwner() == player).isEmpty();
+            boolean bobberStillOwned = findOwnedFishingBobber(client, player) != null;
             if (!bobberStillOwned) {
                 client.interactionManager.interactItem(player, Hand.MAIN_HAND);
                 player.swingHand(Hand.MAIN_HAND);
             }
             autoFishRecastPending = false;
         }
+    }
+
+    private static FishingBobberEntity findOwnedFishingBobber(MinecraftClient client, PlayerEntity player) {
+        if (client.world == null || player == null) return null;
+        List<FishingBobberEntity> bobbers = client.world.getEntitiesByClass(
+            FishingBobberEntity.class, player.getBoundingBox().expand(48.0D),
+            bobber -> !bobber.isRemoved() && bobber.getPlayerOwner() == player);
+        return bobbers.isEmpty() ? null : bobbers.get(0);
     }
 
     private static void resetAutoFish() {
