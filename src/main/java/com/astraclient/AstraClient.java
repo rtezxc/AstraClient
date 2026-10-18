@@ -17,6 +17,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
+import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -30,6 +31,7 @@ import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.ItemEntity;
@@ -51,6 +53,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.SwordItem;
+import net.minecraft.item.ArmorItem;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.Items;
 import net.minecraft.sound.SoundEvents;
@@ -170,6 +173,8 @@ public final class AstraClient implements ClientModInitializer {
     private static float recentDamageAmount;
     private static long damageAlertUntil;
     private static long lastAutoClickAt;
+    private static long lastAutoArmorAt;
+    private static long lastChestStealerAt;
 
     static {
         MODULES.put("fullbright", false);
@@ -187,6 +192,9 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("eagle", false);
         MODULES.put("inventorymove", false);
         MODULES.put("autoeat", false);
+        MODULES.put("autoarmor", false);
+        MODULES.put("cheststealer", false);
+        MODULES.put("novelocity", false);
         MODULES.put("killaura", false);
         MODULES.put("pvpmode", false);
         MODULES.put("triggerbot", false);
@@ -450,6 +458,9 @@ public final class AstraClient implements ClientModInitializer {
             case "eagle" -> "Eagle";
             case "inventorymove" -> "Inventory Move";
             case "autoeat" -> "Auto Eat";
+            case "autoarmor" -> "Auto Armor";
+            case "cheststealer" -> "Chest Stealer";
+            case "novelocity" -> "No Velocity";
             case "killaura" -> "Kill Aura";
             case "pvpmode" -> "PvP Mode";
             case "triggerbot" -> "TriggerBot";
@@ -928,6 +939,8 @@ public final class AstraClient implements ClientModInitializer {
                 targetPassive = false;
             }
             case "autoeat" -> autoEatHungerThreshold = 16;
+            case "autoarmor" -> lastAutoArmorAt = 0L;
+            case "cheststealer" -> lastChestStealerAt = 0L;
             case "lowhealthalert" -> lowHealthThreshold = 6;
             case "effectalert" -> effectAlertThresholdSeconds = 10;
             case "blockfinder" -> {
@@ -1952,6 +1965,8 @@ public final class AstraClient implements ClientModInitializer {
             processModuleKeybinds(client);
             updateInventoryMove(client);
             updateAutoEat(client);
+            updateAutoArmor(client);
+            updateChestStealer(client);
             updateAutoWalk(client);
             updateCombatModules(client);
             updateAimAssist(client);
@@ -2572,6 +2587,92 @@ public final class AstraClient implements ClientModInitializer {
      * Uses food from the hotbar when hunger is low. It stops when the player
      * changes slots, opens a screen, or has enough food, and restores the old slot.
      */
+    /**
+     * Equips strictly better armor from the player's own inventory. It never opens containers,
+     * drops items, or runs while another screen is active. The small delay leaves time for the
+     * server's inventory transaction to reconcile before the next operation.
+     */
+    private static void updateAutoArmor(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (!isEnabled("autoarmor") || player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || player.isSpectator() || System.currentTimeMillis() - lastAutoArmorAt < 250L) return;
+
+        EquipmentSlot[] slots = { EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD };
+        for (EquipmentSlot equipmentSlot : slots) {
+            ItemStack equipped = player.getEquippedStack(equipmentSlot);
+            int equippedScore = armorScore(equipped);
+            int bestInventoryIndex = -1;
+            int bestScore = equippedScore;
+            for (int inventoryIndex = 0; inventoryIndex < 36; inventoryIndex++) {
+                ItemStack candidate = player.getInventory().getStack(inventoryIndex);
+                if (candidate.isEmpty() || !(candidate.getItem() instanceof ArmorItem armor)
+                    || armor.getSlotType() != equipmentSlot) continue;
+                int score = armorScore(candidate);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestInventoryIndex = inventoryIndex;
+                }
+            }
+            if (bestInventoryIndex < 0) continue;
+
+            int syncId = player.currentScreenHandler.syncId;
+            if (!equipped.isEmpty()) {
+                int armorHandlerSlot = switch (equipmentSlot) {
+                    case FEET -> 5;
+                    case LEGS -> 6;
+                    case CHEST -> 7;
+                    case HEAD -> 8;
+                    default -> -1;
+                };
+                if (armorHandlerSlot >= 0) {
+                    client.interactionManager.clickSlot(syncId, armorHandlerSlot, 0, SlotActionType.QUICK_MOVE, player);
+                }
+            } else {
+                int handlerSlot = bestInventoryIndex < 9 ? 36 + bestInventoryIndex : bestInventoryIndex;
+                client.interactionManager.clickSlot(syncId, handlerSlot, 0, SlotActionType.QUICK_MOVE, player);
+            }
+            lastAutoArmorAt = System.currentTimeMillis();
+            return; // One inventory transaction at a time.
+        }
+    }
+
+    private static int armorScore(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return 0;
+        String id = Registries.ITEM.getId(stack.getItem()).getPath();
+        int tier = id.contains("netherite") ? 7
+            : id.contains("diamond") ? 6
+            : id.contains("iron") ? 5
+            : id.contains("golden") ? 4
+            : id.contains("chainmail") ? 3
+            : id.contains("turtle") ? 3
+            : id.contains("leather") ? 2 : 1;
+        int durability = stack.getMaxDamage() <= 0 ? 100
+            : (int)(100L * Math.max(0, stack.getMaxDamage() - stack.getDamage()) / stack.getMaxDamage());
+        return tier * 1000 + durability;
+    }
+
+    /**
+     * Moves loot from generic chest/barrel/shulker screens into inventory one slot per
+     * configured interval. It stops immediately when the screen closes or is not a container.
+     */
+    private static void updateChestStealer(MinecraftClient client) {
+        if (!isEnabled("cheststealer") || client.player == null || client.world == null
+            || client.interactionManager == null || !(client.currentScreen instanceof GenericContainerScreen)
+            || System.currentTimeMillis() - lastChestStealerAt < (long)Math.max(80.0D,
+                Math.min(500.0D, AstraModuleOptions.numberValue("cheststealer", "delay_ms", 140.0D)))) return;
+
+        var handler = client.player.currentScreenHandler;
+        int containerSlots = handler.slots.size() - 36;
+        if (containerSlots <= 0) return;
+        for (int slot = 0; slot < containerSlots; slot++) {
+            if (!handler.getSlot(slot).hasStack()) continue;
+            client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, client.player);
+            lastChestStealerAt = System.currentTimeMillis();
+            return; // Avoid racing multiple server inventory confirmations in one tick.
+        }
+    }
+
     private static void updateAutoEat(MinecraftClient client) {
         if (client.options == null) return;
         PlayerEntity player = client.player;
