@@ -2330,6 +2330,38 @@ public final class AstraClient implements ClientModInitializer {
         highJumpWasGrounded = player.isOnGround();
     }
 
+    /** Emit a small client-side particle ring when a jump begins. */
+    private static void updateJumpCircle(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (player == null || client.world == null) {
+            jumpCirclePlayer = null;
+            jumpCircleWasGrounded = false;
+            return;
+        }
+        if (jumpCirclePlayer != player) {
+            jumpCirclePlayer = player;
+            jumpCircleWasGrounded = player.isOnGround();
+            return;
+        }
+        boolean jumped = jumpCircleWasGrounded && !player.isOnGround()
+            && player.getVelocity().y > 0.0D && player.age != lastJumpCircleAge;
+        if (isEnabled("jumpcircle") && client.currentScreen == null && jumped) {
+            int count = (int)Math.max(8.0D, Math.min(32.0D,
+                AstraModuleOptions.numberValue("jumpcircle", "particle_count", 16.0D)));
+            double radius = 0.72D;
+            double y = player.getBoundingBox().minY + 0.05D;
+            for (int i = 0; i < count; i++) {
+                double angle = (Math.PI * 2.0D * i) / count;
+                double dx = Math.cos(angle);
+                double dz = Math.sin(angle);
+                client.world.addParticle(ParticleTypes.END_ROD, player.getX() + dx * radius, y,
+                    player.getZ() + dz * radius, dx * 0.006D, 0.018D, dz * 0.006D);
+            }
+            lastJumpCircleAge = player.age;
+        }
+        jumpCircleWasGrounded = player.isOnGround();
+    }
+
     /** Captures the last live position and reports it once on death while Death Coordinates is enabled. */
     private static void updateDeathCoordinates(MinecraftClient client) {
         PlayerEntity player = client.player;
