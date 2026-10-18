@@ -261,6 +261,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autoaccept", false);
         MODULES.put("autoleave", false);
         MODULES.put("autoexplosion", false);
+        MODULES.put("autotrap", false);
         MODULES.put("elytramotion", false);
         MODULES.put("antiknockback", false);
         MODULES.put("autoclicker", false);
@@ -480,6 +481,7 @@ public final class AstraClient implements ClientModInitializer {
             case "autoaccept" -> "Auto Accept";
             case "autoleave" -> "Auto Leave";
             case "autoexplosion" -> "Auto Explosion";
+            case "autotrap" -> "Auto Trap";
             case "elytramotion" -> "Elytra Motion";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
@@ -1996,6 +1998,7 @@ public final class AstraClient implements ClientModInitializer {
             updateElytraBoost(client);
             updateElytraSwap(client);
             updateAutoExplosion(client);
+            updateAutoTrap(client);
             updateElytraMotion(client);
             updateNoSlow(client);
             updateSpeed(client);
@@ -2359,6 +2362,55 @@ public final class AstraClient implements ClientModInitializer {
         double strength = Math.max(0.005D, Math.min(0.035D,
             AstraModuleOptions.numberValue("elytramotion", "strength", 0.015D)));
         client.player.setVelocity(velocity.x + look.x * strength, velocity.y, velocity.z + look.z * strength);
+    }
+
+
+    private static long lastAutoTrapPlaceAt;
+
+    /** Builds a small two-block-high ring around the nearest nearby player using hotbar blocks only. */
+    private static void updateAutoTrap(MinecraftClient client) {
+        if (!isEnabled("autotrap") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.isSpectator() || System.currentTimeMillis() - lastAutoTrapPlaceAt < 180L) return;
+        PlayerEntity target = null;
+        double range = Math.max(2.0D, Math.min(5.0D,
+            AstraModuleOptions.numberValue("autotrap", "range", 4.0D)));
+        double bestDistance = range * range;
+        for (PlayerEntity candidate : client.world.getPlayers()) {
+            if (candidate == client.player || candidate.isSpectator() || !candidate.isAlive()) continue;
+            double distance = client.player.squaredDistanceTo(candidate);
+            if (distance < bestDistance) { target = candidate; bestDistance = distance; }
+        }
+        if (target == null) return;
+        String mode = AstraModuleOptions.value("autotrap", "block", "Obsidian");
+        int blockSlot = -1;
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = client.player.getInventory().getStack(i);
+            if ((mode.equalsIgnoreCase("Cobweb") && stack.isOf(Items.COBWEB))
+                || (!mode.equalsIgnoreCase("Cobweb") && stack.isOf(Items.OBSIDIAN))) {
+                blockSlot = i; break;
+            }
+        }
+        if (blockSlot < 0) return;
+        BlockPos base = target.getBlockPos();
+        Direction[] sides = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
+        for (int height = 0; height <= 1; height++) {
+            for (Direction side : sides) {
+                BlockPos placePos = base.offset(side).up(height);
+                if (!client.world.getBlockState(placePos).isAir()) continue;
+                BlockPos support = placePos.down();
+                if (client.world.getBlockState(support).isAir()) continue;
+                int oldSlot = client.player.getInventory().selectedSlot;
+                client.player.getInventory().selectedSlot = blockSlot;
+                Vec3d hitPos = Vec3d.ofCenter(support).add(0.0D, 0.5D, 0.0D);
+                BlockHitResult hit = new BlockHitResult(hitPos, Direction.UP, support, false);
+                client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, hit);
+                client.player.swingHand(Hand.MAIN_HAND);
+                client.player.getInventory().selectedSlot = oldSlot;
+                lastAutoTrapPlaceAt = System.currentTimeMillis();
+                return;
+            }
+        }
     }
 
     private static void updateNoSlow(MinecraftClient client) {
