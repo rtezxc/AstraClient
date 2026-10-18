@@ -138,6 +138,16 @@ public final class AstraModuleOptions {
                 out.add(toggle("target_players", "Trace Players", "Draw tracer lines to players.", true));
                 out.add(toggle("target_mobs", "Trace Mobs", "Draw tracer lines to mobs.", true));
             }
+            case "leavetracker" -> {
+                out.add(toggle("chat_notice", "Chat Notification", "Print a message when a player leaves the server player list.", true));
+            }
+            case "lightning" -> {
+                out.add(slider("render_range", "Alert Range", "Maximum distance for lightning alerts.", "96", 16, 128, 8));
+                out.add(toggle("chat_notice", "Chat Notification", "Print lightning coordinates to chat.", true));
+            }
+            case "lockslot" -> {
+                // Locks the hotbar slot that is selected when the module is enabled.
+            }
             case "trajectories" -> {
                 out.add(slider("steps", "Trajectory Length", "Number of simulated projectile steps.", "32", 16, 48, 4));
                 out.add(color("module_color", "Trajectory Color", "Color used for predicted projectile paths.", "54E8FF"));
