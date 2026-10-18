@@ -42,6 +42,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("nameprotect", "Name Protect", "Masks your own username in locally displayed chat.", "Utility", true),
         new ModuleInfo("fireworkesp", "Firework ESP", "Highlights nearby firework rockets.", "Render", true),
         new ModuleInfo("seeinvisibles", "See Invisibles", "Renders invisible living entities for your local view.", "Render", true),
+        new ModuleInfo("aspectratio", "Aspect Ratio", "Adjusts the local projection ratio for a wider or narrower view.", "Render", true),
         new ModuleInfo("totempopalert", "Totem Pop Alert", "Notifies you when another player pops a totem.", "HUD", true),
         new ModuleInfo("tracers", "Tracers", "Draws lines toward nearby creatures and players.", "Render", true),
         new ModuleInfo("xray", "X-Ray", "Highlights ores already visible to the game. It does not see through walls.", "Render", true),
