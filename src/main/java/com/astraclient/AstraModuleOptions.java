@@ -22,7 +22,7 @@ public final class AstraModuleOptions {
     private static final Map<String, String> VALUES = new LinkedHashMap<>();
     private static final List<String> COLORS = List.of("AA70FF", "54E8FF", "69E6B8", "FF6B9D", "FFC66E", "F3F5FC");
     private static final List<String> ATTACK_MODES = List.of("Normal", "Critical Hits Only", "Mixed");
-    private static final List<String> ROTATION_MODES = List.of("None", "Assist", "Visible");
+    private static final List<String> ROTATION_MODES = List.of("None", "Assist", "Visible", "Spooky Time");
     private static final List<String> TARGET_PRIORITIES = List.of("Closest", "Lowest Health", "Lowest Armor");
     private static final List<String> RENDER_MODES = List.of("Outline", "Bright Outline", "Soft Outline");
     private static final List<String> MOVEMENT_MODES = List.of("Default", "Gentle", "Aggressive");
