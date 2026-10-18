@@ -128,7 +128,8 @@ public final class AstraModuleSettingsScreen extends Screen {
                 nextY + 3, accent(), true);
             int sliderX = x + 20, sliderY = nextY + 27, sliderW = panelW - 40;
             ctx.fill(sliderX, sliderY, sliderX + sliderW, sliderY + 6, 0xFF2B3344);
-            int fill = (60 - AstraClient.zoomFov()) * sliderW / 50;
+            // Match updateZoomFromMouse: 10° is at the left (strongest zoom), 60° at the right.
+            int fill = (AstraClient.zoomFov() - 10) * sliderW / 50;
             ctx.fill(sliderX, sliderY, sliderX + fill, sliderY + 6, accent());
             ctx.fill(sliderX + fill - 4, sliderY - 4, sliderX + fill + 4, sliderY + 10, WHITE);
             ctx.drawText(textRenderer, "10°  •  MORE ZOOM", sliderX, sliderY + 13, MUTED, false);
