@@ -16,6 +16,7 @@
     "AstraAutoFishMixin",
     "AstraNoJumpDelayMixin",
     "AstraNameProtectMixin",
+    "AstraStepMixin",
     "AstraOverlayRemovalMixin",
     "AstraFireOverlayMixin"
   ],
