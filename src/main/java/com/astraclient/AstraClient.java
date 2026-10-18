@@ -260,6 +260,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("elytraswap", false);
         MODULES.put("autoaccept", false);
         MODULES.put("autoleave", false);
+        MODULES.put("autoexplosion", false);
+        MODULES.put("elytramotion", false);
         MODULES.put("antiknockback", false);
         MODULES.put("autoclicker", false);
         MODULES.put("criticals", false);
@@ -477,6 +479,8 @@ public final class AstraClient implements ClientModInitializer {
             case "elytraswap" -> "Elytra Swap";
             case "autoaccept" -> "Auto Accept";
             case "autoleave" -> "Auto Leave";
+            case "autoexplosion" -> "Auto Explosion";
+            case "elytramotion" -> "Elytra Motion";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -1991,6 +1995,8 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoSwap(client);
             updateElytraBoost(client);
             updateElytraSwap(client);
+            updateAutoExplosion(client);
+            updateElytraMotion(client);
             updateNoSlow(client);
             updateSpeed(client);
             updateScaffold(client);
@@ -2324,6 +2330,35 @@ public final class AstraClient implements ClientModInitializer {
                 lastAutoLeaveMessageAt = now;
             }
         }
+    }
+
+
+    private static long lastAutoExplosionAt;
+
+    /** Automatically detonates a targeted end crystal while the attack button is held. */
+    private static void updateAutoExplosion(MinecraftClient client) {
+        if (!isEnabled("autoexplosion") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null || client.options == null
+            || !client.options.attackKey.isPressed()
+            || !(client.crosshairTarget instanceof EntityHitResult hit)
+            || !(hit.getEntity() instanceof net.minecraft.entity.decoration.EndCrystalEntity crystal)
+            || client.player.distanceTo(crystal) > 4.0F
+            || System.currentTimeMillis() - lastAutoExplosionAt < 180L) return;
+        client.interactionManager.attackEntity(client.player, crystal);
+        client.player.swingHand(Hand.MAIN_HAND);
+        lastAutoExplosionAt = System.currentTimeMillis();
+    }
+
+    /** Adds a small forward velocity correction while gliding and actively moving forward. */
+    private static void updateElytraMotion(MinecraftClient client) {
+        if (!isEnabled("elytramotion") || client.player == null || client.world == null
+            || client.currentScreen != null || !client.player.isGliding()
+            || client.player.forwardSpeed <= 0.01F) return;
+        Vec3d velocity = client.player.getVelocity();
+        Vec3d look = client.player.getRotationVector();
+        double strength = Math.max(0.005D, Math.min(0.035D,
+            AstraModuleOptions.numberValue("elytramotion", "strength", 0.015D)));
+        client.player.setVelocity(velocity.x + look.x * strength, velocity.y, velocity.z + look.z * strength);
     }
 
     private static void updateNoSlow(MinecraftClient client) {
