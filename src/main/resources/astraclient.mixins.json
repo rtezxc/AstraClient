@@ -17,6 +17,7 @@
     "AstraNoJumpDelayMixin",
     "AstraNameProtectMixin",
     "AstraStepMixin",
+    "AstraSeeInvisiblesMixin",
     "AstraOverlayRemovalMixin",
     "AstraFireOverlayMixin"
   ],
