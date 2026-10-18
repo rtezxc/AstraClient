@@ -254,6 +254,9 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("clickpearl", false);
         MODULES.put("fireworkesp", false);
         MODULES.put("wardenesp", false);
+        MODULES.put("autoswap", false);
+        MODULES.put("elytraboost", false);
+        MODULES.put("elytraswap", false);
         MODULES.put("antiknockback", false);
         MODULES.put("autoclicker", false);
         MODULES.put("criticals", false);
@@ -466,6 +469,9 @@ public final class AstraClient implements ClientModInitializer {
             case "clickpearl" -> "Click Pearl";
             case "fireworkesp" -> "Firework ESP";
             case "wardenesp" -> "Warden ESP";
+            case "autoswap" -> "Auto Swap";
+            case "elytraboost" -> "Elytra Boost";
+            case "elytraswap" -> "Elytra Swap";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -1972,6 +1978,9 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoFish(client);
             updateChestStealer(client);
             updateClickPearl(client);
+            updateAutoSwap(client);
+            updateElytraBoost(client);
+            updateElytraSwap(client);
             updateNoSlow(client);
             updateSpeed(client);
             updateScaffold(client);
@@ -2190,6 +2199,93 @@ public final class AstraClient implements ClientModInitializer {
             }
         }
         clickPearlWasDown = down;
+    }
+
+
+    private static int autoSwapOriginalSlot = -1;
+    private static boolean autoSwapWasActive;
+    private static long lastElytraBoostAt;
+    private static long lastElytraSwapAt;
+
+    /** Switches to a golden apple at low health, then restores the prior hotbar slot. */
+    private static void updateAutoSwap(MinecraftClient client) {
+        if (client.player == null || client.world == null || client.currentScreen != null) {
+            autoSwapWasActive = false;
+            autoSwapOriginalSlot = -1;
+            return;
+        }
+        var player = client.player;
+        boolean needsHeal = isEnabled("autoswap") && player.getHealth() <= 8.0F;
+        if (needsHeal && !autoSwapWasActive) {
+            int foodSlot = -1;
+            for (int i = 0; i < 9; i++) {
+                ItemStack stack = player.getInventory().getStack(i);
+                if (stack.isOf(Items.GOLDEN_APPLE) || stack.isOf(Items.ENCHANTED_GOLDEN_APPLE)) {
+                    foodSlot = i;
+                    if (stack.isOf(Items.ENCHANTED_GOLDEN_APPLE)) break;
+                }
+            }
+            if (foodSlot >= 0) {
+                autoSwapOriginalSlot = player.getInventory().selectedSlot;
+                player.getInventory().selectedSlot = foodSlot;
+                autoSwapWasActive = true;
+            }
+        } else if (!needsHeal && autoSwapWasActive) {
+            if (autoSwapOriginalSlot >= 0) player.getInventory().selectedSlot = autoSwapOriginalSlot;
+            autoSwapOriginalSlot = -1;
+            autoSwapWasActive = false;
+        }
+    }
+
+    /** Uses a hotbar firework while gliding, only while the player holds the use-item key. */
+    private static void updateElytraBoost(MinecraftClient client) {
+        if (!isEnabled("elytraboost") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null || client.options == null
+            || !client.player.isGliding() || !client.options.useKey.isPressed()
+            || System.currentTimeMillis() - lastElytraBoostAt < 1200L) return;
+        int selected = client.player.getInventory().selectedSlot;
+        for (int i = 0; i < 9; i++) {
+            if (!client.player.getInventory().getStack(i).isOf(Items.FIREWORK_ROCKET)) continue;
+            client.player.getInventory().selectedSlot = i;
+            client.interactionManager.interactItem(client.player, Hand.MAIN_HAND);
+            client.player.getInventory().selectedSlot = selected;
+            lastElytraBoostAt = System.currentTimeMillis();
+            return;
+        }
+    }
+
+    /** Automatically swaps an elytra into the chest slot while airborne and restores chest armor on landing. */
+    private static void updateElytraSwap(MinecraftClient client) {
+        if (!isEnabled("elytraswap") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.age % 10 != 0 || System.currentTimeMillis() - lastElytraSwapAt < 500L) return;
+        var player = client.player;
+        var handler = player.currentScreenHandler;
+        ItemStack chest = handler.getSlot(6).getStack();
+        boolean airborne = !player.isOnGround() && player.getVelocity().y < -0.05D;
+        if (airborne && !(chest.getItem() instanceof net.minecraft.item.ElytraItem)) {
+            for (int slot = 9; slot < Math.min(36, handler.slots.size()); slot++) {
+                if (handler.getSlot(slot).getStack().getItem() instanceof net.minecraft.item.ElytraItem) {
+                    client.interactionManager.clickSlot(handler.syncId, 6, 0, SlotActionType.PICKUP, player);
+                    client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, player);
+                    client.interactionManager.clickSlot(handler.syncId, 6, 0, SlotActionType.PICKUP, player);
+                    lastElytraSwapAt = System.currentTimeMillis();
+                    return;
+                }
+            }
+        } else if (!airborne && chest.getItem() instanceof net.minecraft.item.ElytraItem) {
+            for (int slot = 9; slot < Math.min(36, handler.slots.size()); slot++) {
+                ItemStack candidate = handler.getSlot(slot).getStack();
+                if (candidate.getItem() instanceof net.minecraft.item.ArmorItem
+                    && !(candidate.getItem() instanceof net.minecraft.item.ElytraItem)) {
+                    client.interactionManager.clickSlot(handler.syncId, 6, 0, SlotActionType.PICKUP, player);
+                    client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, player);
+                    client.interactionManager.clickSlot(handler.syncId, 6, 0, SlotActionType.PICKUP, player);
+                    lastElytraSwapAt = System.currentTimeMillis();
+                    return;
+                }
+            }
+        }
     }
 
     private static void updateNoSlow(MinecraftClient client) {
