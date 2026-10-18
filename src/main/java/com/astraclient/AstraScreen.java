@@ -1071,7 +1071,7 @@ public final class AstraScreen extends Screen {
             updateListScrollFromMouse(mouseY, listTop, listBottom, rows, maxScroll);
             return true;
         }
-        int gap = 10, columns = contentW >= 260 ? 2 : 1;
+        int gap = 10;
         int cardW = columns == 2 ? Math.max(70, (contentW - gap) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
