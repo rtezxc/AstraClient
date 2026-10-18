@@ -65,7 +65,10 @@ public final class AstraModuleSettingsScreen extends Screen {
         ctx.fill(x + 15, y + 13, x + 45, y + 43, 0xFF29213F);
         ctx.fill(x + 15, y + 13, x + 18, y + 43, a);
         ctx.drawCenteredTextWithShadow(textRenderer, "A", x + 30, y + 24, WHITE);
-        ctx.drawText(textRenderer, moduleName, x + 55, y + 14, WHITE, true);
+        // Reserve a safe gap before the Advanced button on compact panels so long module
+        // names never paint underneath another control.
+        int moduleTitleWidth = Math.max(40, panelW < 600 ? panelW - 180 : panelW - 80);
+        ctx.drawText(textRenderer, textRenderer.trimToWidth(moduleName, moduleTitleWidth), x + 55, y + 14, WHITE, true);
         ctx.drawText(textRenderer, "ASTRA  /  MODULE SETTINGS", x + 55, y + 33, a, false);
         if (panelW < 600) drawButton(ctx, x + panelW - 118, y + 12, 102, 24,
             "ADVANCED…", mouseX, mouseY, a);
