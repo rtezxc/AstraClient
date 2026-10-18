@@ -55,6 +55,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("nopush", "No Push", "Prevents entity collision from pushing your local player.", "Movement", true),
         new ModuleInfo("autoeat", "Auto Eat", "Eats food from your hotbar when you get hungry.", "Inventory", true),
         new ModuleInfo("autoarmor", "Auto Armor", "Equips improved armor from your inventory.", "Inventory", true),
+        new ModuleInfo("autofish", "Auto Fish", "Reels and recasts when your own bobber gets a bite.", "Inventory", true),
         new ModuleInfo("cheststealer", "Chest Stealer", "Moves container items into your inventory at a controlled pace.", "Inventory", true),
         new ModuleInfo("autoarmor", "Auto Armor", "Equips improved armor from your inventory.", "Inventory", true),
         new ModuleInfo("cheststealer", "Chest Stealer", "Moves container items into your inventory at a controlled pace.", "Inventory", true),
