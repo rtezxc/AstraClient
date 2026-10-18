@@ -70,6 +70,8 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("autoswap", "Auto Swap", "Switches to a golden apple at low health, then restores your prior slot.", "Inventory", true),
         new ModuleInfo("elytraboost", "Elytra Boost", "Uses firework rockets while gliding when you hold use-item.", "Movement", true),
         new ModuleInfo("elytraswap", "Elytra Swap", "Swaps to an elytra while airborne and restores chest armor after landing.", "Inventory", true),
+        new ModuleInfo("autoaccept", "Auto Accept", "Runs a configurable command when server chat contains a configured phrase.", "Utility", true),
+        new ModuleInfo("autoleave", "Auto Leave", "Runs a configurable leave command when server chat contains a configured phrase.", "Utility", true),
         new ModuleInfo("antiknockback", "Anti Knockback", "Reduces horizontal knockback.", "Combat", true),
         new ModuleInfo("targethud", "Target HUD", "Shows your target's name and distance.", "HUD", true),
         new ModuleInfo("damageindicators", "Damage Indicators", "Flashes a warning when you take damage.", "Player", true),
