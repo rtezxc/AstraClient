@@ -54,7 +54,7 @@ public abstract class AstraNameProtectMixin {
 
         MutableText rebuilt = Text.empty();
         message.visit((style, segment) -> {
-            astra$astra$appendReplacement(rebuilt, segment, style, username, alias);
+            astra$appendReplacement(rebuilt, segment, style, username, alias);
             return Optional.empty();
         }, Style.EMPTY);
         return rebuilt;
