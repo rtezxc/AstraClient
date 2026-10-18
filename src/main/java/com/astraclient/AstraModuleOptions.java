@@ -86,6 +86,16 @@ public final class AstraModuleOptions {
             case "deathcoord" -> {
                 out.add(toggle("chat_notice", "Chat Notification", "Print your last known position when you die.", true));
             }
+            case "elytraboost" -> {
+                out.add(slider("interval_ms", "Rocket Interval", "Minimum delay between firework use requests while gliding and holding use.", "180", 120, 400, 20));
+                out.add(toggle("require_right_click", "Require Right Click", "Only use rockets while right mouse is held.", true));
+            }
+            case "elytraspeed" -> {
+                out.add(slider("strength", "Speed Strength", "Bounded local horizontal multiplier while gliding.", "1.08", 1.0, 1.25, 0.01));
+            }
+            case "highjump" -> {
+                out.add(slider("height_multiplier", "Jump Multiplier", "Bounded multiplier for a normal jump impulse.", "1.45", 1.1, 1.8, 0.05));
+            }
             case "clickpearl", "elytraswap" -> {
                 // Action modules execute once when enabled, then turn themselves off.
             }
