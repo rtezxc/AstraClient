@@ -35,6 +35,7 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
@@ -195,6 +196,9 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autoarmor", false);
         MODULES.put("cheststealer", false);
         MODULES.put("novelocity", false);
+        MODULES.put("noweb", false);
+        MODULES.put("nopush", false);
+        MODULES.put("fireworkesp", false);
         MODULES.put("killaura", false);
         MODULES.put("pvpmode", false);
         MODULES.put("triggerbot", false);
@@ -461,6 +465,9 @@ public final class AstraClient implements ClientModInitializer {
             case "autoarmor" -> "Auto Armor";
             case "cheststealer" -> "Chest Stealer";
             case "novelocity" -> "No Velocity";
+            case "noweb" -> "No Web";
+            case "nopush" -> "No Push";
+            case "fireworkesp" -> "Firework ESP";
             case "killaura" -> "Kill Aura";
             case "pvpmode" -> "PvP Mode";
             case "triggerbot" -> "TriggerBot";
@@ -941,6 +948,7 @@ public final class AstraClient implements ClientModInitializer {
             case "autoeat" -> autoEatHungerThreshold = 16;
             case "autoarmor" -> lastAutoArmorAt = 0L;
             case "cheststealer" -> lastChestStealerAt = 0L;
+            case "fireworkesp" -> espRange = 64;
             case "lowhealthalert" -> lowHealthThreshold = 6;
             case "effectalert" -> effectAlertThresholdSeconds = 10;
             case "blockfinder" -> {
@@ -2594,9 +2602,11 @@ public final class AstraClient implements ClientModInitializer {
      */
     private static void updateAutoArmor(MinecraftClient client) {
         PlayerEntity player = client.player;
+        long armorDelay = (long)Math.max(150.0D, Math.min(1000.0D,
+            AstraModuleOptions.numberValue("autoarmor", "upgrade_delay_ms", 250.0D)));
         if (!isEnabled("autoarmor") || player == null || client.world == null
             || client.interactionManager == null || client.currentScreen != null
-            || player.isSpectator() || System.currentTimeMillis() - lastAutoArmorAt < 250L) return;
+            || player.isSpectator() || System.currentTimeMillis() - lastAutoArmorAt < armorDelay) return;
 
         EquipmentSlot[] slots = { EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD };
         for (EquipmentSlot equipmentSlot : slots) {
@@ -2837,7 +2847,8 @@ public final class AstraClient implements ClientModInitializer {
         boolean playerEsp = isEnabled("playeresp");
         boolean mobEsp = isEnabled("mobesp");
         boolean itemEsp = isEnabled("itemesp");
-        if (!playerEsp && !mobEsp && !itemEsp && ORIGINAL_ENTITY_GLOW.isEmpty()) return;
+        boolean fireworkEsp = isEnabled("fireworkesp");
+        if (!playerEsp && !mobEsp && !itemEsp && !fireworkEsp && ORIGINAL_ENTITY_GLOW.isEmpty()) return;
 
         List<Entity> candidates = new ArrayList<>();
         candidates.addAll(client.world.getPlayers());
@@ -2845,10 +2856,12 @@ public final class AstraClient implements ClientModInitializer {
         double playerRange = Math.min(128.0D, AstraModuleOptions.numberValue("playeresp", "render_range", espRange));
         double mobRange = Math.min(128.0D, AstraModuleOptions.numberValue("mobesp", "render_range", espRange));
         double itemRange = Math.min(128.0D, AstraModuleOptions.numberValue("itemesp", "render_range", espRange));
-        double maxRange = Math.max(playerRange, Math.max(mobRange, itemRange));
+        double fireworkRange = Math.min(128.0D, AstraModuleOptions.numberValue("fireworkesp", "render_range", espRange));
+        double maxRange = Math.max(Math.max(playerRange, mobRange), Math.max(itemRange, fireworkRange));
         double playerRangeSq = playerRange * playerRange;
         double mobRangeSq = mobRange * mobRange;
         double itemRangeSq = itemRange * itemRange;
+        double fireworkRangeSq = fireworkRange * fireworkRange;
         Box nearby = client.player.getBoundingBox().expand(maxRange);
         // When a visual module is disabled, continue fetching nearby entities briefly so
         // their original glow flags can be restored cleanly.
@@ -2861,6 +2874,10 @@ public final class AstraClient implements ClientModInitializer {
             candidates.addAll(client.world.getEntitiesByClass(ItemEntity.class, nearby,
                 entity -> !entity.isRemoved()));
         }
+        if (fireworkEsp || restoringTrackedEntities) {
+            candidates.addAll(client.world.getEntitiesByClass(FireworkRocketEntity.class, nearby,
+                entity -> !entity.isRemoved()));
+        }
 
         Set<UUID> seen = new HashSet<>();
         for (Entity entity : candidates) {
@@ -2870,7 +2887,8 @@ public final class AstraClient implements ClientModInitializer {
                 ? playerEsp && distanceSq <= playerRangeSq
                 : entity instanceof LivingEntity
                     ? mobEsp && distanceSq <= mobRangeSq
-                    : entity instanceof ItemEntity && itemEsp && distanceSq <= itemRangeSq;
+                    : entity instanceof ItemEntity ? itemEsp && distanceSq <= itemRangeSq
+                    : entity instanceof FireworkRocketEntity && fireworkEsp && distanceSq <= fireworkRangeSq;
             UUID uuid = entity.getUuid();
             seen.add(uuid);
             if (desired) {
