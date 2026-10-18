@@ -291,7 +291,10 @@ public final class AstraModuleOptions {
                     int key = Integer.parseInt(raw);
                     yield Integer.toString(key >= -1 && key <= 348 ? key : -1);
                 }
-                case TEXT -> raw.length() > 64 ? raw.substring(0, 64) : raw;
+                case TEXT -> {
+                    int maxLength = (int)Math.max(1, Math.min(64, option.max()));
+                    yield raw.length() > maxLength ? raw.substring(0, maxLength) : raw;
+                }
                 case COLOR -> {
                     String hex = raw.trim().replace("#", "").toUpperCase(Locale.ROOT);
                     yield COLORS.contains(hex) ? hex : option.defaultValue();
