@@ -99,7 +99,7 @@ public final class AstraModuleOptions {
                 out.add(toggle("only_when_held", "Require Mouse Hold", "Only repeat while the left mouse button is held.", true));
                 out.add(toggle("respect_cooldown", "Respect Attack Cooldown", "Keep vanilla attack cooldown checks enabled.", true));
             }
-            case "playeresp", "mobesp", "itemesp" -> {
+            case "playeresp", "mobesp", "itemesp", "fireworkesp" -> {
                 out.add(slider("render_range", "Render Range", "Maximum distance for this outline module.", "64", 8, 128, 4));
             }
             case "tracers" -> {
@@ -165,9 +165,7 @@ public final class AstraModuleOptions {
             case "cheststealer" -> {
                 out.add(slider("delay_ms", "Loot Delay", "Milliseconds between moved container slots.", "140", 80, 500, 20));
             }
-            case "novelocity" -> {
-                out.add(toggle("players_only", "Local Player Only", "Only cancel velocity updates addressed to you.", true));
-            }
+            case "novelocity", "noweb", "nopush" -> { }
             case "autoeat" -> {
                 out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
             }
