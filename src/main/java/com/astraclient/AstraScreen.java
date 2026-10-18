@@ -140,7 +140,8 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("fastxp", "Fast XP", "Repeats vanilla XP bottle use while you hold right click.", "Inventory", true),
         new ModuleInfo("elytraboost", "Elytra Boost", "Repeats vanilla firework use while gliding and holding right click.", "Movement", true),
         new ModuleInfo("elytraspeed", "Elytra Speed", "Applies a bounded local speed boost while gliding.", "Movement", true),
-        new ModuleInfo("highjump", "High Jump", "Adds a bounded boost to a normal jump.", "Movement", true)
+        new ModuleInfo("highjump", "High Jump", "Adds a bounded boost to a normal jump.", "Movement", true),
+        new ModuleInfo("jumpcircle", "Jump Circle", "Emits a compact particle ring when you jump.", "Render", true)
     );
 
     private String category = "Render";
