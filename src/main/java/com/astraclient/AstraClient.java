@@ -3538,8 +3538,11 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
                 boolean warden = showWardenEsp && entity instanceof net.minecraft.entity.mob.WardenEntity;
                 boolean firework = showFireworkEsp && entity instanceof net.minecraft.entity.projectile.FireworkRocketEntity;
                 if (!warden && !firework) continue;
-                double range = client.player.squaredDistanceTo(entity);
-                if (range > 96.0D * 96.0D) continue;
+                double rangeSq = client.player.squaredDistanceTo(entity);
+                double wardenRange = Math.min(96.0D, AstraModuleOptions.numberValue("wardensesp", "render_range", 96.0D));
+                double fireworkRange = Math.min(96.0D, AstraModuleOptions.numberValue("fireworkesp", "render_range", 96.0D));
+                if (warden && rangeSq > wardenRange * wardenRange) continue;
+                if (firework && rangeSq > fireworkRange * fireworkRange) continue;
                 int tint = warden ? 0xFFB66CFF : 0xFFFFC66E;
                 VertexRendering.drawBox(matrices, lines, entity.getBoundingBox().expand(0.06D),
                     ((tint >> 16) & 255) / 255.0F, ((tint >> 8) & 255) / 255.0F,
