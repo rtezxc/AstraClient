@@ -166,6 +166,9 @@ public final class AstraModuleOptions {
                 out.add(text("trigger_phrase", "Trigger Phrase", "Chat text that should trigger the accept command.", "wants to duel"));
                 out.add(text("command", "Command", "Server command to run, without needing a leading slash.", "accept"));
             }
+            case "elytramotion" -> {
+                out.add(slider("strength", "Glide Correction", "Small forward correction applied while gliding.", "0.015", 0.005, 0.035, 0.005));
+            }
             case "autoleave" -> {
                 out.add(text("trigger_phrase", "Trigger Phrase", "Chat text that should trigger the leave command.", "moderator joined"));
                 out.add(text("command", "Command", "Server command to run, without needing a leading slash.", "hub"));
