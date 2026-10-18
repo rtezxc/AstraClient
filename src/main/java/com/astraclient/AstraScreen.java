@@ -439,17 +439,18 @@ public final class AstraScreen extends Screen {
                     : "No matching modules found.", contentX, listTop + 10, MUTED, false);
             } else {
                 int gap = 10;
-                int cardW = Math.max(70, (contentW - gap) / 2);
+                int columns = contentW >= 260 ? 2 : 1;
+                int cardW = columns == 2 ? Math.max(70, (contentW - gap) / 2) : Math.max(1, contentW);
                 int cardH = 65;
                 int stride = 76;
-                int rows = (visible.size() + 1) / 2;
+                int rows = (visible.size() + columns - 1) / columns;
                 int maxScroll = Math.max(0, rows * stride - viewportH);
                 scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
                 ctx.enableScissor(contentX, listTop, contentX + contentW, listBottom);
 
                 for (int i = 0; i < visible.size(); i++) {
                     ModuleInfo module = visible.get(i);
-                    int col = i % 2, row = i / 2;
+                    int col = i % columns, row = i / columns;
                     int x = contentX + col * (cardW + gap);
                     int y = listTop + row * stride - scrollOffset;
                     if (y + cardH < listTop || y > listBottom) continue;
@@ -1061,7 +1062,8 @@ public final class AstraScreen extends Screen {
         if (mouseY < listTop || mouseY > listBottom) return true;
         List<ModuleInfo> visible = getVisibleModules();
         int viewportH = Math.max(1, listBottom - listTop);
-        int rows = (visible.size() + 1) / 2;
+        int columns = contentW >= 260 ? 2 : 1;
+        int rows = (visible.size() + columns - 1) / columns;
         int maxScroll = Math.max(0, rows * 76 - viewportH);
         int scrollbarX = contentX + contentW - 7;
         if (maxScroll > 0 && mouseX >= scrollbarX && mouseX <= contentX + contentW + 1) {
@@ -1069,13 +1071,14 @@ public final class AstraScreen extends Screen {
             updateListScrollFromMouse(mouseY, listTop, listBottom, rows, maxScroll);
             return true;
         }
-        int gap = 10, cardW = Math.max(70, (contentW - gap) / 2);
+        int gap = 10, columns = contentW >= 260 ? 2 : 1;
+        int cardW = columns == 2 ? Math.max(70, (contentW - gap) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int x = contentX + (i % 2) * (cardW + gap);
-            int y = listTop + (i / 2) * stride - scrollOffset;
+            int x = contentX + (i % columns) * (cardW + gap);
+            int y = listTop + (i / columns) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 // The star is a one-tap shortcut for pinning frequently used modules.
                 if (mouseX >= x + cardW - 21 && mouseX <= x + cardW - 4
@@ -1143,15 +1146,16 @@ public final class AstraScreen extends Screen {
         int listTop = top + 105, listBottom = top + panelH - 43;
         if (!inside(mouseX, mouseY, contentX, listTop, contentW, Math.max(1, listBottom - listTop))) return true;
         List<ModuleInfo> visible = getVisibleModules();
-        int cardW = Math.max(70, (contentW - 10) / 2);
+        int columns = contentW >= 260 ? 2 : 1;
+        int cardW = columns == 2 ? Math.max(70, (contentW - 10) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         int viewportH = Math.max(1, listBottom - listTop);
-        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        int maxScroll = Math.max(0, ((visible.size() + columns - 1) / columns) * stride - viewportH);
         scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int x = contentX + (i % 2) * (cardW + 10);
-            int y = listTop + (i / 2) * stride - scrollOffset;
+            int x = contentX + (i % columns) * (cardW + 10);
+            int y = listTop + (i / columns) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 contextMenuModuleId = null;
                 searchFocused = false;
@@ -1179,15 +1183,16 @@ public final class AstraScreen extends Screen {
             return true;
         }
         List<ModuleInfo> visible = getVisibleModules();
-        int cardW = Math.max(70, (contentW - 10) / 2);
+        int columns = contentW >= 260 ? 2 : 1;
+        int cardW = columns == 2 ? Math.max(70, (contentW - 10) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         int viewportH = Math.max(1, listBottom - listTop);
-        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        int maxScroll = Math.max(0, ((visible.size() + columns - 1) / columns) * stride - viewportH);
         scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int x = contentX + (i % 2) * (cardW + 10);
-            int y = listTop + (i / 2) * stride - scrollOffset;
+            int x = contentX + (i % columns) * (cardW + 10);
+            int y = listTop + (i / columns) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 contextMenuModuleId = module.id;
                 contextMenuX = (int) mouseX;
@@ -1433,15 +1438,16 @@ public final class AstraScreen extends Screen {
         int listTop = top + 105, listBottom = top + panelH - 43;
         if (mouseY < listTop || mouseY > listBottom) return true;
         List<ModuleInfo> visible = getVisibleModules();
-        int cardW = Math.max(70, (contentW - 10) / 2);
+        int columns = contentW >= 260 ? 2 : 1;
+        int cardW = columns == 2 ? Math.max(70, (contentW - 10) / 2) : Math.max(1, contentW);
         int stride = 76, cardH = 65;
         int viewportH = Math.max(1, listBottom - listTop);
-        int maxScroll = Math.max(0, ((visible.size() + 1) / 2) * stride - viewportH);
+        int maxScroll = Math.max(0, ((visible.size() + columns - 1) / columns) * stride - viewportH);
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
         for (int i = 0; i < visible.size(); i++) {
             ModuleInfo module = visible.get(i);
-            int x = contentX + (i % 2) * (cardW + 10);
-            int y = listTop + (i / 2) * stride - scrollOffset;
+            int x = contentX + (i % columns) * (cardW + 10);
+            int y = listTop + (i / columns) * stride - scrollOffset;
             if (inside(mouseX, mouseY, x, y, cardW, cardH)) {
                 if (module.implemented) {
                     captureKeybindId = module.id;
@@ -1457,11 +1463,13 @@ public final class AstraScreen extends Screen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (button == 0 && draggingListScrollbar) {
-            int panelH = panelHeight();
+            int panelW = panelWidth(), panelH = panelHeight();
+            int sideW = sidebarWidth(panelW), contentW = panelW - sideW - 34;
+            int columns = contentW >= 260 ? 2 : 1;
             int top = panelTop(panelH) + renderOffsetY;
             int listTop = top + 105, listBottom = top + panelH - 43;
             List<ModuleInfo> visible = getVisibleModules();
-            int rows = (visible.size() + 1) / 2;
+            int rows = (visible.size() + columns - 1) / columns;
             int maxScroll = Math.max(0, rows * 76 - Math.max(1, listBottom - listTop));
             if (maxScroll > 0) updateListScrollFromMouse(mouseY, listTop, listBottom, rows, maxScroll);
             return true;
@@ -1539,7 +1547,8 @@ public final class AstraScreen extends Screen {
             }
             int viewportH = Math.max(1, listBottom - listTop);
             List<ModuleInfo> visible = getVisibleModules();
-            int rows = (visible.size() + 1) / 2;
+            int columns = contentW >= 260 ? 2 : 1;
+            int rows = (visible.size() + columns - 1) / columns;
             int maxScroll = Math.max(0, rows * 76 - viewportH);
             scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset - (int) (verticalAmount * 38)));
             return true;
