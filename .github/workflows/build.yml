@@ -1,8 +1,10 @@
 name: Build Astra Client
-# Build and inspect the distributable mod JAR on every main-branch update.
+# Build and inspect the distributable mod JAR on main updates and pull requests.
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -19,6 +21,19 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check patch whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            git diff --check "origin/${GITHUB_BASE_REF}...HEAD"
+          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          fi
 
       - name: Set up Java 21
         uses: actions/setup-java@v5
@@ -109,6 +124,24 @@ jobs:
               sys.exit("ERROR: slider/text preview controls are not wired")
           if "searchCursor" not in screen or "GLFW_KEY_DELETE" not in screen or "GLFW_KEY_HOME" not in screen:
               sys.exit("ERROR: module search does not provide cursor-aware text editing")
+
+          # Closing animation must freeze interactive mutations until the screen exits.
+          for handler in ("mouseDragged", "mouseScrolled", "charTyped", "keyPressed"):
+              match = re.search(r"public boolean " + handler + r"\s*\([^)]*\)\s*\{(.*?)\n    \}", screen, re.S)
+              if not match or "if (closing) return true;" not in match.group(1):
+                  sys.exit(f"ERROR: {handler} does not guard input while the GUI is closing")
+          release = re.search(r"public boolean mouseReleased\s*\([^)]*\)\s*\{(.*?)\n    \}", screen, re.S)
+          if not release or "if (closing)" not in release.group(1) or "draggingListScrollbar = false;" not in release.group(1):
+              sys.exit("ERROR: mouse release does not safely clear drag state during close animation")
+
+          # Transition timing must be monotonic and progress must be clamped.
+          for token in ("System.nanoTime()", "OPEN_DURATION_NANOS", "CLOSE_DURATION_NANOS", "clamp01(", "Float.isFinite(value)"):
+              if token not in screen:
+                  sys.exit(f"ERROR: GUI animation safety token {token} is missing")
+          if "System.currentTimeMillis()" in screen:
+              sys.exit("ERROR: GUI transition timing still depends on the wall clock")
+          if "clockNow / 1_000_000L" not in screen:
+              sys.exit("ERROR: ambient GUI effects must retain millisecond timing after switching to nanoTime")
           if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
               sys.exit("ERROR: long advanced text settings do not keep the caret visible")
           if "AstraModuleOptions.resetModule(moduleId)" not in client:
