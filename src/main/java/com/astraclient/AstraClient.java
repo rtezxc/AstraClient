@@ -2755,11 +2755,12 @@ public final class AstraClient implements ClientModInitializer {
 
             int syncId = player.currentScreenHandler.syncId;
             if (!equipped.isEmpty()) {
+                // PlayerScreenHandler armor slots are ordered head, chest, legs, feet.
                 int armorHandlerSlot = switch (equipmentSlot) {
-                    case FEET -> 5;
-                    case LEGS -> 6;
-                    case CHEST -> 7;
-                    case HEAD -> 8;
+                    case HEAD -> 5;
+                    case CHEST -> 6;
+                    case LEGS -> 7;
+                    case FEET -> 8;
                     default -> -1;
                 };
                 if (armorHandlerSlot >= 0) {
