@@ -172,6 +172,9 @@ public final class AstraModuleOptions {
             case "cheststealer" -> {
                 out.add(slider("delay_ms", "Loot Delay", "Milliseconds between moved container slots.", "140", 80, 500, 20));
             }
+            case "nameprotect" -> {
+                out.add(text("alias", "Display Alias", "Name to display instead of your own username in local chat.", "Astra"));
+            }
             case "novelocity", "noweb", "nopush", "noclip", "nojumpdelay" -> { }
             case "autoeat" -> {
                 out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
