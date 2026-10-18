@@ -66,6 +66,7 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("autofish", "Auto Fish", "Reels in when the fishing bobber visibly dips.", "World", true),
         new ModuleInfo("elytraboost", "Elytra Boost", "Uses a hotbar firework while gliding, with a cooldown.", "Movement", true),
         new ModuleInfo("elytraswap", "Elytra Swap", "Equips an elytra for flight and restores a chestplate after landing.", "Inventory", true),
+        new ModuleInfo("clickpearl", "Click Pearl", "Uses an ender pearl on a fresh right-click and restores your previous hotbar slot.", "Combat", true),
         new ModuleInfo("wardensesp", "Warden ESP", "Outlines nearby Wardens.", "Render", true),
         new ModuleInfo("fireworkesp", "Firework ESP", "Outlines nearby firework rockets.", "Render", true),
         new ModuleInfo("antiknockback", "Anti Knockback", "Reduces horizontal knockback.", "Combat", true),
