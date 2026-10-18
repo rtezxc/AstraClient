@@ -4,6 +4,8 @@ name: Build Astra Client
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -65,7 +67,750 @@ jobs:
           grep -q '^com/astraclient/mixin/AstraFastBreakMixin.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraNoWeatherMixin.class$' /tmp/jar-contents.txt
           grep -q '^com/astraclient/mixin/AstraOverlayRemovalMixin.class$' /tmp/jar-contents.txt
-          grep -q '^com/astraclient/mixin/AstraFireOverlayMixin.class$' /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraFireOverlayMixin.class
+          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraOverlayRemovalMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFireOverlayMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoVelocityMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWebMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoPushMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraAutoFishMixin"'
+
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          root = pathlib.Path("src/main/java/com/astraclient")
+          client = (root / "AstraClient.java").read_text(encoding="utf-8")
+          screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+          options = (root / "AstraModuleOptions.java").read_text(encoding="utf-8")
+          options_screen = (root / "AstraModuleOptionsScreen.java").read_text(encoding="utf-8")
+          module_screen = (root / "AstraModuleSettingsScreen.java").read_text(encoding="utf-8")
+
+          # The typed settings engine must expose every required control and persist values.
+          for control_type in ("TOGGLE", "DROPDOWN", "SLIDER", "MULTI_SELECT", "KEYBIND", "TEXT", "COLOR", "MODE"):
+              if f"{control_type}" not in options:
+                  sys.exit(f"ERROR: typed module setting control {control_type} is missing")
+          if "AstraModuleOptions.load(properties)" not in client or "AstraModuleOptions.save(properties)" not in client:
+              sys.exit("ERROR: module options are not integrated with persistent config load/save")
+          if "new AstraModuleOptionsScreen" not in module_screen:
+              sys.exit("ERROR: module settings page does not link to advanced options")
+          if "openModuleSettings(mouseX, mouseY)" not in screen or "hasShiftDown()" not in screen:
+              sys.exit("ERROR: right-click settings navigation or Shift-right-click context menu is missing")
+          for required_setting in ('"attack_mode"', '"attack_range"', '"rotation_mode"', '"target_priority"',
+                                   '"target_types"', '"show_target"', '"attack_effects"'):
+              if required_setting not in options:
+                  sys.exit(f"ERROR: Kill Aura setting {required_setting} is missing")
+          for required_module in ("autoarmor", "autofish", "cheststealer", "novelocity", "noweb", "nopush", "fireworkesp", "autojump", "noclip"):
+              if f'MODULES.put("{required_module}"' not in client:
+                  sys.exit(f"ERROR: Obsidian-inspired module {required_module} is not registered")
+              if f'new ModuleInfo("{required_module}"' not in screen:
+                  sys.exit(f"ERROR: Obsidian-inspired module {required_module} is not present in the GUI")
+          for runtime_hook in ("updateAutoArmor", "updateAutoFish", "updateChestStealer", "updateNoClip", "updateAutoJump", "applyKillAuraRotation", "selectedTargets"):
+              if runtime_hook not in client:
+                  sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
+          if "AstraModuleOptions.previewValue" not in options_screen:
+              sys.exit("ERROR: slider/text preview controls are not wired")
+          if "searchCursor" not in screen or "GLFW_KEY_DELETE" not in screen or "GLFW_KEY_HOME" not in screen:
+              sys.exit("ERROR: module search does not provide cursor-aware text editing")
+          if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
+              sys.exit("ERROR: long advanced text settings do not keep the caret visible")
+          if "AstraModuleOptions.resetModule(moduleId)" not in client:
+              sys.exit("ERROR: per-module setting reset does not clear stored overrides")
+          if 'AstraClient.resetModuleSettings(moduleId)' not in module_screen or '"RESET SETTINGS"' not in module_screen:
+              sys.exit("ERROR: module reset button label and action do not match")
+
+          overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
+          fire_mixin = (root / "mixin" / "AstraFireOverlayMixin.java").read_text(encoding="utf-8")
+
+          overlay_ids = (
+              "nopumpkinoverlay", "nofireoverlay", "noportaloverlay",
+              "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay",
+              "novignette", "noscoreboard",
+          )
+          for module_id in overlay_ids:
+              if f'MODULES.put("{module_id}", false)' not in client:
+                  sys.exit(f"ERROR: overlay module {module_id} is not registered")
+              if f'new ModuleInfo("{module_id}"' not in screen:
+                  sys.exit(f"ERROR: overlay module {module_id} is missing from the GUI")
+              active_source = fire_mixin if module_id == "nofireoverlay" else overlay_mixin
+              if f'isEnabled("{module_id}")' not in active_source:
+                  sys.exit(f"ERROR: overlay module {module_id} has no active mixin behavior")
+
+          # The custom background must remain opt-out-able for renderer troubleshooting.
+          if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
+              sys.exit("ERROR: menu background setting is not persisted/toggleable")
+          if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
+              sys.exit("ERROR: menu background setting is missing from the GUI")
+          import_backup = client[client.index("public static void importConfigBackup()"):client.index("private static void loadConfig()")]
+          if 'resolveSibling("astraclient.properties.bak")' not in import_backup:
+              sys.exit("ERROR: config backup import does not use the backup written by the config saver")
+          if client.count('resolveSibling("astraclient.properties.bak")') < 2:
+              sys.exit("ERROR: config backup saver/import paths do not match")
+          if "validateConfigProperties(validation)" not in import_backup:
+              sys.exit("ERROR: config backups are not validated before import")
+          if "Files.createTempFile(configDirectory, \"astraclient-import-\"" not in import_backup:
+              sys.exit("ERROR: backup import does not stage the file before replacement")
+          if "StandardCopyOption.ATOMIC_MOVE" not in import_backup:
+              sys.exit("ERROR: backup import does not attempt an atomic replacement")
+          if '"pvpmode.previous."' not in client:
+              sys.exit("ERROR: PvP Mode previous module states are not persisted")
+          if 'customMenuBackground = true;' not in client or 'reducedMotion = false;' not in client:
+              sys.exit("ERROR: reset defaults does not restore all persisted motion/background preferences")
+          if 'new ConfirmScreen(' not in screen or '"Reset all Astra settings?"' not in screen:
+              sys.exit("ERROR: destructive settings reset is not protected by confirmation")
+          if "PVP_MODE_PREVIOUS_STATES.clear()" not in client or "PVP_MODE_PREVIOUS_STATES.put(id, Boolean.parseBoolean(savedState))" not in client:
+              sys.exit("ERROR: PvP Mode previous states are not restored from config")
+          if '"ui.reducedMotion"' not in client or 'isReducedMotionEnabled()' not in client:
+              sys.exit("ERROR: reduced-motion preference is not persisted")
+          if '"Reduced motion"' not in screen or 'toggleReducedMotion()' not in screen:
+              sys.exit("ERROR: reduced-motion setting is missing from the GUI")
+          ui_effects = (root / "AstraUiEffects.java").read_text(encoding="utf-8")
+          background = (root / "AstraBackgroundRenderer.java").read_text(encoding="utf-8")
+          if 'isReducedMotionEnabled()' not in ui_effects or 'isReducedMotionEnabled()' not in background:
+              sys.exit("ERROR: animated backgrounds ignore reduced-motion preference")
+          for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
+              mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
+              if "isCustomMenuBackgroundEnabled()" not in mixin_source:
+                  sys.exit(f"ERROR: {mixin_name} ignores the background fallback setting")
+
+          # Restrict registry parsing to the static initializer, where modules are registered.
+          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
+          if not static:
+              sys.exit("ERROR: AstraClient module registry initializer not found")
+          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
+          gui = re.findall(
+              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
+              screen,
+          )
+
+          if len(registered) != len(set(registered)):
+              duplicates = sorted({item for item in registered if registered.count(item) > 1})
+              sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
+          gui_ids = [item[0] for item in gui]
+          if len(gui_ids) != len(set(gui_ids)):
+              duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
+              sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
+
+          registered_set = set(registered)
+          gui_set = set(gui_ids)
+          implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
+          missing_registration = sorted(implemented - registered_set)
+          missing_gui = sorted(registered_set - gui_set)
+          if missing_registration:
+              sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
+          if missing_gui:
+              sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
+
+          print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
+          print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
+          PY
+
+          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified production JAR only
+        uses: actions/upload-artifact@v7
+        with:
+          name: AstraClient-1.21.4-JAR
+          path: ${{ steps.verify.outputs.jar_file }}
+          if-no-files-found: error
+          retention-days: 14
+ /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraNoVelocityMixin.class
+          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraOverlayRemovalMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFireOverlayMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
+
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          root = pathlib.Path("src/main/java/com/astraclient")
+          client = (root / "AstraClient.java").read_text(encoding="utf-8")
+          screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+          options = (root / "AstraModuleOptions.java").read_text(encoding="utf-8")
+          options_screen = (root / "AstraModuleOptionsScreen.java").read_text(encoding="utf-8")
+          module_screen = (root / "AstraModuleSettingsScreen.java").read_text(encoding="utf-8")
+
+          # The typed settings engine must expose every required control and persist values.
+          for control_type in ("TOGGLE", "DROPDOWN", "SLIDER", "MULTI_SELECT", "KEYBIND", "TEXT", "COLOR", "MODE"):
+              if f"{control_type}" not in options:
+                  sys.exit(f"ERROR: typed module setting control {control_type} is missing")
+          if "AstraModuleOptions.load(properties)" not in client or "AstraModuleOptions.save(properties)" not in client:
+              sys.exit("ERROR: module options are not integrated with persistent config load/save")
+          if "new AstraModuleOptionsScreen" not in module_screen:
+              sys.exit("ERROR: module settings page does not link to advanced options")
+          if "openModuleSettings(mouseX, mouseY)" not in screen or "hasShiftDown()" not in screen:
+              sys.exit("ERROR: right-click settings navigation or Shift-right-click context menu is missing")
+          for required_setting in ('"attack_mode"', '"attack_range"', '"rotation_mode"', '"target_priority"',
+                                   '"target_types"', '"show_target"', '"attack_effects"'):
+              if required_setting not in options:
+                  sys.exit(f"ERROR: Kill Aura setting {required_setting} is missing")
+          for runtime_hook in ("shouldWaitForCritical", "applyKillAuraRotation", "selectedTargets"):
+              if runtime_hook not in client:
+                  sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
+          if "AstraModuleOptions.previewValue" not in options_screen:
+              sys.exit("ERROR: slider/text preview controls are not wired")
+          if "searchCursor" not in screen or "GLFW_KEY_DELETE" not in screen or "GLFW_KEY_HOME" not in screen:
+              sys.exit("ERROR: module search does not provide cursor-aware text editing")
+          if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
+              sys.exit("ERROR: long advanced text settings do not keep the caret visible")
+          if "AstraModuleOptions.resetModule(moduleId)" not in client:
+              sys.exit("ERROR: per-module setting reset does not clear stored overrides")
+          if 'AstraClient.resetModuleSettings(moduleId)' not in module_screen or '"RESET SETTINGS"' not in module_screen:
+              sys.exit("ERROR: module reset button label and action do not match")
+
+          overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
+          fire_mixin = (root / "mixin" / "AstraFireOverlayMixin.java").read_text(encoding="utf-8")
+
+          overlay_ids = (
+              "nopumpkinoverlay", "nofireoverlay", "noportaloverlay",
+              "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay",
+              "novignette", "noscoreboard",
+          )
+          for module_id in overlay_ids:
+              if f'MODULES.put("{module_id}", false)' not in client:
+                  sys.exit(f"ERROR: overlay module {module_id} is not registered")
+              if f'new ModuleInfo("{module_id}"' not in screen:
+                  sys.exit(f"ERROR: overlay module {module_id} is missing from the GUI")
+              active_source = fire_mixin if module_id == "nofireoverlay" else overlay_mixin
+              if f'isEnabled("{module_id}")' not in active_source:
+                  sys.exit(f"ERROR: overlay module {module_id} has no active mixin behavior")
+
+          # The custom background must remain opt-out-able for renderer troubleshooting.
+          if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
+              sys.exit("ERROR: menu background setting is not persisted/toggleable")
+          if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
+              sys.exit("ERROR: menu background setting is missing from the GUI")
+          import_backup = client[client.index("public static void importConfigBackup()"):client.index("private static void loadConfig()")]
+          if 'resolveSibling("astraclient.properties.bak")' not in import_backup:
+              sys.exit("ERROR: config backup import does not use the backup written by the config saver")
+          if client.count('resolveSibling("astraclient.properties.bak")') < 2:
+              sys.exit("ERROR: config backup saver/import paths do not match")
+          if "validateConfigProperties(validation)" not in import_backup:
+              sys.exit("ERROR: config backups are not validated before import")
+          if "Files.createTempFile(configDirectory, \"astraclient-import-\"" not in import_backup:
+              sys.exit("ERROR: backup import does not stage the file before replacement")
+          if "StandardCopyOption.ATOMIC_MOVE" not in import_backup:
+              sys.exit("ERROR: backup import does not attempt an atomic replacement")
+          if '"pvpmode.previous."' not in client:
+              sys.exit("ERROR: PvP Mode previous module states are not persisted")
+          if 'customMenuBackground = true;' not in client or 'reducedMotion = false;' not in client:
+              sys.exit("ERROR: reset defaults does not restore all persisted motion/background preferences")
+          if 'new ConfirmScreen(' not in screen or '"Reset all Astra settings?"' not in screen:
+              sys.exit("ERROR: destructive settings reset is not protected by confirmation")
+          if "PVP_MODE_PREVIOUS_STATES.clear()" not in client or "PVP_MODE_PREVIOUS_STATES.put(id, Boolean.parseBoolean(savedState))" not in client:
+              sys.exit("ERROR: PvP Mode previous states are not restored from config")
+          if '"ui.reducedMotion"' not in client or 'isReducedMotionEnabled()' not in client:
+              sys.exit("ERROR: reduced-motion preference is not persisted")
+          if '"Reduced motion"' not in screen or 'toggleReducedMotion()' not in screen:
+              sys.exit("ERROR: reduced-motion setting is missing from the GUI")
+          ui_effects = (root / "AstraUiEffects.java").read_text(encoding="utf-8")
+          background = (root / "AstraBackgroundRenderer.java").read_text(encoding="utf-8")
+          if 'isReducedMotionEnabled()' not in ui_effects or 'isReducedMotionEnabled()' not in background:
+              sys.exit("ERROR: animated backgrounds ignore reduced-motion preference")
+          for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
+              mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
+              if "isCustomMenuBackgroundEnabled()" not in mixin_source:
+                  sys.exit(f"ERROR: {mixin_name} ignores the background fallback setting")
+
+          # Restrict registry parsing to the static initializer, where modules are registered.
+          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
+          if not static:
+              sys.exit("ERROR: AstraClient module registry initializer not found")
+          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
+          gui = re.findall(
+              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
+              screen,
+          )
+
+          if len(registered) != len(set(registered)):
+              duplicates = sorted({item for item in registered if registered.count(item) > 1})
+              sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
+          gui_ids = [item[0] for item in gui]
+          if len(gui_ids) != len(set(gui_ids)):
+              duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
+              sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
+
+          registered_set = set(registered)
+          gui_set = set(gui_ids)
+          implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
+          missing_registration = sorted(implemented - registered_set)
+          missing_gui = sorted(registered_set - gui_set)
+          if missing_registration:
+              sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
+          if missing_gui:
+              sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
+
+          print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
+          print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
+          PY
+
+          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified production JAR only
+        uses: actions/upload-artifact@v7
+        with:
+          name: AstraClient-1.21.4-JAR
+          path: ${{ steps.verify.outputs.jar_file }}
+          if-no-files-found: error
+          retention-days: 14
+ /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraNoWebMixin.class
+          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraOverlayRemovalMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFireOverlayMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
+
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          root = pathlib.Path("src/main/java/com/astraclient")
+          client = (root / "AstraClient.java").read_text(encoding="utf-8")
+          screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+          options = (root / "AstraModuleOptions.java").read_text(encoding="utf-8")
+          options_screen = (root / "AstraModuleOptionsScreen.java").read_text(encoding="utf-8")
+          module_screen = (root / "AstraModuleSettingsScreen.java").read_text(encoding="utf-8")
+
+          # The typed settings engine must expose every required control and persist values.
+          for control_type in ("TOGGLE", "DROPDOWN", "SLIDER", "MULTI_SELECT", "KEYBIND", "TEXT", "COLOR", "MODE"):
+              if f"{control_type}" not in options:
+                  sys.exit(f"ERROR: typed module setting control {control_type} is missing")
+          if "AstraModuleOptions.load(properties)" not in client or "AstraModuleOptions.save(properties)" not in client:
+              sys.exit("ERROR: module options are not integrated with persistent config load/save")
+          if "new AstraModuleOptionsScreen" not in module_screen:
+              sys.exit("ERROR: module settings page does not link to advanced options")
+          if "openModuleSettings(mouseX, mouseY)" not in screen or "hasShiftDown()" not in screen:
+              sys.exit("ERROR: right-click settings navigation or Shift-right-click context menu is missing")
+          for required_setting in ('"attack_mode"', '"attack_range"', '"rotation_mode"', '"target_priority"',
+                                   '"target_types"', '"show_target"', '"attack_effects"'):
+              if required_setting not in options:
+                  sys.exit(f"ERROR: Kill Aura setting {required_setting} is missing")
+          for runtime_hook in ("shouldWaitForCritical", "applyKillAuraRotation", "selectedTargets"):
+              if runtime_hook not in client:
+                  sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
+          if "AstraModuleOptions.previewValue" not in options_screen:
+              sys.exit("ERROR: slider/text preview controls are not wired")
+          if "searchCursor" not in screen or "GLFW_KEY_DELETE" not in screen or "GLFW_KEY_HOME" not in screen:
+              sys.exit("ERROR: module search does not provide cursor-aware text editing")
+          if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
+              sys.exit("ERROR: long advanced text settings do not keep the caret visible")
+          if "AstraModuleOptions.resetModule(moduleId)" not in client:
+              sys.exit("ERROR: per-module setting reset does not clear stored overrides")
+          if 'AstraClient.resetModuleSettings(moduleId)' not in module_screen or '"RESET SETTINGS"' not in module_screen:
+              sys.exit("ERROR: module reset button label and action do not match")
+
+          overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
+          fire_mixin = (root / "mixin" / "AstraFireOverlayMixin.java").read_text(encoding="utf-8")
+
+          overlay_ids = (
+              "nopumpkinoverlay", "nofireoverlay", "noportaloverlay",
+              "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay",
+              "novignette", "noscoreboard",
+          )
+          for module_id in overlay_ids:
+              if f'MODULES.put("{module_id}", false)' not in client:
+                  sys.exit(f"ERROR: overlay module {module_id} is not registered")
+              if f'new ModuleInfo("{module_id}"' not in screen:
+                  sys.exit(f"ERROR: overlay module {module_id} is missing from the GUI")
+              active_source = fire_mixin if module_id == "nofireoverlay" else overlay_mixin
+              if f'isEnabled("{module_id}")' not in active_source:
+                  sys.exit(f"ERROR: overlay module {module_id} has no active mixin behavior")
+
+          # The custom background must remain opt-out-able for renderer troubleshooting.
+          if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
+              sys.exit("ERROR: menu background setting is not persisted/toggleable")
+          if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
+              sys.exit("ERROR: menu background setting is missing from the GUI")
+          import_backup = client[client.index("public static void importConfigBackup()"):client.index("private static void loadConfig()")]
+          if 'resolveSibling("astraclient.properties.bak")' not in import_backup:
+              sys.exit("ERROR: config backup import does not use the backup written by the config saver")
+          if client.count('resolveSibling("astraclient.properties.bak")') < 2:
+              sys.exit("ERROR: config backup saver/import paths do not match")
+          if "validateConfigProperties(validation)" not in import_backup:
+              sys.exit("ERROR: config backups are not validated before import")
+          if "Files.createTempFile(configDirectory, \"astraclient-import-\"" not in import_backup:
+              sys.exit("ERROR: backup import does not stage the file before replacement")
+          if "StandardCopyOption.ATOMIC_MOVE" not in import_backup:
+              sys.exit("ERROR: backup import does not attempt an atomic replacement")
+          if '"pvpmode.previous."' not in client:
+              sys.exit("ERROR: PvP Mode previous module states are not persisted")
+          if 'customMenuBackground = true;' not in client or 'reducedMotion = false;' not in client:
+              sys.exit("ERROR: reset defaults does not restore all persisted motion/background preferences")
+          if 'new ConfirmScreen(' not in screen or '"Reset all Astra settings?"' not in screen:
+              sys.exit("ERROR: destructive settings reset is not protected by confirmation")
+          if "PVP_MODE_PREVIOUS_STATES.clear()" not in client or "PVP_MODE_PREVIOUS_STATES.put(id, Boolean.parseBoolean(savedState))" not in client:
+              sys.exit("ERROR: PvP Mode previous states are not restored from config")
+          if '"ui.reducedMotion"' not in client or 'isReducedMotionEnabled()' not in client:
+              sys.exit("ERROR: reduced-motion preference is not persisted")
+          if '"Reduced motion"' not in screen or 'toggleReducedMotion()' not in screen:
+              sys.exit("ERROR: reduced-motion setting is missing from the GUI")
+          ui_effects = (root / "AstraUiEffects.java").read_text(encoding="utf-8")
+          background = (root / "AstraBackgroundRenderer.java").read_text(encoding="utf-8")
+          if 'isReducedMotionEnabled()' not in ui_effects or 'isReducedMotionEnabled()' not in background:
+              sys.exit("ERROR: animated backgrounds ignore reduced-motion preference")
+          for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
+              mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
+              if "isCustomMenuBackgroundEnabled()" not in mixin_source:
+                  sys.exit(f"ERROR: {mixin_name} ignores the background fallback setting")
+
+          # Restrict registry parsing to the static initializer, where modules are registered.
+          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
+          if not static:
+              sys.exit("ERROR: AstraClient module registry initializer not found")
+          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
+          gui = re.findall(
+              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
+              screen,
+          )
+
+          if len(registered) != len(set(registered)):
+              duplicates = sorted({item for item in registered if registered.count(item) > 1})
+              sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
+          gui_ids = [item[0] for item in gui]
+          if len(gui_ids) != len(set(gui_ids)):
+              duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
+              sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
+
+          registered_set = set(registered)
+          gui_set = set(gui_ids)
+          implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
+          missing_registration = sorted(implemented - registered_set)
+          missing_gui = sorted(registered_set - gui_set)
+          if missing_registration:
+              sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
+          if missing_gui:
+              sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
+
+          print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
+          print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
+          PY
+
+          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified production JAR only
+        uses: actions/upload-artifact@v7
+        with:
+          name: AstraClient-1.21.4-JAR
+          path: ${{ steps.verify.outputs.jar_file }}
+          if-no-files-found: error
+          retention-days: 14
+ /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraNoPushMixin.class
+          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraOverlayRemovalMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFireOverlayMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
+
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          root = pathlib.Path("src/main/java/com/astraclient")
+          client = (root / "AstraClient.java").read_text(encoding="utf-8")
+          screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+          options = (root / "AstraModuleOptions.java").read_text(encoding="utf-8")
+          options_screen = (root / "AstraModuleOptionsScreen.java").read_text(encoding="utf-8")
+          module_screen = (root / "AstraModuleSettingsScreen.java").read_text(encoding="utf-8")
+
+          # The typed settings engine must expose every required control and persist values.
+          for control_type in ("TOGGLE", "DROPDOWN", "SLIDER", "MULTI_SELECT", "KEYBIND", "TEXT", "COLOR", "MODE"):
+              if f"{control_type}" not in options:
+                  sys.exit(f"ERROR: typed module setting control {control_type} is missing")
+          if "AstraModuleOptions.load(properties)" not in client or "AstraModuleOptions.save(properties)" not in client:
+              sys.exit("ERROR: module options are not integrated with persistent config load/save")
+          if "new AstraModuleOptionsScreen" not in module_screen:
+              sys.exit("ERROR: module settings page does not link to advanced options")
+          if "openModuleSettings(mouseX, mouseY)" not in screen or "hasShiftDown()" not in screen:
+              sys.exit("ERROR: right-click settings navigation or Shift-right-click context menu is missing")
+          for required_setting in ('"attack_mode"', '"attack_range"', '"rotation_mode"', '"target_priority"',
+                                   '"target_types"', '"show_target"', '"attack_effects"'):
+              if required_setting not in options:
+                  sys.exit(f"ERROR: Kill Aura setting {required_setting} is missing")
+          for runtime_hook in ("shouldWaitForCritical", "applyKillAuraRotation", "selectedTargets"):
+              if runtime_hook not in client:
+                  sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
+          if "AstraModuleOptions.previewValue" not in options_screen:
+              sys.exit("ERROR: slider/text preview controls are not wired")
+          if "searchCursor" not in screen or "GLFW_KEY_DELETE" not in screen or "GLFW_KEY_HOME" not in screen:
+              sys.exit("ERROR: module search does not provide cursor-aware text editing")
+          if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
+              sys.exit("ERROR: long advanced text settings do not keep the caret visible")
+          if "AstraModuleOptions.resetModule(moduleId)" not in client:
+              sys.exit("ERROR: per-module setting reset does not clear stored overrides")
+          if 'AstraClient.resetModuleSettings(moduleId)' not in module_screen or '"RESET SETTINGS"' not in module_screen:
+              sys.exit("ERROR: module reset button label and action do not match")
+
+          overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
+          fire_mixin = (root / "mixin" / "AstraFireOverlayMixin.java").read_text(encoding="utf-8")
+
+          overlay_ids = (
+              "nopumpkinoverlay", "nofireoverlay", "noportaloverlay",
+              "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay",
+              "novignette", "noscoreboard",
+          )
+          for module_id in overlay_ids:
+              if f'MODULES.put("{module_id}", false)' not in client:
+                  sys.exit(f"ERROR: overlay module {module_id} is not registered")
+              if f'new ModuleInfo("{module_id}"' not in screen:
+                  sys.exit(f"ERROR: overlay module {module_id} is missing from the GUI")
+              active_source = fire_mixin if module_id == "nofireoverlay" else overlay_mixin
+              if f'isEnabled("{module_id}")' not in active_source:
+                  sys.exit(f"ERROR: overlay module {module_id} has no active mixin behavior")
+
+          # The custom background must remain opt-out-able for renderer troubleshooting.
+          if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
+              sys.exit("ERROR: menu background setting is not persisted/toggleable")
+          if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
+              sys.exit("ERROR: menu background setting is missing from the GUI")
+          import_backup = client[client.index("public static void importConfigBackup()"):client.index("private static void loadConfig()")]
+          if 'resolveSibling("astraclient.properties.bak")' not in import_backup:
+              sys.exit("ERROR: config backup import does not use the backup written by the config saver")
+          if client.count('resolveSibling("astraclient.properties.bak")') < 2:
+              sys.exit("ERROR: config backup saver/import paths do not match")
+          if "validateConfigProperties(validation)" not in import_backup:
+              sys.exit("ERROR: config backups are not validated before import")
+          if "Files.createTempFile(configDirectory, \"astraclient-import-\"" not in import_backup:
+              sys.exit("ERROR: backup import does not stage the file before replacement")
+          if "StandardCopyOption.ATOMIC_MOVE" not in import_backup:
+              sys.exit("ERROR: backup import does not attempt an atomic replacement")
+          if '"pvpmode.previous."' not in client:
+              sys.exit("ERROR: PvP Mode previous module states are not persisted")
+          if 'customMenuBackground = true;' not in client or 'reducedMotion = false;' not in client:
+              sys.exit("ERROR: reset defaults does not restore all persisted motion/background preferences")
+          if 'new ConfirmScreen(' not in screen or '"Reset all Astra settings?"' not in screen:
+              sys.exit("ERROR: destructive settings reset is not protected by confirmation")
+          if "PVP_MODE_PREVIOUS_STATES.clear()" not in client or "PVP_MODE_PREVIOUS_STATES.put(id, Boolean.parseBoolean(savedState))" not in client:
+              sys.exit("ERROR: PvP Mode previous states are not restored from config")
+          if '"ui.reducedMotion"' not in client or 'isReducedMotionEnabled()' not in client:
+              sys.exit("ERROR: reduced-motion preference is not persisted")
+          if '"Reduced motion"' not in screen or 'toggleReducedMotion()' not in screen:
+              sys.exit("ERROR: reduced-motion setting is missing from the GUI")
+          ui_effects = (root / "AstraUiEffects.java").read_text(encoding="utf-8")
+          background = (root / "AstraBackgroundRenderer.java").read_text(encoding="utf-8")
+          if 'isReducedMotionEnabled()' not in ui_effects or 'isReducedMotionEnabled()' not in background:
+              sys.exit("ERROR: animated backgrounds ignore reduced-motion preference")
+          for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
+              mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
+              if "isCustomMenuBackgroundEnabled()" not in mixin_source:
+                  sys.exit(f"ERROR: {mixin_name} ignores the background fallback setting")
+
+          # Restrict registry parsing to the static initializer, where modules are registered.
+          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
+          if not static:
+              sys.exit("ERROR: AstraClient module registry initializer not found")
+          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
+          gui = re.findall(
+              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
+              screen,
+          )
+
+          if len(registered) != len(set(registered)):
+              duplicates = sorted({item for item in registered if registered.count(item) > 1})
+              sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
+          gui_ids = [item[0] for item in gui]
+          if len(gui_ids) != len(set(gui_ids)):
+              duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
+              sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
+
+          registered_set = set(registered)
+          gui_set = set(gui_ids)
+          implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
+          missing_registration = sorted(implemented - registered_set)
+          missing_gui = sorted(registered_set - gui_set)
+          if missing_registration:
+              sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
+          if missing_gui:
+              sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
+
+          print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
+          print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
+          PY
+
+          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified production JAR only
+        uses: actions/upload-artifact@v7
+        with:
+          name: AstraClient-1.21.4-JAR
+          path: ${{ steps.verify.outputs.jar_file }}
+          if-no-files-found: error
+          retention-days: 14
+ /tmp/jar-contents.txt
+          grep -q '^com/astraclient/mixin/AstraAutoFishMixin.class
+          unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastBreakMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraNoWeatherMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraOverlayRemovalMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFireOverlayMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraPanoramaMixin"'
+          unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraWorldMenuBackgroundMixin"'
+
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          root = pathlib.Path("src/main/java/com/astraclient")
+          client = (root / "AstraClient.java").read_text(encoding="utf-8")
+          screen = (root / "AstraScreen.java").read_text(encoding="utf-8")
+          options = (root / "AstraModuleOptions.java").read_text(encoding="utf-8")
+          options_screen = (root / "AstraModuleOptionsScreen.java").read_text(encoding="utf-8")
+          module_screen = (root / "AstraModuleSettingsScreen.java").read_text(encoding="utf-8")
+
+          # The typed settings engine must expose every required control and persist values.
+          for control_type in ("TOGGLE", "DROPDOWN", "SLIDER", "MULTI_SELECT", "KEYBIND", "TEXT", "COLOR", "MODE"):
+              if f"{control_type}" not in options:
+                  sys.exit(f"ERROR: typed module setting control {control_type} is missing")
+          if "AstraModuleOptions.load(properties)" not in client or "AstraModuleOptions.save(properties)" not in client:
+              sys.exit("ERROR: module options are not integrated with persistent config load/save")
+          if "new AstraModuleOptionsScreen" not in module_screen:
+              sys.exit("ERROR: module settings page does not link to advanced options")
+          if "openModuleSettings(mouseX, mouseY)" not in screen or "hasShiftDown()" not in screen:
+              sys.exit("ERROR: right-click settings navigation or Shift-right-click context menu is missing")
+          for required_setting in ('"attack_mode"', '"attack_range"', '"rotation_mode"', '"target_priority"',
+                                   '"target_types"', '"show_target"', '"attack_effects"'):
+              if required_setting not in options:
+                  sys.exit(f"ERROR: Kill Aura setting {required_setting} is missing")
+          for runtime_hook in ("shouldWaitForCritical", "applyKillAuraRotation", "selectedTargets"):
+              if runtime_hook not in client:
+                  sys.exit(f"ERROR: Kill Aura setting behavior hook {runtime_hook} is missing")
+          if "AstraModuleOptions.previewValue" not in options_screen:
+              sys.exit("ERROR: slider/text preview controls are not wired")
+          if "searchCursor" not in screen or "GLFW_KEY_DELETE" not in screen or "GLFW_KEY_HOME" not in screen:
+              sys.exit("ERROR: module search does not provide cursor-aware text editing")
+          if "editableTextPreview(" not in options_screen or "textDisplayStart" not in options_screen:
+              sys.exit("ERROR: long advanced text settings do not keep the caret visible")
+          if "AstraModuleOptions.resetModule(moduleId)" not in client:
+              sys.exit("ERROR: per-module setting reset does not clear stored overrides")
+          if 'AstraClient.resetModuleSettings(moduleId)' not in module_screen or '"RESET SETTINGS"' not in module_screen:
+              sys.exit("ERROR: module reset button label and action do not match")
+
+          overlay_mixin = (root / "mixin" / "AstraOverlayRemovalMixin.java").read_text(encoding="utf-8")
+          fire_mixin = (root / "mixin" / "AstraFireOverlayMixin.java").read_text(encoding="utf-8")
+
+          overlay_ids = (
+              "nopumpkinoverlay", "nofireoverlay", "noportaloverlay",
+              "nospyglassoverlay", "nopowdersnowoverlay", "nonauseaoverlay",
+              "novignette", "noscoreboard",
+          )
+          for module_id in overlay_ids:
+              if f'MODULES.put("{module_id}", false)' not in client:
+                  sys.exit(f"ERROR: overlay module {module_id} is not registered")
+              if f'new ModuleInfo("{module_id}"' not in screen:
+                  sys.exit(f"ERROR: overlay module {module_id} is missing from the GUI")
+              active_source = fire_mixin if module_id == "nofireoverlay" else overlay_mixin
+              if f'isEnabled("{module_id}")' not in active_source:
+                  sys.exit(f"ERROR: overlay module {module_id} has no active mixin behavior")
+
+          # The custom background must remain opt-out-able for renderer troubleshooting.
+          if '"graphics.menuBackground"' not in client or 'toggleCustomMenuBackground()' not in client:
+              sys.exit("ERROR: menu background setting is not persisted/toggleable")
+          if 'AstraClient.isCustomMenuBackgroundEnabled()' not in screen:
+              sys.exit("ERROR: menu background setting is missing from the GUI")
+          import_backup = client[client.index("public static void importConfigBackup()"):client.index("private static void loadConfig()")]
+          if 'resolveSibling("astraclient.properties.bak")' not in import_backup:
+              sys.exit("ERROR: config backup import does not use the backup written by the config saver")
+          if client.count('resolveSibling("astraclient.properties.bak")') < 2:
+              sys.exit("ERROR: config backup saver/import paths do not match")
+          if "validateConfigProperties(validation)" not in import_backup:
+              sys.exit("ERROR: config backups are not validated before import")
+          if "Files.createTempFile(configDirectory, \"astraclient-import-\"" not in import_backup:
+              sys.exit("ERROR: backup import does not stage the file before replacement")
+          if "StandardCopyOption.ATOMIC_MOVE" not in import_backup:
+              sys.exit("ERROR: backup import does not attempt an atomic replacement")
+          if '"pvpmode.previous."' not in client:
+              sys.exit("ERROR: PvP Mode previous module states are not persisted")
+          if 'customMenuBackground = true;' not in client or 'reducedMotion = false;' not in client:
+              sys.exit("ERROR: reset defaults does not restore all persisted motion/background preferences")
+          if 'new ConfirmScreen(' not in screen or '"Reset all Astra settings?"' not in screen:
+              sys.exit("ERROR: destructive settings reset is not protected by confirmation")
+          if "PVP_MODE_PREVIOUS_STATES.clear()" not in client or "PVP_MODE_PREVIOUS_STATES.put(id, Boolean.parseBoolean(savedState))" not in client:
+              sys.exit("ERROR: PvP Mode previous states are not restored from config")
+          if '"ui.reducedMotion"' not in client or 'isReducedMotionEnabled()' not in client:
+              sys.exit("ERROR: reduced-motion preference is not persisted")
+          if '"Reduced motion"' not in screen or 'toggleReducedMotion()' not in screen:
+              sys.exit("ERROR: reduced-motion setting is missing from the GUI")
+          ui_effects = (root / "AstraUiEffects.java").read_text(encoding="utf-8")
+          background = (root / "AstraBackgroundRenderer.java").read_text(encoding="utf-8")
+          if 'isReducedMotionEnabled()' not in ui_effects or 'isReducedMotionEnabled()' not in background:
+              sys.exit("ERROR: animated backgrounds ignore reduced-motion preference")
+          for mixin_name in ("AstraPanoramaMixin.java", "AstraWorldMenuBackgroundMixin.java"):
+              mixin_source = (root / "mixin" / mixin_name).read_text(encoding="utf-8")
+              if "isCustomMenuBackgroundEnabled()" not in mixin_source:
+                  sys.exit(f"ERROR: {mixin_name} ignores the background fallback setting")
+
+          # Restrict registry parsing to the static initializer, where modules are registered.
+          static = re.search(r"static\s*\{(.*?)\n    \}", client, re.S)
+          if not static:
+              sys.exit("ERROR: AstraClient module registry initializer not found")
+          registered = re.findall(r'MODULES\.put\("([^"]+)"', static.group(1))
+          gui = re.findall(
+              r'new ModuleInfo\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)",\s*(true|false)\)',
+              screen,
+          )
+
+          if len(registered) != len(set(registered)):
+              duplicates = sorted({item for item in registered if registered.count(item) > 1})
+              sys.exit(f"ERROR: duplicate module registry IDs: {duplicates}")
+          gui_ids = [item[0] for item in gui]
+          if len(gui_ids) != len(set(gui_ids)):
+              duplicates = sorted({item for item in gui_ids if gui_ids.count(item) > 1})
+              sys.exit(f"ERROR: duplicate GUI module IDs: {duplicates}")
+
+          registered_set = set(registered)
+          gui_set = set(gui_ids)
+          implemented = {module_id for module_id, _, is_implemented in gui if is_implemented == "true"}
+          missing_registration = sorted(implemented - registered_set)
+          missing_gui = sorted(registered_set - gui_set)
+          if missing_registration:
+              sys.exit(f"ERROR: GUI marks modules implemented but they are not registered: {missing_registration}")
+          if missing_gui:
+              sys.exit(f"ERROR: registered modules missing from the GUI: {missing_gui}")
+
+          print(f"Module consistency passed: {len(registered_set)} registered modules, {len(gui_ids)} GUI entries.")
+          print("Every implemented GUI module is registered; module IDs are unique and discoverable.")
+          PY
+
+          echo "jar_file=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified production JAR only
+        uses: actions/upload-artifact@v7
+        with:
+          name: AstraClient-1.21.4-JAR
+          path: ${{ steps.verify.outputs.jar_file }}
+          if-no-files-found: error
+          retention-days: 14
+ /tmp/jar-contents.txt
           unzip -p "$JAR" fabric.mod.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | python -m json.tool >/dev/null
           unzip -p "$JAR" astraclient.mixins.json | grep -q '"AstraFastPlaceMixin"'
