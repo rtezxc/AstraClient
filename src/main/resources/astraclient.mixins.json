@@ -13,6 +13,7 @@
     "AstraNoVelocityMixin",
     "AstraNoWebMixin",
     "AstraNoPushMixin",
+    "AstraAutoFishMixin",
     "AstraOverlayRemovalMixin",
     "AstraFireOverlayMixin"
   ],
