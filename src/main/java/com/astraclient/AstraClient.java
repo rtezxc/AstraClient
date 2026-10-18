@@ -1960,7 +1960,7 @@ public final class AstraClient implements ClientModInitializer {
             return true;
         });
 
-        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+        ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
             if (message != null) handleAutoChatAutomation(message.getString());
             return true;
         });
