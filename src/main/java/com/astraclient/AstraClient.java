@@ -207,6 +207,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("cheststealer", false);
         MODULES.put("novelocity", false);
         MODULES.put("nameprotect", false);
+        MODULES.put("antibot", false);
         MODULES.put("noclip", false);
         MODULES.put("autojump", false);
         MODULES.put("autofish", false);
@@ -481,6 +482,7 @@ public final class AstraClient implements ClientModInitializer {
             case "cheststealer" -> "Chest Stealer";
             case "novelocity" -> "No Velocity";
             case "nameprotect" -> "Name Protect";
+            case "antibot" -> "Anti Bot";
             case "noclip" -> "No Clip";
             case "autojump" -> "Auto Jump";
             case "autofish" -> "Auto Fish";
@@ -2432,15 +2434,30 @@ public final class AstraClient implements ClientModInitializer {
         if (bestSlot >= 0) client.player.getInventory().selectedSlot = bestSlot;
     }
 
+    /**
+     * Optional tab-list heuristic: entities without a network player-list entry are excluded
+     * from combat targeting. This is deliberately toggleable because some servers hide the tab list.
+     */
+    private static boolean isLikelyBot(PlayerEntity candidate) {
+        if (!AstraModuleOptions.boolValue("antibot", "require_tab_entry", true)) return false;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.getNetworkHandler() == null) return false;
+        return client.getNetworkHandler().getPlayerListEntry(candidate.getUuid()) == null;
+    }
+
     private static boolean isValidCombatTarget(LivingEntity target, PlayerEntity self) {
         if (target == self || !target.isAlive() || target.isSpectator()) return false;
-        if (target instanceof PlayerEntity) return targetPlayers;
+        if (target instanceof PlayerEntity playerTarget) {
+            if (isEnabled("antibot") && isLikelyBot(playerTarget)) return false;
+            return targetPlayers;
+        }
         return target instanceof HostileEntity ? targetHostile : targetPassive;
     }
 
     private static boolean isValidCombatTarget(LivingEntity target, PlayerEntity self, String moduleId) {
         if (target == self || !target.isAlive() || target.isSpectator()) return false;
-        if (target instanceof PlayerEntity) {
+        if (target instanceof PlayerEntity playerTarget) {
+            if (isEnabled("antibot") && isLikelyBot(playerTarget)) return false;
             boolean enabled = AstraModuleOptions.boolValue(moduleId, "target_players", targetPlayers);
             if (moduleId.equals("killaura")) enabled &= selectedTargets(moduleId).contains("Players");
             return enabled;
