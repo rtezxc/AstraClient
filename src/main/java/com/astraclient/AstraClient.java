@@ -3735,8 +3735,15 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         BlockPos closest = null;
         String closestType = "Storage";
         double closestSquared = Double.POSITIVE_INFINITY;
+        // Cache position scalars outside the scan and avoid allocating a Vec3d for each block.
+        double playerX = client.player.getX();
+        double playerY = client.player.getY();
+        double playerZ = client.player.getZ();
         for (BlockPos pos : BlockPos.iterate(start, end)) {
-            double distanceSquared = pos.toCenterPos().squaredDistanceTo(client.player.getPos());
+            double dx = pos.getX() + 0.5D - playerX;
+            double dy = pos.getY() + 0.5D - playerY;
+            double dz = pos.getZ() + 0.5D - playerZ;
+            double distanceSquared = dx * dx + dy * dy + dz * dz;
             if (distanceSquared > radius * radius || distanceSquared >= closestSquared) continue;
             Block block = client.world.getBlockState(pos).getBlock();
             if (block != Blocks.CHEST && block != Blocks.TRAPPED_CHEST && block != Blocks.ENDER_CHEST
@@ -3777,8 +3784,15 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         BlockPos end = new BlockPos(center.getX() + radius, top, center.getZ() + radius);
         BlockPos closest = null;
         double closestSquared = Double.POSITIVE_INFINITY;
+        // Same allocation-free distance calculation as Storage Finder to reduce scan spikes.
+        double playerX = client.player.getX();
+        double playerY = client.player.getY();
+        double playerZ = client.player.getZ();
         for (BlockPos pos : BlockPos.iterate(start, end)) {
-            double distanceSquared = pos.toCenterPos().squaredDistanceTo(client.player.getPos());
+            double dx = pos.getX() + 0.5D - playerX;
+            double dy = pos.getY() + 0.5D - playerY;
+            double dz = pos.getZ() + 0.5D - playerZ;
+            double distanceSquared = dx * dx + dy * dy + dz * dz;
             if (distanceSquared > radius * radius || distanceSquared >= closestSquared) continue;
             if (isBlockFinderTarget(client.world.getBlockState(pos).getBlock())) {
                 closest = new BlockPos(pos.getX(), pos.getY(), pos.getZ());
