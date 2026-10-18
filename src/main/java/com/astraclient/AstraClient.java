@@ -17,6 +17,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
+import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -248,6 +249,14 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("scaffold", false);
         MODULES.put("aimassist", false);
         MODULES.put("autototem", false);
+        MODULES.put("autoarmor", false);
+        MODULES.put("cheststealer", false);
+        MODULES.put("autofish", false);
+        MODULES.put("elytraboost", false);
+        MODULES.put("elytraswap", false);
+        MODULES.put("clickpearl", false);
+        MODULES.put("wardensesp", false);
+        MODULES.put("fireworkesp", false);
         MODULES.put("antiknockback", false);
         MODULES.put("autoclicker", false);
         MODULES.put("criticals", false);
@@ -454,6 +463,14 @@ public final class AstraClient implements ClientModInitializer {
             case "pvpmode" -> "PvP Mode";
             case "triggerbot" -> "TriggerBot";
             case "autotool" -> "Auto Tool";
+            case "autoarmor" -> "Auto Armor";
+            case "cheststealer" -> "Chest Stealer";
+            case "autofish" -> "Auto Fish";
+            case "elytraboost" -> "Elytra Boost";
+            case "elytraswap" -> "Elytra Swap";
+            case "clickpearl" -> "Click Pearl";
+            case "wardensesp" -> "Warden ESP";
+            case "fireworkesp" -> "Firework ESP";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -1956,6 +1973,12 @@ public final class AstraClient implements ClientModInitializer {
             updateCombatModules(client);
             updateAimAssist(client);
             updateAutoTotem(client);
+            updateAutoArmor(client);
+            updateChestStealer(client);
+            updateAutoFish(client);
+            updateElytraBoost(client);
+            updateElytraSwap(client);
+            updateClickPearl(client);
             updateNoSlow(client);
             updateSpeed(client);
             updateScaffold(client);
@@ -2103,6 +2126,152 @@ public final class AstraClient implements ClientModInitializer {
     }
 
     /** Client-side movement helpers; they never change packet handling or anti-cheat behavior. */
+    /**
+     * Moves the best available armor piece into an empty armor slot using vanilla
+     * inventory actions. It never replaces equipped armor with weaker gear.
+     */
+    private static void updateAutoArmor(MinecraftClient client) {
+        if (!isEnabled("autoarmor") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.age % 8 != 0) return;
+        var player = client.player;
+        var handler = player.currentScreenHandler;
+        for (int slot = 5; slot <= 8; slot++) {
+            if (!handler.getSlot(slot).getStack().isEmpty()) continue;
+            for (int inventorySlot = 9; inventorySlot < 45; inventorySlot++) {
+                ItemStack stack = handler.getSlot(inventorySlot).getStack();
+                if (stack.isEmpty()) continue;
+                String itemPath = Registries.ITEM.getId(stack.getItem()).getPath();
+                int targetSlot = itemPath.endsWith("_helmet") || itemPath.equals("turtle_helmet") ? 5
+                    : itemPath.endsWith("_chestplate") || itemPath.equals("elytra") ? 6
+                    : itemPath.endsWith("_leggings") ? 7
+                    : itemPath.endsWith("_boots") ? 8 : -1;
+                if (targetSlot != slot) continue;
+                client.interactionManager.clickSlot(handler.syncId, inventorySlot, 0, SlotActionType.QUICK_MOVE, player);
+                break;
+            }
+        }
+    }
+
+    /** Loots container slots using vanilla quick-move actions, with a small tick delay. */
+    private static void updateChestStealer(MinecraftClient client) {
+        if (!isEnabled("cheststealer") || client.player == null || client.world == null
+            || client.interactionManager == null || !(client.currentScreen instanceof GenericContainerScreen)
+            || client.player.age % 4 != 0) return;
+        var handler = client.player.currentScreenHandler;
+        int containerSlots = Math.max(0, handler.slots.size() - 36);
+        for (int slot = 0; slot < containerSlots; slot++) {
+            if (!handler.getSlot(slot).getStack().isEmpty()) {
+                client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, client.player);
+                return;
+            }
+        }
+        // Close only after the server has reported every container slot empty.
+        client.setScreen(null);
+    }
+
+    private static long lastAutoFishAt;
+    private static long lastElytraBoostAt;
+
+    /** Reels in a fishing bobber when it visibly dips, then waits for the next cast. */
+    private static void updateAutoFish(MinecraftClient client) {
+        if (!isEnabled("autofish") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null) return;
+        var bobber = client.player.fishHook;
+        if (bobber == null || !bobber.isAlive()) return;
+        long now = System.currentTimeMillis();
+        if (now - lastAutoFishAt < 450L) return;
+        if (bobber.getVelocity().y < -0.08D && bobber.isTouchingWater()) {
+            client.interactionManager.interactItem(client.player, Hand.MAIN_HAND);
+            lastAutoFishAt = now;
+        }
+    }
+
+    /** Uses an existing hotbar rocket while gliding; never crafts or consumes inventory items automatically. */
+    private static void updateElytraBoost(MinecraftClient client) {
+        if (!isEnabled("elytraboost") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || !client.player.isGliding() || client.player.age % 4 != 0) return;
+        long now = System.currentTimeMillis();
+        if (now - lastElytraBoostAt < 1800L) return;
+        var player = client.player;
+        int rocketSlot = -1;
+        for (int slot = 0; slot < 9; slot++) {
+            if (player.getInventory().getStack(slot).isOf(Items.FIREWORK_ROCKET)) {
+                rocketSlot = slot;
+                break;
+            }
+        }
+        if (rocketSlot < 0) return;
+        int previousSlot = player.getInventory().selectedSlot;
+        player.getInventory().selectedSlot = rocketSlot;
+        client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+        player.getInventory().selectedSlot = previousSlot;
+        lastElytraBoostAt = now;
+    }
+
+    /** Swaps between an elytra while gliding and a chestplate when grounded. */
+    private static void updateElytraSwap(MinecraftClient client) {
+        if (!isEnabled("elytraswap") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null
+            || client.player.age % 10 != 0) return;
+        var player = client.player;
+        var handler = player.currentScreenHandler;
+        ItemStack chest = handler.getSlot(6).getStack();
+        String chestPath = chest.isEmpty() ? "" : Registries.ITEM.getId(chest.getItem()).getPath();
+        boolean gliding = player.isGliding();
+        if (gliding && !chestPath.equals("elytra")) {
+            for (int slot = 9; slot < 45; slot++) {
+                ItemStack candidate = handler.getSlot(slot).getStack();
+                if (candidate.isOf(Items.ELYTRA)) {
+                    client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, player);
+                    return;
+                }
+            }
+        } else if (!gliding && chestPath.equals("elytra")) {
+            for (int slot = 9; slot < 45; slot++) {
+                ItemStack candidate = handler.getSlot(slot).getStack();
+                String path = candidate.isEmpty() ? "" : Registries.ITEM.getId(candidate.getItem()).getPath();
+                if (path.endsWith("_chestplate")) {
+                    client.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.QUICK_MOVE, player);
+                    return;
+                }
+            }
+        }
+    }
+
+    private static boolean clickPearlMouseWasDown;
+    private static long lastClickPearlAt;
+
+    /** Uses an ender pearl on a fresh right-click, restoring the selected hotbar slot afterward. */
+    private static void updateClickPearl(MinecraftClient client) {
+        long window = client.getWindow() == null ? 0L : client.getWindow().getHandle();
+        boolean down = window != 0L && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+        boolean pressed = down && !clickPearlMouseWasDown;
+        clickPearlMouseWasDown = down;
+        if (!isEnabled("clickpearl") || !pressed || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null) return;
+        long now = System.currentTimeMillis();
+        if (now - lastClickPearlAt < 500L) return;
+        var player = client.player;
+        int pearlSlot = -1;
+        for (int slot = 0; slot < 9; slot++) {
+            if (player.getInventory().getStack(slot).isOf(Items.ENDER_PEARL)) {
+                pearlSlot = slot;
+                break;
+            }
+        }
+        if (pearlSlot < 0) {
+            notifyUser("Click Pearl: no pearls in hotbar");
+            return;
+        }
+        int previousSlot = player.getInventory().selectedSlot;
+        player.getInventory().selectedSlot = pearlSlot;
+        client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+        player.getInventory().selectedSlot = previousSlot;
+        lastClickPearlAt = now;
+    }
+
     private static void updateNoSlow(MinecraftClient client) {
         if (!isEnabled("noslow") || client.player == null || client.world == null
             || (client.currentScreen != null && AstraModuleOptions.boolValue("noslow", "pause_in_menus", true))
@@ -3330,6 +3499,8 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
 
         boolean showXray = isEnabled("xray") && !XRAY_ORE_POSITIONS.isEmpty();
         boolean showHitboxes = isEnabled("hitboxes");
+        boolean showWardenEsp = isEnabled("wardensesp");
+        boolean showFireworkEsp = isEnabled("fireworkesp");
         boolean showTargetFeedback = AstraModuleOptions.boolValue("killaura", "show_target", true);
         boolean showTargetBox = isEnabled("targetbox") && showTargetFeedback && lastCombatTarget != null
             && lastCombatTarget.isAlive() && !lastCombatTarget.isRemoved()
@@ -3340,7 +3511,8 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
         boolean showBlockHighlight = isEnabled("blockhighlight")
             && client.crosshairTarget instanceof BlockHitResult blockHit
             && client.crosshairTarget.getType() == HitResult.Type.BLOCK;
-        if (!showXray && !showHitboxes && !showTargetBox && !showTargetHalo && !showBlockHighlight) return;
+        if (!showXray && !showHitboxes && !showTargetBox && !showTargetHalo && !showBlockHighlight
+            && !showWardenEsp && !showFireworkEsp) return;
 
         int accent = accentColor();
         int blockAccent = moduleColor("blockhighlight", accent);
@@ -3391,6 +3563,25 @@ if (isEnabled("blockfinder") && AstraModuleOptions.boolValue("blockfinder", "sho
                 float oreBlue = (ore & 255) / 255.0F;
                 VertexRendering.drawBox(matrices, lines, new Box(orePos).expand(0.003D),
                     oreRed, oreGreen, oreBlue, 0.95F);
+            }
+        }
+
+        if (showWardenEsp || showFireworkEsp) {
+            Box scan = client.player.getBoundingBox().expand(96.0D);
+            for (Entity entity : client.world.getEntitiesByClass(Entity.class, scan,
+                    candidate -> candidate != client.player && !candidate.isRemoved())) {
+                boolean warden = showWardenEsp && entity instanceof net.minecraft.entity.mob.WardenEntity;
+                boolean firework = showFireworkEsp && entity instanceof net.minecraft.entity.projectile.FireworkRocketEntity;
+                if (!warden && !firework) continue;
+                double rangeSq = client.player.squaredDistanceTo(entity);
+                double wardenRange = Math.min(96.0D, AstraModuleOptions.numberValue("wardensesp", "render_range", 96.0D));
+                double fireworkRange = Math.min(96.0D, AstraModuleOptions.numberValue("fireworkesp", "render_range", 96.0D));
+                if (warden && rangeSq > wardenRange * wardenRange) continue;
+                if (firework && rangeSq > fireworkRange * fireworkRange) continue;
+                int tint = warden ? 0xFFB66CFF : 0xFFFFC66E;
+                VertexRendering.drawBox(matrices, lines, entity.getBoundingBox().expand(0.06D),
+                    ((tint >> 16) & 255) / 255.0F, ((tint >> 8) & 255) / 255.0F,
+                    (tint & 255) / 255.0F, 0.95F);
             }
         }
 

@@ -162,6 +162,13 @@ public final class AstraModuleOptions {
             case "autoeat" -> {
                 out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
             }
+            case "autoarmor" -> { }
+            case "cheststealer" -> { }
+            case "autofish" -> { }
+            case "elytraboost", "elytraswap", "clickpearl" -> { }
+            case "wardensesp", "fireworkesp" -> {
+                out.add(slider("render_range", "Render Range", "Maximum range for this entity highlight.", "96", 16, 96, 8));
+            }
             case "autototem", "autotool", "autoweapon", "potionhud" -> { }
             case "blockfinder" -> {
                 out.add(slider("scan_range", "Scan Radius", "Radius used to search for a configured block.", "24", 8, 48, 4));
