@@ -3,6 +3,7 @@ package com.astraclient;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.text.Text;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -257,6 +258,8 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autoswap", false);
         MODULES.put("elytraboost", false);
         MODULES.put("elytraswap", false);
+        MODULES.put("autoaccept", false);
+        MODULES.put("autoleave", false);
         MODULES.put("antiknockback", false);
         MODULES.put("autoclicker", false);
         MODULES.put("criticals", false);
@@ -472,6 +475,8 @@ public final class AstraClient implements ClientModInitializer {
             case "autoswap" -> "Auto Swap";
             case "elytraboost" -> "Elytra Boost";
             case "elytraswap" -> "Elytra Swap";
+            case "autoaccept" -> "Auto Accept";
+            case "autoleave" -> "Auto Leave";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -1947,6 +1952,11 @@ public final class AstraClient implements ClientModInitializer {
             return true;
         });
 
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (message != null) handleAutoChatAutomation(message.getString());
+            return true;
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             long guiWindow = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             updateChatHudEditor(client);
@@ -2284,6 +2294,34 @@ public final class AstraClient implements ClientModInitializer {
                     lastElytraSwapAt = System.currentTimeMillis();
                     return;
                 }
+            }
+        }
+    }
+
+
+    private static long lastAutoAcceptMessageAt;
+    private static long lastAutoLeaveMessageAt;
+
+    /** Optional server-specific chat triggers. Commands and trigger phrases are user-configurable. */
+    private static void handleAutoChatAutomation(String message) {
+        String normalized = message.toLowerCase(Locale.ROOT);
+        long now = System.currentTimeMillis();
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.getNetworkHandler() == null) return;
+        if (isEnabled("autoaccept") && now - lastAutoAcceptMessageAt > 5000L) {
+            String phrase = AstraModuleOptions.value("autoaccept", "trigger_phrase", "wants to duel").trim().toLowerCase(Locale.ROOT);
+            String command = AstraModuleOptions.value("autoaccept", "command", "accept").trim();
+            if (!phrase.isEmpty() && !command.isEmpty() && normalized.contains(phrase)) {
+                client.getNetworkHandler().sendChatCommand(command.startsWith("/") ? command.substring(1) : command);
+                lastAutoAcceptMessageAt = now;
+            }
+        }
+        if (isEnabled("autoleave") && now - lastAutoLeaveMessageAt > 10000L) {
+            String phrase = AstraModuleOptions.value("autoleave", "trigger_phrase", "moderator joined").trim().toLowerCase(Locale.ROOT);
+            String command = AstraModuleOptions.value("autoleave", "command", "hub").trim();
+            if (!phrase.isEmpty() && !command.isEmpty() && normalized.contains(phrase)) {
+                client.getNetworkHandler().sendChatCommand(command.startsWith("/") ? command.substring(1) : command);
+                lastAutoLeaveMessageAt = now;
             }
         }
     }
