@@ -30,6 +30,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LightningEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
@@ -197,6 +198,12 @@ public final class AstraClient implements ClientModInitializer {
     private static PlayerEntity jumpCirclePlayer;
     private static boolean jumpCircleWasGrounded;
     private static int lastJumpCircleAge = Integer.MIN_VALUE;
+    private static final Map<UUID, String> KNOWN_SERVER_PLAYERS = new LinkedHashMap<>();
+    private static Object playerListHandler;
+    private static Object lightningWorld;
+    private static final Set<UUID> SEEN_LIGHTNING = new HashSet<>();
+    private static int lockedHotbarSlot = -1;
+    private static boolean lockSlotWasEnabled;
     private static BlockPos lastKnownDeathPosition;
     private static Object deathCoordinateWorld;
     private static boolean deathCoordinateWasAlive;
@@ -319,6 +326,9 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("jumpcircle", false);
         MODULES.put("wardenesp", false);
         MODULES.put("trajectories", false);
+        MODULES.put("leavetracker", false);
+        MODULES.put("lightning", false);
+        MODULES.put("lockslot", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -577,6 +587,9 @@ public final class AstraClient implements ClientModInitializer {
             case "jumpcircle" -> "Jump Circle";
             case "wardenesp" -> "Warden ESP";
             case "trajectories" -> "Trajectories";
+            case "leavetracker" -> "Leave Tracker";
+            case "lightning" -> "Lightning Detector";
+            case "lockslot" -> "Lock Slot";
             default -> id;
         };
     }
@@ -2074,6 +2087,9 @@ public final class AstraClient implements ClientModInitializer {
             updateElytraSpeed(client);
             updateHighJump(client);
             updateJumpCircle(client);
+            updatePlayerLeaveTracker(client);
+            updateLightningDetector(client);
+            updateLockSlot(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -2191,6 +2207,91 @@ public final class AstraClient implements ClientModInitializer {
         float pitchStep = (float) Math.max(-2.0D, Math.min(2.0D, (desiredPitch - player.getPitch()) * 0.16D));
         player.setYaw(player.getYaw() + yawStep);
         player.setPitch(Math.max(-90.0F, Math.min(90.0F, player.getPitch() + pitchStep)));
+    }
+
+    /** Track server player-list departures without treating a new connection as mass departures. */
+    private static void updatePlayerLeaveTracker(MinecraftClient client) {
+        if (!isEnabled("leavetracker") || client.player == null || client.getNetworkHandler() == null) {
+            KNOWN_SERVER_PLAYERS.clear();
+            playerListHandler = null;
+            return;
+        }
+        Object handler = client.getNetworkHandler();
+        Map<UUID, String> current = new LinkedHashMap<>();
+        for (var entry : client.getNetworkHandler().getPlayerList()) {
+            var profile = entry.getProfile();
+            current.put(profile.getId(), profile.getName());
+        }
+        if (handler != playerListHandler) {
+            KNOWN_SERVER_PLAYERS.clear();
+            KNOWN_SERVER_PLAYERS.putAll(current);
+            playerListHandler = handler;
+            return;
+        }
+        for (Map.Entry<UUID, String> previous : KNOWN_SERVER_PLAYERS.entrySet()) {
+            if (!current.containsKey(previous.getKey())) {
+                String message = "Player left: " + previous.getValue();
+                notifyUser(message);
+                if (AstraModuleOptions.boolValue("leavetracker", "chat_notice", true)) {
+                    client.player.sendMessage(Text.literal("§b[Astra] §f" + message), false);
+                }
+            }
+        }
+        KNOWN_SERVER_PLAYERS.clear();
+        KNOWN_SERVER_PLAYERS.putAll(current);
+    }
+
+    /** Notify on newly spawned lightning entities in a bounded radius. */
+    private static void updateLightningDetector(MinecraftClient client) {
+        if (!isEnabled("lightning") || client.player == null || client.world == null) {
+            lightningWorld = null;
+            SEEN_LIGHTNING.clear();
+            return;
+        }
+        if (lightningWorld != client.world) {
+            lightningWorld = client.world;
+            SEEN_LIGHTNING.clear();
+        }
+        double range = Math.max(16.0D, Math.min(128.0D,
+            AstraModuleOptions.numberValue("lightning", "render_range", 96.0D)));
+        Set<UUID> current = new HashSet<>();
+        for (LightningEntity bolt : client.world.getEntitiesByClass(
+                LightningEntity.class, client.player.getBoundingBox().expand(range),
+                entity -> !entity.isRemoved())) {
+            UUID id = bolt.getUuid();
+            current.add(id);
+            if (SEEN_LIGHTNING.contains(id)) continue;
+            BlockPos position = BlockPos.ofFloored(bolt.getX(), bolt.getY(), bolt.getZ());
+            String message = "Lightning detected at " + position.getX() + ", " + position.getY() + ", " + position.getZ();
+            notifyUser(message);
+            if (AstraModuleOptions.boolValue("lightning", "chat_notice", true)) {
+                client.player.sendMessage(Text.literal("§b[Astra] §f" + message), false);
+            }
+        }
+        SEEN_LIGHTNING.retainAll(current);
+        SEEN_LIGHTNING.addAll(current);
+    }
+
+    /** Keep the hotbar slot selected at activation; release ownership when disabled/world changes. */
+    private static void updateLockSlot(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (player == null || client.world == null || !isEnabled("lockslot") || client.currentScreen != null) {
+            lockedHotbarSlot = -1;
+            lockSlotWasEnabled = false;
+            return;
+        }
+        if (!lockSlotWasEnabled || lockedHotbarSlot < 0 || lockedHotbarSlot > 8) {
+            lockedHotbarSlot = Math.max(0, Math.min(8, player.getInventory().selectedSlot));
+            lockSlotWasEnabled = true;
+            notifyUser("Locked hotbar slot " + (lockedHotbarSlot + 1));
+            return;
+        }
+        if (player.getInventory().selectedSlot != lockedHotbarSlot) {
+            player.getInventory().selectedSlot = lockedHotbarSlot;
+            if (client.getNetworkHandler() != null) {
+                client.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(lockedHotbarSlot));
+            }
+        }
     }
 
     /** One-shot ClickPearl utility: throws one pearl from the hotbar and then disables itself. */
