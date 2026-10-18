@@ -193,6 +193,9 @@ public final class AstraClient implements ClientModInitializer {
     private static PlayerEntity highJumpPlayer;
     private static boolean highJumpWasGrounded;
     private static int lastHighJumpAge = Integer.MIN_VALUE;
+    private static PlayerEntity jumpCirclePlayer;
+    private static boolean jumpCircleWasGrounded;
+    private static int lastJumpCircleAge = Integer.MIN_VALUE;
     private static BlockPos lastKnownDeathPosition;
     private static Object deathCoordinateWorld;
     private static boolean deathCoordinateWasAlive;
@@ -312,6 +315,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("elytraboost", false);
         MODULES.put("elytraspeed", false);
         MODULES.put("highjump", false);
+        MODULES.put("jumpcircle", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -567,6 +571,7 @@ public final class AstraClient implements ClientModInitializer {
             case "elytraboost" -> "Elytra Boost";
             case "elytraspeed" -> "Elytra Speed";
             case "highjump" -> "High Jump";
+            case "jumpcircle" -> "Jump Circle";
             default -> id;
         };
     }
@@ -2063,6 +2068,7 @@ public final class AstraClient implements ClientModInitializer {
             updateElytraBoost(client);
             updateElytraSpeed(client);
             updateHighJump(client);
+            updateJumpCircle(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
