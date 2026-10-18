@@ -162,6 +162,9 @@ public final class AstraModuleOptions {
             case "autojump" -> {
                 out.add(slider("jump_delay_ticks", "Jump Delay", "Minimum tick interval between automatic jumps.", "12", 8, 40, 2));
             }
+            case "step" -> {
+                out.add(slider("height", "Step Height", "Maximum local step height, clamped to 0.6–1.5 blocks.", "1.0", 0.6, 1.5, 0.1));
+            }
             case "autofish" -> {
                 out.add(slider("reel_delay_ms", "Reel Delay", "Delay after the owned fishing bobber splashes before reeling.", "160", 80, 600, 20));
                 out.add(slider("recast_delay_ms", "Recast Delay", "Delay before casting again after a catch.", "350", 180, 1000, 25));
