@@ -215,7 +215,7 @@ public final class AstraScreen extends Screen {
         // This also avoids translucent compositing on mobile OpenGL renderers.
         long clockNow = System.nanoTime();
         boolean reducedMotion = AstraClient.isReducedMotionEnabled();
-        long now = reducedMotion ? 0L : clockNow;
+        long now = reducedMotion ? 0L : clockNow / 1_000_000L;
         float progress = reducedMotion ? 1.0f : closing
             ? clamp01(1.0f - (float) (clockNow - closingAt) / CLOSE_DURATION_NANOS)
             : clamp01((float) (clockNow - openedAt) / OPEN_DURATION_NANOS);
