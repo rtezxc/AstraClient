@@ -165,7 +165,7 @@ public final class AstraModuleOptions {
             case "autoarmor" -> { }
             case "cheststealer" -> { }
             case "autofish" -> { }
-            case "elytraboost", "elytraswap" -> { }
+            case "elytraboost", "elytraswap", "clickpearl" -> { }
             case "wardensesp", "fireworkesp" -> {
                 out.add(slider("render_range", "Render Range", "Maximum range for this entity highlight.", "96", 16, 96, 8));
             }
