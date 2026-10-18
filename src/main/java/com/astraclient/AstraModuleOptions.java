@@ -162,6 +162,10 @@ public final class AstraModuleOptions {
             case "autojump" -> {
                 out.add(slider("jump_delay_ticks", "Jump Delay", "Minimum tick interval between automatic jumps.", "12", 8, 40, 2));
             }
+            case "autofish" -> {
+                out.add(slider("reel_delay_ms", "Reel Delay", "Delay after the owned fishing bobber splashes before reeling.", "160", 80, 600, 20));
+                out.add(slider("recast_delay_ms", "Recast Delay", "Delay before casting again after a catch.", "350", 180, 1000, 25));
+            }
             case "autoarmor" -> {
                 out.add(slider("upgrade_delay_ms", "Upgrade Check Delay", "Milliseconds between armor inventory transactions.", "250", 150, 1000, 50));
             }
