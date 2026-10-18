@@ -131,7 +131,12 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("nopowdersnowoverlay", "No Powder Snow Overlay", "Hides the powder-snow screen effect.", "Render", true),
         new ModuleInfo("nonauseaoverlay", "No Nausea Overlay", "Hides the nausea screen effect.", "Render", true),
         new ModuleInfo("novignette", "No Vignette", "Removes the dark edges around your screen.", "Render", true),
-        new ModuleInfo("noscoreboard", "No Scoreboard", "Hides the scoreboard on the right.", "Render", true)
+        new ModuleInfo("noscoreboard", "No Scoreboard", "Hides the scoreboard on the right.", "Render", true),
+        new ModuleInfo("arrows", "Player Arrows", "Shows yaw-relative arrows toward nearby players.", "Render", true),
+        new ModuleInfo("hitmarker", "Hit Marker", "Shows a brief visual confirmation when Astra attacks a target.", "HUD", true),
+        new ModuleInfo("deathcoord", "Death Coordinates", "Reports your last known position when you die.", "Utility", true),
+        new ModuleInfo("clickpearl", "Click Pearl", "Throws one Ender Pearl from your hotbar when activated.", "Inventory", true),
+        new ModuleInfo("elytraswap", "Elytra Swap", "Swaps an Elytra with a chestplate in your hotbar when activated.", "Inventory", true)
     );
 
     private String category = "Render";
