@@ -186,6 +186,10 @@ public final class AstraClient implements ClientModInitializer {
     private static long autoFishRecastAt;
     private static boolean autoFishSplashPending;
     private static boolean autoFishRecastPending;
+    private static long lastHitMarkerAt;
+    private static BlockPos lastKnownDeathPosition;
+    private static Object deathCoordinateWorld;
+    private static boolean deathCoordinateWasAlive;
 
     static {
         MODULES.put("fullbright", false);
@@ -293,6 +297,11 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("nonauseaoverlay", false);
         MODULES.put("novignette", false);
         MODULES.put("noscoreboard", false);
+        MODULES.put("arrows", false);
+        MODULES.put("hitmarker", false);
+        MODULES.put("deathcoord", false);
+        MODULES.put("clickpearl", false);
+        MODULES.put("elytraswap", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -539,6 +548,11 @@ public final class AstraClient implements ClientModInitializer {
             case "waypoint" -> "Waypoint";
             case "storagefinder" -> "Storage Finder";
             case "effectalert" -> "Effect Expiry Alert";
+            case "arrows" -> "Player Arrows";
+            case "hitmarker" -> "Hit Marker";
+            case "deathcoord" -> "Death Coordinates";
+            case "clickpearl" -> "Click Pearl";
+            case "elytraswap" -> "Elytra Swap";
             default -> id;
         };
     }
@@ -2028,6 +2042,9 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoWeapon(client);
             updateAutoTool(client);
             updateFly(client);
+            updateClickPearl(client);
+            updateElytraSwap(client);
+            updateDeathCoordinates(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -2145,6 +2162,85 @@ public final class AstraClient implements ClientModInitializer {
         float pitchStep = (float) Math.max(-2.0D, Math.min(2.0D, (desiredPitch - player.getPitch()) * 0.16D));
         player.setYaw(player.getYaw() + yawStep);
         player.setPitch(Math.max(-90.0F, Math.min(90.0F, player.getPitch() + pitchStep)));
+    }
+
+    /** One-shot ClickPearl utility: throws one pearl from the hotbar and then disables itself. */
+    private static void updateClickPearl(MinecraftClient client) {
+        if (!isEnabled("clickpearl") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null || client.player.isSpectator()) return;
+        PlayerEntity player = client.player;
+        int pearlSlot = -1;
+        for (int slot = 0; slot < 9; slot++) {
+            if (player.getInventory().getStack(slot).isOf(Items.ENDER_PEARL)) { pearlSlot = slot; break; }
+        }
+        MODULES.put("clickpearl", false);
+        if (pearlSlot < 0) {
+            notifyUser("Click Pearl: no ender pearl in hotbar");
+            saveConfig();
+            return;
+        }
+        int previousSlot = player.getInventory().selectedSlot;
+        player.getInventory().selectedSlot = pearlSlot;
+        client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+        player.swingHand(Hand.MAIN_HAND);
+        player.getInventory().selectedSlot = previousSlot;
+        notifyUser("Click Pearl used");
+        saveConfig();
+    }
+
+    /** One-shot ElytraSwap: swaps an Elytra with a chestplate using an available hotbar slot. */
+    private static void updateElytraSwap(MinecraftClient client) {
+        if (!isEnabled("elytraswap") || client.player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null || client.player.isSpectator()) return;
+        PlayerEntity player = client.player;
+        ItemStack chest = player.getEquippedStack(EquipmentSlot.CHEST);
+        boolean wearingElytra = chest.isOf(Items.ELYTRA);
+        int swapSlot = -1;
+        for (int slot = 0; slot < 9; slot++) {
+            ItemStack candidate = player.getInventory().getStack(slot);
+            if (wearingElytra) {
+                if (!candidate.isEmpty() && candidate.getItem() instanceof ArmorItem
+                    && armorSlotFor(candidate) == EquipmentSlot.CHEST) { swapSlot = slot; break; }
+            } else if (candidate.isOf(Items.ELYTRA)) { swapSlot = slot; break; }
+        }
+        MODULES.put("elytraswap", false);
+        if (swapSlot < 0) {
+            notifyUser(wearingElytra ? "Elytra Swap: no chestplate in hotbar" : "Elytra Swap: no Elytra in hotbar");
+            saveConfig();
+            return;
+        }
+        client.interactionManager.clickSlot(player.currentScreenHandler.syncId, 6, swapSlot, SlotActionType.SWAP, player);
+        notifyUser(wearingElytra ? "Swapped to chestplate" : "Equipped Elytra");
+        saveConfig();
+    }
+
+    /** Captures the last live position and reports it once on death while Death Coordinates is enabled. */
+    private static void updateDeathCoordinates(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (player == null || client.world == null) {
+            deathCoordinateWorld = null;
+            lastKnownDeathPosition = null;
+            deathCoordinateWasAlive = false;
+            return;
+        }
+        if (deathCoordinateWorld != client.world) {
+            deathCoordinateWorld = client.world;
+            lastKnownDeathPosition = null;
+            deathCoordinateWasAlive = false;
+        }
+        if (player.isAlive() && player.getHealth() > 0.0F) {
+            lastKnownDeathPosition = BlockPos.ofFloored(player.getX(), player.getY(), player.getZ());
+            deathCoordinateWasAlive = true;
+            return;
+        }
+        if (!deathCoordinateWasAlive || lastKnownDeathPosition == null) return;
+        deathCoordinateWasAlive = false;
+        if (!isEnabled("deathcoord")) return;
+        String coords = lastKnownDeathPosition.getX() + ", " + lastKnownDeathPosition.getY() + ", " + lastKnownDeathPosition.getZ();
+        notifyUser("Death location: " + coords);
+        if (AstraModuleOptions.boolValue("deathcoord", "chat_notice", true)) {
+            player.sendMessage(Text.literal("§b[Astra] §fLast position before death: §e" + coords), false);
+        }
     }
 
     /** Keeps a totem in the offhand when one is available in the player's inventory. */
@@ -2621,6 +2717,7 @@ public final class AstraClient implements ClientModInitializer {
             || distanceToTargetBox(client.player, target) > 3.0D
             || (respectCooldown && client.player.getAttackCooldownProgress(0.0F) < 0.9F)) return false;
         client.interactionManager.attackEntity(client.player, target);
+        lastHitMarkerAt = System.currentTimeMillis();
         client.player.swingHand(Hand.MAIN_HAND);
         return true;
     }
@@ -3106,6 +3203,35 @@ public final class AstraClient implements ClientModInitializer {
         }
     }
 
+    /** Render yaw-relative arrows pointing toward nearby remote players. */
+    private static void renderPlayerArrows(MinecraftClient client, DrawContext context, int screenWidth, int screenHeight) {
+        if (client.player == null || client.world == null) return;
+        double range = Math.max(8.0D, Math.min(128.0D,
+            AstraModuleOptions.numberValue("arrows", "render_range", 64.0D)));
+        int radius = Math.max(30, Math.min(58, Math.min(screenWidth, screenHeight) / 8));
+        int cx = screenWidth / 2;
+        int cy = screenHeight / 2;
+        String[] glyphs = {"↑", "↗", "→", "↘", "↓", "↙", "←", "↖"};
+        for (PlayerEntity target : client.world.getPlayers()) {
+            if (target == client.player || target.isSpectator() || target.isRemoved()) continue;
+            double dx = target.getX() - client.player.getX();
+            double dz = target.getZ() - client.player.getZ();
+            double distanceSquared = dx * dx + dz * dz;
+            if (distanceSquared < 1.0D || distanceSquared > range * range) continue;
+            double yawToTarget = Math.toDegrees(Math.atan2(-dx, dz));
+            double relative = net.minecraft.util.math.MathHelper.wrapDegrees(yawToTarget - client.player.getYaw());
+            double radians = Math.toRadians(relative);
+            int x = cx + (int)Math.round(Math.sin(radians) * radius);
+            int y = cy - (int)Math.round(Math.cos(radians) * radius);
+            int slot = Math.floorMod((int)Math.round(relative / 45.0D), 8);
+            String glyph = glyphs[slot];
+            int drawX = Math.max(2, Math.min(screenWidth - client.textRenderer.getWidth(glyph) - 2,
+                x - client.textRenderer.getWidth(glyph) / 2));
+            int drawY = Math.max(2, Math.min(screenHeight - 10, y - 4));
+            context.drawTextWithShadow(client.textRenderer, glyph, drawX, drawY, accentColor());
+        }
+    }
+
     private static void renderHud(MinecraftClient client, DrawContext context) {
         HUD_RENDERED_BOUNDS.clear();
         if (client.player == null || client.world == null) return;
@@ -3116,6 +3242,7 @@ public final class AstraClient implements ClientModInitializer {
 
         if (isEnabled("reach")) renderReachInfo(client, context, screenWidth, accent);
         if (isEnabled("tracers")) renderTracers(client, context, screenWidth, screenHeight, accent);
+        if (isEnabled("arrows")) renderPlayerArrows(client, context, screenWidth, screenHeight);
         if (isEnabled("nametags")) renderNametags(client, context, screenWidth, screenHeight, accent);
         if (isEnabled("breadcrumbs") && AstraModuleOptions.boolValue("breadcrumbs", "show_hud", true)) renderBreadcrumbs(client, context, screenWidth, screenHeight, accent);
 
@@ -3153,6 +3280,26 @@ public final class AstraClient implements ClientModInitializer {
             context.fill(cx + crosshairGap, cy - halfThickness,
                 cx + crosshairGap + crosshairSize, cy - halfThickness + crosshairThickness, color);
             context.fill(cx - 1, cy - 1, cx + 2, cy + 2, 0xFFFFFFFF);
+        }
+
+        if (isEnabled("hitmarker")) {
+            long elapsed = System.currentTimeMillis() - lastHitMarkerAt;
+            int duration = (int)Math.max(100L, Math.min(500L, Math.round(
+                AstraModuleOptions.numberValue("hitmarker", "duration_ms", 220.0D))));
+            if (lastHitMarkerAt > 0L && elapsed >= 0L && elapsed < duration) {
+                int cx = screenWidth / 2;
+                int cy = screenHeight / 2;
+                int color = moduleColor("hitmarker", 0xFFF3F5FC);
+                // Four short corner strokes create a readable hit confirmation without covering the crosshair.
+                context.fill(cx - 8, cy - 8, cx - 4, cy - 7, color);
+                context.fill(cx - 8, cy - 8, cx - 7, cy - 4, color);
+                context.fill(cx + 4, cy - 8, cx + 8, cy - 7, color);
+                context.fill(cx + 7, cy - 8, cx + 8, cy - 4, color);
+                context.fill(cx - 8, cy + 7, cx - 4, cy + 8, color);
+                context.fill(cx - 8, cy + 4, cx - 7, cy + 8, color);
+                context.fill(cx + 4, cy + 7, cx + 8, cy + 8, color);
+                context.fill(cx + 7, cy + 4, cx + 8, cy + 8, color);
+            }
         }
 
         if (isEnabled("compasshud")) {
