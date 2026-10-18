@@ -2739,8 +2739,8 @@ public final class AstraClient implements ClientModInitializer {
             int bestScore = equippedScore;
             for (int inventoryIndex = 0; inventoryIndex < 36; inventoryIndex++) {
                 ItemStack candidate = player.getInventory().getStack(inventoryIndex);
-                if (candidate.isEmpty() || !(candidate.getItem() instanceof ArmorItem armor)
-                    || armor.getSlotType() != equipmentSlot) continue;
+                if (candidate.isEmpty() || !(candidate.getItem() instanceof ArmorItem)
+                    || armorSlotFor(candidate) != equipmentSlot) continue;
                 int score = armorScore(candidate);
                 if (score > bestScore) {
                     bestScore = score;
@@ -2768,6 +2768,16 @@ public final class AstraClient implements ClientModInitializer {
             lastAutoArmorAt = System.currentTimeMillis();
             return; // One inventory transaction at a time.
         }
+    }
+
+    private static EquipmentSlot armorSlotFor(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return null;
+        String path = Registries.ITEM.getId(stack.getItem()).getPath();
+        if (path.endsWith("_boots")) return EquipmentSlot.FEET;
+        if (path.endsWith("_leggings")) return EquipmentSlot.LEGS;
+        if (path.endsWith("_chestplate")) return EquipmentSlot.CHEST;
+        if (path.endsWith("_helmet") || path.equals("turtle_helmet")) return EquipmentSlot.HEAD;
+        return null;
     }
 
     private static int armorScore(ItemStack stack) {
