@@ -159,6 +159,15 @@ public final class AstraModuleOptions {
                 out.add(toggle("pause_in_menus", "Pause In Menus", "Release forced forward movement while a screen is open.", true));
             }
             case "safewalk", "eagle", "inventorymove" -> { }
+            case "autoarmor" -> {
+                out.add(slider("upgrade_delay_ms", "Upgrade Check Delay", "Milliseconds between armor inventory transactions.", "250", 150, 1000, 50));
+            }
+            case "cheststealer" -> {
+                out.add(slider("delay_ms", "Loot Delay", "Milliseconds between moved container slots.", "140", 80, 500, 20));
+            }
+            case "novelocity" -> {
+                out.add(toggle("players_only", "Local Player Only", "Only cancel velocity updates addressed to you.", true));
+            }
             case "autoeat" -> {
                 out.add(slider("threshold", "Food Threshold", "Eat when hunger is at or below this level.", "16", 10, 19, 1));
             }
