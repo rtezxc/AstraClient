@@ -263,6 +263,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("autoexplosion", false);
         MODULES.put("autotrap", false);
         MODULES.put("elytramotion", false);
+        MODULES.put("elytratarget", false);
         MODULES.put("antiknockback", false);
         MODULES.put("autoclicker", false);
         MODULES.put("criticals", false);
@@ -483,6 +484,7 @@ public final class AstraClient implements ClientModInitializer {
             case "autoexplosion" -> "Auto Explosion";
             case "autotrap" -> "Auto Trap";
             case "elytramotion" -> "Elytra Motion";
+            case "elytratarget" -> "Elytra Target";
             case "autoweapon" -> "Auto Weapon";
             case "biome" -> "Biome Display";
             case "cps" -> "CPS Counter";
@@ -2000,6 +2002,7 @@ public final class AstraClient implements ClientModInitializer {
             updateAutoExplosion(client);
             updateAutoTrap(client);
             updateElytraMotion(client);
+            updateElytraTarget(client);
             updateNoSlow(client);
             updateSpeed(client);
             updateScaffold(client);
@@ -2411,6 +2414,33 @@ public final class AstraClient implements ClientModInitializer {
                 return;
             }
         }
+    }
+
+
+    /** Gently turns toward the nearest visible player while gliding. */
+    private static void updateElytraTarget(MinecraftClient client) {
+        if (!isEnabled("elytratarget") || client.player == null || client.world == null
+            || client.currentScreen != null || !client.player.isGliding()) return;
+        PlayerEntity target = null;
+        double best = 32.0D * 32.0D;
+        for (PlayerEntity candidate : client.world.getPlayers()) {
+            if (candidate == client.player || candidate.isSpectator() || !candidate.isAlive()
+                || !client.player.canSee(candidate)) continue;
+            double distance = client.player.squaredDistanceTo(candidate);
+            if (distance < best) { best = distance; target = candidate; }
+        }
+        if (target == null) return;
+        double dx = target.getX() - client.player.getX();
+        double dy = target.getEyeY() - client.player.getEyeY();
+        double dz = target.getZ() - client.player.getZ();
+        double horizontal = Math.sqrt(dx * dx + dz * dz);
+        float desiredYaw = (float)(Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
+        float desiredPitch = (float)(-Math.atan2(dy, Math.max(0.001D, horizontal)) * 180.0D / Math.PI);
+        float strength = 0.12F;
+        float yawDelta = net.minecraft.util.math.MathHelper.wrapDegrees(desiredYaw - client.player.getYaw());
+        float pitchDelta = net.minecraft.util.math.MathHelper.wrapDegrees(desiredPitch - client.player.getPitch());
+        client.player.setYaw(client.player.getYaw() + yawDelta * strength);
+        client.player.setPitch(Math.max(-90.0F, Math.min(90.0F, client.player.getPitch() + pitchDelta * strength)));
     }
 
     private static void updateNoSlow(MinecraftClient client) {
