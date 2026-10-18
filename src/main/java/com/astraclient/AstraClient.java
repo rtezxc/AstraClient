@@ -59,6 +59,7 @@ import net.minecraft.item.ArmorItem;
 import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.Items;
+import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.Hand;
@@ -187,6 +188,7 @@ public final class AstraClient implements ClientModInitializer {
     private static boolean autoFishSplashPending;
     private static boolean autoFishRecastPending;
     private static long lastHitMarkerAt;
+    private static long lastFastXpAt;
     private static BlockPos lastKnownDeathPosition;
     private static Object deathCoordinateWorld;
     private static boolean deathCoordinateWasAlive;
@@ -302,6 +304,7 @@ public final class AstraClient implements ClientModInitializer {
         MODULES.put("deathcoord", false);
         MODULES.put("clickpearl", false);
         MODULES.put("elytraswap", false);
+        MODULES.put("fastxp", false);
         for (String id : MODULES.keySet()) {
             MODULE_KEYBINDS.put(id, GLFW.GLFW_KEY_UNKNOWN);
             KEY_WAS_DOWN.put(id, false);
@@ -553,6 +556,7 @@ public final class AstraClient implements ClientModInitializer {
             case "deathcoord" -> "Death Coordinates";
             case "clickpearl" -> "Click Pearl";
             case "elytraswap" -> "Elytra Swap";
+            case "fastxp" -> "Fast XP";
             default -> id;
         };
     }
@@ -2045,6 +2049,7 @@ public final class AstraClient implements ClientModInitializer {
             updateClickPearl(client);
             updateElytraSwap(client);
             updateDeathCoordinates(client);
+            updateFastXp(client);
             long windowHandle = client.getWindow() == null ? 0L : client.getWindow().getHandle();
             if (windowHandle != 0L) {
                 long now = System.currentTimeMillis();
@@ -2181,9 +2186,15 @@ public final class AstraClient implements ClientModInitializer {
         }
         int previousSlot = player.getInventory().selectedSlot;
         player.getInventory().selectedSlot = pearlSlot;
+        if (client.getNetworkHandler() != null) {
+            client.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(pearlSlot));
+        }
         client.interactionManager.interactItem(player, Hand.MAIN_HAND);
         player.swingHand(Hand.MAIN_HAND);
         player.getInventory().selectedSlot = previousSlot;
+        if (client.getNetworkHandler() != null) {
+            client.getNetworkHandler().sendPacket(new UpdateSelectedSlotC2SPacket(previousSlot));
+        }
         notifyUser("Click Pearl used");
         saveConfig();
     }
@@ -2212,6 +2223,27 @@ public final class AstraClient implements ClientModInitializer {
         client.interactionManager.clickSlot(player.currentScreenHandler.syncId, 6, swapSlot, SlotActionType.SWAP, player);
         notifyUser(wearingElytra ? "Swapped to chestplate" : "Equipped Elytra");
         saveConfig();
+    }
+
+    /** Repeats ordinary XP bottle use at a bounded interval only while right-click is held. */
+    private static void updateFastXp(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        if (!isEnabled("fastxp") || player == null || client.world == null
+            || client.interactionManager == null || client.currentScreen != null || player.isSpectator()) return;
+        if (!player.getMainHandStack().isOf(Items.EXPERIENCE_BOTTLE)) return;
+        boolean requireUse = AstraModuleOptions.boolValue("fastxp", "require_right_click", true);
+        if (requireUse) {
+            if (client.getWindow() == null || org.lwjgl.glfw.GLFW.glfwGetMouseButton(
+                client.getWindow().getHandle(), org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)
+                != org.lwjgl.glfw.GLFW.GLFW_PRESS) return;
+        }
+        long interval = (long)Math.max(80.0D, Math.min(250.0D,
+            AstraModuleOptions.numberValue("fastxp", "interval_ms", 120.0D)));
+        long now = System.currentTimeMillis();
+        if (now - lastFastXpAt < interval) return;
+        client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+        player.swingHand(Hand.MAIN_HAND);
+        lastFastXpAt = now;
     }
 
     /** Captures the last live position and reports it once on death while Death Coordinates is enabled. */
