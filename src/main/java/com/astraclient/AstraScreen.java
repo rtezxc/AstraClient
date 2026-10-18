@@ -137,7 +137,10 @@ public final class AstraScreen extends Screen {
         new ModuleInfo("deathcoord", "Death Coordinates", "Reports your last known position when you die.", "Utility", true),
         new ModuleInfo("clickpearl", "Click Pearl", "Throws one Ender Pearl from your hotbar when activated.", "Inventory", true),
         new ModuleInfo("elytraswap", "Elytra Swap", "Swaps an Elytra with a chestplate in your hotbar when activated.", "Inventory", true),
-        new ModuleInfo("fastxp", "Fast XP", "Repeats vanilla XP bottle use while you hold right click.", "Inventory", true)
+        new ModuleInfo("fastxp", "Fast XP", "Repeats vanilla XP bottle use while you hold right click.", "Inventory", true),
+        new ModuleInfo("elytraboost", "Elytra Boost", "Repeats vanilla firework use while gliding and holding right click.", "Movement", true),
+        new ModuleInfo("elytraspeed", "Elytra Speed", "Applies a bounded local speed boost while gliding.", "Movement", true),
+        new ModuleInfo("highjump", "High Jump", "Adds a bounded boost to a normal jump.", "Movement", true)
     );
 
     private String category = "Render";
