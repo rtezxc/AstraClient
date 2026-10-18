@@ -165,6 +165,9 @@ public final class AstraModuleOptions {
             case "step" -> {
                 out.add(slider("height", "Step Height", "Maximum local step height, clamped to 0.6–1.5 blocks.", "1.0", 0.6, 1.5, 0.1));
             }
+            case "aspectratio" -> {
+                out.add(slider("ratio", "Aspect Ratio", "Projection ratio from 1.0 (square) to 2.5 (ultrawide).", "1.777", 1.0, 2.5, 0.05));
+            }
             case "autofish" -> {
                 out.add(slider("reel_delay_ms", "Reel Delay", "Delay after the owned fishing bobber splashes before reeling.", "160", 80, 600, 20));
                 out.add(slider("recast_delay_ms", "Recast Delay", "Delay before casting again after a catch.", "350", 180, 1000, 25));
